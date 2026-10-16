@@ -27,6 +27,7 @@
 0x0039: C3 CE 00 ; JMP 0x00CE
 0x003C: DC 9C 00 ; CC 0x009C
 0x003F: 21 07 04 ; LXI H,0x0407
+
 0x0042: 7E       ; MOV A,M
 0x0043: 0F       ; RRC
 0x0044: 9D       ; SBB L
