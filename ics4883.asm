@@ -5,7 +5,7 @@
         ORG	0000h
 
 ; ---------------------------------------------------------------------
-; 0000h - 0016h: Boot-Vektor & Initialisierung (23 Bytes)
+; 0000h - 0016h: boot vector and initialization
 ; ---------------------------------------------------------------------
 L_0000:
         LXI     SP, 0500h       ; 31 00 05 -> Stack-Pointer setzen
@@ -18,7 +18,7 @@ L_0000:
         JMP     02C8h           ; C3 C8 02 -> Sprung in die Hauptinitialisierung
 
 ; ------------------------------------------------------------------------------
-; Haupt-I/O-Abfrageschleife (Polling Loop)
+; main IO polling loop
 ; ------------------------------------------------------------------------------
 L_0017:
         DI
@@ -58,12 +58,12 @@ L_001F:
         JC      006Dh           ; DA 6D 00 -> Wenn Carry=1, springe zu Adresse 006Dh
         STA     0607h           ; 32 07 06 -> Berechneten Zustand im RAM 0607h sichern
     	LXI     H, 0403h        ; 21 03 04 -> HL-Zeiger auf I/O-Schnittstelle 0403h ausrichten
-    	MOV A,M                 ; 7E from byte 63h
-    	ANA B                   ; A0 from byte 64h
-    	ORA C                   ; B1 from byte 65h
-    	MOV M,A                 ; 77 from byte 66h
+    	MOV     A,M             ; 7E from byte 63h
+    	ANA     B               ; A0 from byte 64h
+    	ORA     C               ; B1 from byte 65h
+    	MOV     M,A             ; 77 from byte 66h
     	STA     00703h          ; Zwischenspeichern des aktuellen I/O-Status
-    	JMP     0017h           ; C3 17 00  ECHTES ENDE: Springt endlos zurück zum Schleifenstart
+    	JMP     0017h           ; C3 17 00  back to loop start
 
     	DB 021h	; 021h, from byte 6dh
     	DB 00Eh	; 00Eh, from byte 6eh
