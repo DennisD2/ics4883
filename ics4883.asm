@@ -43,9 +43,9 @@ L_001F:
         JMP     L_00CE          ; C3 CE 00 -> Sprung zur Service-Routine L_00CE
         CC      009Ch           ; DC 9C 00 -> Bedingter Unterprogramm-Aufruf, wenn Carry-Flag = 1
         LXI     H, 0407h        ; 21 07 04 -> Register HL mit Adresse 0407h laden
-    	DB 07Eh	; 07Eh, from byte 42h
-    	DB 00Fh	; 00Fh, from byte 43h
-    	DB 00Fh	; 00Fh, from byte 44h
+    	MOV     A,M             ; 7E
+    	RRC                     ; 0F
+    	RRC                     ; 0F
     	DB 0DAh	; 0DAh, from byte 45h
     	DB 09Dh	; 09Dh, from byte 46h
     	DB 002h	; 002h, from byte 47h
