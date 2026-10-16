@@ -56,9 +56,7 @@ L_001F:
     	JNC     0060h           ; D2 60 00 -> Wenn kein Carry, springe vor zu Adresse 0060h
     	CALL    00C7h           ; CD C7 00 -> Unterfunktion an Adresse 00C7h ausf
         JC      006Dh           ; DA 6D 00 -> Wenn Carry=1, springe zu Adresse 006Dh
-    	DB 032h	; 032h, from byte 5dh
-    	DB 007h	; 007h, from byte 5eh
-    	DB 006h	; 006h, from byte 5fh
+        STA     0607h           ; 32 07 06 -> Berechneten Zustand im RAM 0607h sichern
     	LXI     H, 0403h        ; 21 03 04 -> HL-Zeiger auf I/O-Schnittstelle 0403h ausrichten
     	DB 07Eh	; 07Eh, from byte 63h
     	DB 0A0h	; 0A0h, from byte 64h
