@@ -46,13 +46,9 @@ L_001F:
     	MOV     A,M             ; 7E
     	RRC                     ; 0F
     	RRC                     ; 0F
-    	DB 0DAh	; 0DAh, from byte 45h
-    	DB 09Dh	; 09Dh, from byte 46h
-    	DB 002h	; 002h, from byte 47h
-    	DB 00Fh	; 00Fh, from byte 48h
-    	DB 0DAh	; 0DAh, from byte 49h
-    	DB 0ADh	; 0ADh, from byte 4ah
-    	DB 001h	; 001h, from byte 4bh
+        JC      029Dh           ; DA 9D 02 -> Wenn Carry=1, springe zu Adresse 029Dh
+        RRC                     ; 0F       -> Akkumulator nach rechts rotieren
+        JC      01ADh           ; DA AD 01 -> Wenn Carry=1, springe zu Adresse 01ADh
     	DB 001h	; 001h, from byte 4ch
     	DB 000h	; 000h, from byte 4dh
     	DB 010h	; 010h, from byte 4eh
