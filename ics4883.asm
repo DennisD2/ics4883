@@ -37,10 +37,8 @@ L_001F:
         CALL    00A1h           ; CD A1 00 -> Ruft Subroutine an Adresse 00A1h auf
         LDA     0706h           ; 3A 06 07 -> Lädt den Status aus dem Talker-Register 0706h
 
-    	DB 007h	; 007h, from byte 34h
-    	DB 0C3h	; 0C3h, from byte 35h
-    	DB 03Ch	; 03Ch, from byte 36h
-    	DB 000h	; 000h, from byte 37h
+RLC     RLC                     ; 07       -> Akkumulatorinhalt nach links rotieren
+        JMP     003Ch           ; C3 3C 00 -> Unbedingter Sprung zur Routine 003Ch
     	DB 0E1h	; 0E1h, from byte 38h
     	DB 0C3h	; 0C3h, from byte 39h
     	DB 0CEh	; 0CEh, from byte 3ah
