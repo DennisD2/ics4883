@@ -58,10 +58,10 @@ L_001F:
         JC      006Dh           ; DA 6D 00 -> Wenn Carry=1, springe zu Adresse 006Dh
         STA     0607h           ; 32 07 06 -> Berechneten Zustand im RAM 0607h sichern
     	LXI     H, 0403h        ; 21 03 04 -> HL-Zeiger auf I/O-Schnittstelle 0403h ausrichten
-    	DB 07Eh	; 07Eh, from byte 63h
-    	DB 0A0h	; 0A0h, from byte 64h
-    	DB 0B1h	; 0B1h, from byte 65h
-    	DB 077h	; 077h, from byte 66h
+    	MOV A,M                 ; 7E from byte 63h
+    	ANA B                   ; A0 from byte 64h
+    	ORA C                   ; B1 from byte 65h
+    	MOV M,A                 ; 77 from byte 66h
     	STA     00703h          ; Zwischenspeichern des aktuellen I/O-Status
     	JMP     0017h           ; C3 17 00  ECHTES ENDE: Springt endlos zurück zum Schleifenstart
 
