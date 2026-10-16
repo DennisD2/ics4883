@@ -49,9 +49,7 @@ L_001F:
         JC      029Dh           ; DA 9D 02 -> Wenn Carry=1, springe zu Adresse 029Dh
         RRC                     ; 0F       -> Akkumulator nach rechts rotieren
         JC      01ADh           ; DA AD 01 -> Wenn Carry=1, springe zu Adresse 01ADh
-    	DB 001h	; 001h, from byte 4ch
-    	DB 000h	; 000h, from byte 4dh
-    	DB 010h	; 010h, from byte 4eh
+        LXI     B,01000h         ;
         LDA     0605h           ; 3A 05 06 -> Holt das Daten-Byte vom I/O-Schnittstellenregister
     	CMA                     ; 2F       -> Akkumulator invertieren (Low-Aktive Signale)
     	RRC                     ; 0F       -> Bit nach rechts rotieren
