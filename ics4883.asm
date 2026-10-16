@@ -55,21 +55,13 @@ L_001F:
         LDA     0605h           ; 3A 05 06 -> Holt das Daten-Byte vom I/O-Schnittstellenregister
     	CMA                     ; 2F       -> Akkumulator invertieren (Low-Aktive Signale)
     	RRC                     ; 0F       -> Bit nach rechts rotieren
-    	DB 0D2h	; 0D2h, from byte 54h
-    	DB 060h	; 060h, from byte 55h
-    	DB 000h	; 000h, from byte 56h
-    	DB 0CDh	; 0CDh, from byte 57h
-    	DB 0C7h	; 0C7h, from byte 58h
-    	DB 000h	; 000h, from byte 59h
-    	DB 0DAh	; 0DAh, from byte 5ah
-    	DB 06Dh	; 06Dh, from byte 5bh
-    	DB 000h	; 000h, from byte 5ch
+    	JNC     0060h           ; D2 60 00 -> Wenn kein Carry, springe vor zu Adresse 0060h
+    	CALL    00C7h           ; CD C7 00 -> Unterfunktion an Adresse 00C7h ausf
+        JC      006Dh           ; DA 6D 00 -> Wenn Carry=1, springe zu Adresse 006Dh
     	DB 032h	; 032h, from byte 5dh
     	DB 007h	; 007h, from byte 5eh
     	DB 006h	; 006h, from byte 5fh
-    	DB 021h	; 021h, from byte 60h
-    	DB 003h	; 003h, from byte 61h
-    	DB 004h	; 004h, from byte 62h
+    	LXI     H, 0403h        ; 21 03 04 -> HL-Zeiger auf I/O-Schnittstelle 0403h ausrichten
     	DB 07Eh	; 07Eh, from byte 63h
     	DB 0A0h	; 0A0h, from byte 64h
     	DB 0B1h	; 0B1h, from byte 65h
