@@ -32,17 +32,11 @@ L_001F:
         CPI     80h             ; Prüfen auf Status-Flag 80h
         JZ      L_00CE          ; Bei Treffer -> Abzweigen zur Routine L_00CE
 
-    	DB 0CDh	; 0CDh, from byte 29h
-    	DB 0ADh	; 0ADh, from byte 2ah
-    	DB 000h	; 000h, from byte 2bh
-    	DB 00Eh	; 00Eh, from byte 2ch
-    	DB 0FEh	; 0FEh, from byte 2dh
-    	DB 0CDh	; 0CDh, from byte 2eh
-    	DB 0A1h	; 0A1h, from byte 2fh
-    	DB 000h	; 000h, from byte 30h
-    	DB 03Ah	; 03Ah, from byte 31h
-    	DB 006h	; 006h, from byte 32h
-    	DB 007h	; 007h, from byte 33h
+        CALL    00ADh           ; CD AD 00 -> Ruft Subroutine an Adresse 00ADh auf
+        MVI     C, 0FEh         ; 0E FE    -> Lädt Konstante 0FEh in Register C
+        CALL    00A1h           ; CD A1 00 -> Ruft Subroutine an Adresse 00A1h auf
+        LDA     0706h           ; 3A 06 07 -> Lädt den Status aus dem Talker-Register 0706h
+
     	DB 007h	; 007h, from byte 34h
     	DB 0C3h	; 0C3h, from byte 35h
     	DB 03Ch	; 03Ch, from byte 36h
