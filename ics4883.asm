@@ -52,11 +52,9 @@ L_001F:
     	DB 001h	; 001h, from byte 4ch
     	DB 000h	; 000h, from byte 4dh
     	DB 010h	; 010h, from byte 4eh
-    	DB 03Ah	; 03Ah, from byte 4fh
-    	DB 005h	; 005h, from byte 50h
-    	DB 006h	; 006h, from byte 51h
-    	DB 02Fh	; 02Fh, from byte 52h
-    	DB 00Fh	; 00Fh, from byte 53h
+        LDA     0605h           ; 3A 05 06 -> Holt das Daten-Byte vom I/O-Schnittstellenregister
+    	CMA                     ; 2F       -> Akkumulator invertieren (Low-Aktive Signale)
+    	RRC                     ; 0F       -> Bit nach rechts rotieren
     	DB 0D2h	; 0D2h, from byte 54h
     	DB 060h	; 060h, from byte 55h
     	DB 000h	; 000h, from byte 56h
