@@ -464,76 +464,80 @@
 0x034D: 21 04 07 ; LXI H,0x0704
 0x0350: 36 00    ; MVI M,0x00
 0x0352: 21 02 07 ; LXI H,0x0702
-0x0355: 3A 0B 04 ; LDA 0x040B
-0x0358: 77       ; MOV M,A
-0x0359: 23       ; INX H
-0x035A: 36 00    ; MVI M,0x00
-0x035C: 2E 07    ; MVI L,0x07
-0x035E: 3A 07 04 ; LDA 0x0407
-0x0361: 77       ; MOV M,A
-0x0362: C3 1F 00 ; JMP 0x001F
-0x0365: AF       ; XRA A
-0x0366: 32 01 04 ; STA 0x0401
-0x0369: 21 07 04 ; LXI H,0x0407
-0x036C: 7E       ; MOV A,M
-0x036D: E6 F7    ; ANI 0xF7
-0x036F: 77       ; MOV M,A
-0x0370: C3 17 00 ; JMP 0x0017
-0x0373: 3A 07 04 ; LDA 0x0407
-0x0376: E6 02    ; ANI 0x02
-0x0378: CA 17 00 ; JZ 0x0017
-0x037B: 78       ; MOV A,B
-0x037C: B2       ; ORA D
-0x037D: 0C       ; INR C
-0x037E: 04       ; INR B
-0x037F: C3 20 00 ; JMP 0x0020
-0x0382: 00       ; NOP
-0x0383: 02       ; STAX B
-0x0384: 05       ; DCR B
-0x0385: 04       ; INR B
-0x0386: 3C       ; INR A
-0x0387: 01 14 06 ; LXI B,0x0614
-0x038A: 00       ; NOP
-0x038B: 15       ; DCR D
-0x038C: 6D       ; MOV L,L
-0x038D: 03       ; INX B
-0x038E: 18       ; DB 0x18 (Unknown Opcode)
-0x038F: 48       ; MOV C,B
-0x0390: 01 19 47 ; LXI B,0x4719
-0x0393: 01 08 8A ; LXI B,0x8A08
-0x0396: 02       ; STAX B
-0x0397: 20       ; DB 0x20 (Unknown Opcode)
-0x0398: 00       ; NOP
-0x0399: 01 40 20 ; LXI B,0x2040
-0x039C: 01 05 7B ; LXI B,0x7B05
-0x039F: 03       ; INX B
-0x03A0: 60       ; MOV H,B
-0x03A1: 24       ; INR H
-0x03A2: 03       ; INX B
-0x03A3: 17       ; RAL
-0x03A4: 00       ; NOP
-0x03A5: 0B       ; DCX B
-0x03A6: 1F       ; RAR
-0x03A7: 04       ; INR B
-0x03A8: 0A       ; LDAX B
-0x03A9: 00       ; NOP
-0x03AA: 20       ; DB 0x20 (Unknown Opcode)
-0x03AB: 00       ; NOP
-0x03AC: 20       ; DB 0x20 (Unknown Opcode)
-0x03AD: 00       ; NOP
-0x03AE: 20       ; DB 0x20 (Unknown Opcode)
-0x03AF: 00       ; NOP
-0x03B0: 20       ; DB 0x20 (Unknown Opcode)
-0x03B1: 00       ; NOP
-0x03B2: 00       ; NOP
-0x03B3: 01 06 05 ; LXI B,0x0506
-0x03B6: 06 02    ; MVI B,0x02
-0x03B8: 06 06    ; MVI B,0x06
-0x03BA: 20       ; DB 0x20 (Unknown Opcode)
-0x03BB: 00       ; NOP
-0x03BC: 06 02    ; MVI B,0x02
-0x03BE: 20       ; DB 0x20 (Unknown Opcode)
-0x03BF: 00       ; NOP
+
+;;; "Zurücksetzen des I/O-Status (Acknowledge-Zyklus)"
+0x0355: 3A 0B 04   LDA 0x040B    ; Status von I/O-Adresse 0x040B in den Akkumulator laden
+0x0358: 77         MOV M, A      ; Wert im RAM-Speicher sichern (Adresse steht in HL)
+0x0359: 23         INX H         ; Speicherzeiger HL um eins erhöhen (nächstes RAM-Byte)
+0x035A: 36 00      MVI M, 0x00   ; Folgende RAM-Zelle vorsorglich mit Null initialisieren
+0x035C: 2E 07      MVI L, 0x07   ; Unteres Byte von HL auf 0x07 setzen (zeigt nun auf 0x0407)
+0x035E: 3A 07 04   LDA 0x0407    ; Status von I/O-Adresse 0x0407 einlesen
+0x0361: 77         MOV M, A      ; Diesen Zustand ebenfalls im RAM sichern
+0x0362: C3 1F 00   JMP 0x001F    ; Kurzzeitiger Rücksprung zur Validierung im Boot-Bereich
+0x0365: AF         XRA A         ; Akkumulator leeren / auf Null setzen (XOR A mit A)
+0x0366: 32 01 04   STA 0x0401    ; Null nach 0x0401 schreiben (löscht das auslösende Status-Flag)
+0x0369: 21 07 04   LXI H, 0x0407 ; Registerpaar HL direkt auf I/O-Adresse 0x0407 ausrichten
+0x036C: 7E         MOV A, M      ; Wert von Adresse 0x0407 in den Akkumulator holen
+0x036D: E6 F7      ANI 0xF7      ; Bitmaske anwenden: Bit 3 gezielt ausschalten (UND mit 0xF7)
+0x036F: 77         MOV M, A      ; Modifizierten Status zurück an die Hardware senden
+0x0370: C3 17 00   JMP 0x0017    ; Vollständiger Rücksprung zum Start der Haupt-I/O-Schleife
+
+;;; "Bit-Prüfung und Bedingter Abbruch"
+0x0373: 3A 07 04   LDA 0x0407    ; Erneutes Einlesen des Schnittstellen-Status von 0x0407
+0x0376: E6 02      ANI 0x02      ; Bit 1 isolieren (Prüfung auf Daten- oder Handshake-Flag)
+0x0378: CA 17 00   JZ 0x0017     ; Wenn Bit 1 nicht gesetzt ist (Ergebnis 0), zurück zu Schleife 0x0017
+
+0x037B: 3A 0C 04   LDA 0x040C    ; Nächstes Datenregister (z.B. GPIB-Datenbyte) auslesen
+0x037E: E6 7F      ANI 0x7F      ; Maskierung: Oberstes Bit ausblenden (reines 7-Bit-ASCII isolieren)
+0x0380: 4F         MOV C, A      ; Gelesenes Zeichen zur Zwischenspeicherung in Register C kopieren
+0x0381: 3A 02 05   LDA 0x0502    ; Konfigurations- oder Statuswert aus dem RAM (0x0502) holen
+0x0384: B7         ORA A         ; Wert prüfen (Akkumulator mit sich selbst verodern)
+0x0385: C2 9D 03   JNZ 0x039D    ; Wenn ungleich Null, zu alternativer Zeichenverarbeitung springen
+0x0388: 78         MOV A, B      ; Inhalt von Register B in den Akkumulator holen
+0x0389: B7         ORA A         ; Prüfen, ob Register B ein aktives Flag enthält (ist es Null?)
+0x038A: CA 94 03   JZ 0x0394     ; Wenn Null, springe direkt weiter zur Standard-Auswertung
+0x038D: 79         MOV A, C      ; Zeichen aus Register C wieder in den Akkumulator holen
+0x038E: FE 3A      CPI 0x3A      ; Mit dem ASCII-Wert des Doppelpunkts (':') vergleichen
+0x0390: C2 A4 03   JNZ 0x03A4    ; Wenn es kein Doppelpunkt ist, zu Speicherroutine 0x03A4 springen
+0x0393: AF         XRA A         ; Akkumulator wieder auf Null zurücksetzen (XOR A mit A)
+0x0394: 79         MOV A, C      ; Zeichen aus Register C für finale Prüfung bereitstellen
+0x0395: FE 20      CPI 0x20      ; Mit dem ASCII-Wert des Leerzeichens (' ') vergleichen
+0x0397: CA 17 00   JZ 0x0017     ; Wenn es ein Leerzeichen ist, ignorieren und zurück zu 0x0017
+0x039A: C3 A4 03   JMP 0x03A4    ; Ansonsten unbedingter Sprung zur Pufferung ab Adresse 0x03A4
+
+
+0x039D: 79         MOV A, C      ; Zeichen aus Register C zurück in den Akkumulator holen
+0x039E: FE 0D      CPI 0x0D      ; Mit ASCII-Wert für Carriage Return ('\r' / Wagenrücklauf) vergleichen
+0x03A0: C2 A4 03   JNZ 0x03A4    ; Wenn es kein Carriage Return ist, weiter zur normalen Pufferung bei 0x03A4
+0x03A3: 47         MOV B, A      ; Bei Treffer: Das CR-Zeichen als Status-Flag in Register B sichern
+0x03A4: 21 00 06   LXI H, 0x0600 ; Startadresse des Datenpuffers (0x0600) in das HL-Register laden
+0x03A7: 79         MOV A, C      ; Das zu speichernde Zeichen wieder in den Akkumulator laden
+0x03A8: 77         MOV M, A      ; Zeichen in die vom HL-Register adressierte RAM-Zelle schreiben
+0x03A9: C3 17 00   JMP 0x0017    ; Zeichen verarbeitet: Unbedingter Rücksprung zur Hauptschleife
+
+0x03AC: 00         NOP           ; Füllbyte / Unbenutzter Speicherplatz
+0x03AD: 00         NOP           ; Füllbyte / Unbenutzter Speicherplatz
+0x03AE: 00         NOP           ; Füllbyte / Unbenutzter Speicherplatz
+0x03AF: 00         NOP           ; Füllbyte / Unbenutzter Speicherplatz
+0x03B0: 00         NOP           ; Füllbyte / Unbenutzter Speicherplatz
+0x03B1: 00         NOP           ; Füllbyte / Unbenutzter Speicherplatz
+0x03B2: 00         NOP           ; Füllbyte / Unbenutzter Speicherplatz
+
+0x03B3: 49         DB 0x49       ; Beginn einer Datenstruktur / Identifikations-String ("I")
+0x03B4: 43         DB 0x43       ; Buchstabe "C"
+0x03B5: 53         DB 0x53       ; Buchstabe "S"
+0x03B6: 20         DB 0x20       ; Leerzeichen " "
+0x03B7: 34         DB 0x34       ; Ziffer "4"
+0x03B8: 38         DB 0x38       ; Ziffer "8"
+0x03B9: 38         DB 0x38       ; Ziffer "8"
+0x03BA: 33         DB 0x33       ; Ziffer "3" (Ergibt zusammen die Gerätekennung "ICS 4883")
+0x03BB: 0D         DB 0x0D       ; Steuerzeichen Carriage Return ('\r')
+0x03BC: 0A         DB 0x0A       ; Steuerzeichen Line Feed ('\n')
+0x03BD: 00         DB 0x00       ; Nullbyte als String-Terminator (Ende der Textkette)
+
+0x03BE: 00         NOP           ; Füllbyte / Ausrichtung
+0x03BF: 00         NOP           ; Füllbyte / Ausrichtung
+
 0x03C0: 00       DB '.' (0x00)
 0x03C1: 80       DB '.' (0x80)
 0x03C2: 20       DB ' ' (0x20)
