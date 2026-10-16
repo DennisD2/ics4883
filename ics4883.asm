@@ -1,30 +1,30 @@
 ; =====================================================================
 ; ICS Electronics Model 4883 Instrument Coupler
 ; =====================================================================
-    CPU	8080
-	ORG	0000h
+        CPU	8080
+        ORG	0000h
 
 ; ---------------------------------------------------------------------
 ; 0000h - 0016h: Boot-Vektor & Initialisierung (23 Bytes)
 ; ---------------------------------------------------------------------
 L_0000:
-    LXI     SP, 0500h       ; 31 00 05 -> Stack-Pointer setzen
-    CALL    008Fh           ; CD 8F 00 -> Erste Hardware-Subroutine aufrufen
-    LDA     03C4h           ; 3A C4 03 -> Konfigurationswert aus dem ROM laden
-    XRI     0Ch             ; EE 0C    -> Maskierung (XOR) für Initialisierung
-    STA     0506h           ; 32 06 05 -> Im System-SRAM wegsichern
-    LXI     H, 03B3h        ; 21 B3 03 -> Zeiger auf ID-String "ICS 4883" laden
-    CALL    007Bh           ; CD 7B 00 -> Speicher-Kopierroutine aufrufen
-    JMP     02C8h           ; C3 C8 02 -> Sprung in die Hauptinitialisierung
+        LXI     SP, 0500h       ; 31 00 05 -> Stack-Pointer setzen
+        CALL    008Fh           ; CD 8F 00 -> Erste Hardware-Subroutine aufrufen
+        LDA     03C4h           ; 3A C4 03 -> Konfigurationswert aus dem ROM laden
+        XRI     0Ch             ; EE 0C    -> Maskierung (XOR) für Initialisierung
+        STA     0506h           ; 32 06 05 -> Im System-SRAM wegsichern
+        LXI     H, 03B3h        ; 21 B3 03 -> Zeiger auf ID-String "ICS 4883" laden
+        CALL    007Bh           ; CD 7B 00 -> Speicher-Kopierroutine aufrufen
+        JMP     02C8h           ; C3 C8 02 -> Sprung in die Hauptinitialisierung
 
-    ; ------------------------------------------------------------------------------
-    ; Haupt-I/O-Abfrageschleife (Polling Loop)
-    ; ------------------------------------------------------------------------------
+; ------------------------------------------------------------------------------
+; Haupt-I/O-Abfrageschleife (Polling Loop)
+; ------------------------------------------------------------------------------
 L_0017:
-    DI
-    LDA     0401h           ; Status von GPIB / I/O Interface-Chip laden
-    ORA     A               ; Prüfen, ob der Status 0 ist
-    JNZ     L_0355          ; Wenn ungleich Null -> Zur Service-Routine abzweigen
+        DI
+        LDA     0401h           ; Status von GPIB / I/O Interface-Chip laden
+        ORA     A               ; Prüfen, ob der Status 0 ist
+        JNZ     L_0355          ; Wenn ungleich Null -> Zur Service-Routine abzweigen
 
 L_001F:
         LDA     0701h           ; Status des Talker-Interfaces einlesen
