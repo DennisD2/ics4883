@@ -1,0 +1,586 @@
+;;; start init sequence
+0x0000: 31 00 05   LXI SP, 0x0500    ; Stack-Pointer auf RAM-Adresse 0x0500 setzen
+0x0003: CD 20 00   CALL 0x0020       ; Initialisierungs-Subroutine aufrufen
+0x0006: 3A C4 03   LDA 0x03C4        ; Konfigurationswert aus dem ROM laden
+0x0009: EE 0C      XRI 0x0C          ; Exklusiv-Oder (XOR) mit Maske 0x0C
+0x000B: 32 06 05   STA 0x0506        ; Ergebnis im System-RAM (0x0506) sichern
+0x000E: 21 B3 03   LXI H, 0x03B3     ; Zeiger auf Text/Daten-Tabelle im ROM laden
+0x0011: CD 7B 00   CALL 0x007B       ; Funktion aufrufen (vermutlich String-Ausgabe)
+0x0014: C3 C8 02   JMP 0x02C8        ; Sprung in die Hauptschleife (Main Loop)
+
+;;; IO loop
+0x0017: F3          DI                ; Interrupts global deaktivieren
+0x0018: 3A 01 04    LDA 0x0401        ; Status von I/O-Adresse/RAM 0x0401 lesen
+0x001B: B7          ORA A             ; Prüfen, ob der Wert 0 ist
+0x001C: C2 55 03    JNZ 0x0355        ; Wenn nicht 0, springe zu Fehler/Sonderbehandlung
+0x001F: 3A 01 07    LDA 0x0701        ; Nächstes Interface-Register einlesen
+0x0022: E6 C0       ANI 0xC0          ; Bitmaske anlegen (nur oberste zwei Bits prüfen)
+0x0024: FE 80       CPI 0x80          ; Vergleichen mit Status-Flag 0x80
+0x0026: CA CE 00    JZ 0x00CE         ; Wenn Bedingung erfüllt, springe zu Routine 0x00CE
+0x0029: CD AD 00 ; CALL 0x00AD
+0x002C: 0E FE    ; MVI C,0xFE
+0x002E: CD A1 00 ; CALL 0x00A1
+0x0031: 3A 06 07 ; LDA 0x0706
+0x0034: 07       ; RLC
+0x0035: C3 3C 00 ; JMP 0x003C
+0x0038: E1       ; POP H
+0x0039: C3 CE 00 ; JMP 0x00CE
+0x003C: DC 9C 00 ; CC 0x009C
+0x003F: 21 07 04 ; LXI H,0x0407
+0x0042: 7E       ; MOV A,M
+0x0043: 0F       ; RRC
+0x0044: 9D       ; SBB L
+0x0045: 02       ; STAX B
+0x0046: AD       ; XRA L
+0x0047: 01 20 00 ; LXI B,0x0020
+0x004A: 10       ; DB 0x10 (Unknown Opcode)
+0x004B: 3A 05 06    LDA 0x0605        ; Daten-Byte holen
+0x004E: 2F          CMA               ; Akkumulator invertieren (Eingangssignale oft Low-Aktiv!)
+0x004F: 0F          RRC               ; Bit nach rechts rotieren
+0x0050: D2 60 00    JNC 0x0060        ; Wenn kein Carry-Flag, springe zu 0x0060
+0x0053: CD C7 00    CALL 0x00C7       ; Unterfunktion ausführen
+0x0056: DA 6D 00 ; JC 0x006D
+0x0059: 32 07 06 ; STA 0x0607
+0x005C: 21 03 04 ; LXI H,0x0403
+0x005F: 7E       ; MOV A,M
+0x0060: A0       ; ANA B
+0x0061: B1       ; ORA C
+0x0062: 77       ; MOV M,A
+0x0063: 32 03 07    STA 0x0703    ; Zwischenspeichern des aktuellen I/O-Status
+0x0066: C3 17 00    JMP 0x0017    ; ECHTES ENDE: Springt endlos zurück zum Schleifenstart
+
+0x0069: 21 0E 04 ; LXI H,0x040E
+0x006C: 7E       ; MOV A,M
+0x006D: 0F       ; RRC
+0x006E: DA 60 00 ; JC 0x0060
+0x0071: 36 41    ; MVI M,0x41
+0x0073: 48       ; MOV C,B
+0x0074: C3 60 00 ; JMP 0x0060
+0x0077: 7E       ; MOV A,M
+0x0078: B7       ; ORA A
+0x0079: C8       ; RZ
+0x007A: 4F       ; MOV C,A
+0x007B: 23       ; INX H
+0x007C: 5E       ; MOV E,M
+0x007D: 23       ; INX H
+0x007E: 56       ; MOV D,M
+0x007F: 23       ; INX H
+0x0080: 7E       ; MOV A,M
+0x0081: 12       ; STAX D
+0x0082: 23       ; INX H
+0x0083: 13       ; INX D
+0x0084: 0D       ; DCR C
+0x0085: C2 1E 20 ; JNZ 0x201E
+0x0088: C3 7B 00 ; JMP 0x007B
+0x008B: 0E 40    ; MVI C,0x40
+0x008D: 21 00 04 ; LXI H,0x0400
+0x0090: 36 00    ; MVI M,0x00
+0x0092: 23       ; INX H
+0x0093: 0D       ; DCR C
+0x0094: C2 94 00 ; JNZ 0x0094
+0x0097: C9       ; RET
+0x0098: 07       ; RLC
+0x0099: 07       ; RLC
+0x009A: 07       ; RLC
+0x009B: 0E F9    ; MVI C,0xF9
+0x009D: 21 07 04 ; LXI H,0x0407
+0x00A0: 47       ; MOV B,A
+0x00A1: 7E       ; MOV A,M
+0x00A2: A1       ; ANA C
+0x00A3: B0       ; ORA B
+0x00A4: 77       ; MOV M,A
+0x00A5: 26 07    ; MVI H,0x07
+0x00A7: 77       ; MOV M,A
+0x00A8: C9       ; RET
+0x00A9: 21 91 03 ; LXI H,0x0391
+0x00AC: 3A 05 06 ; LDA 0x0605
+0x00AF: 2F       ; CMA
+0x00B0: E6 02    ; ANI 0x02
+0x00B2: BE       ; CMP M
+0x00B3: C2 C5 00 ; JNZ 0x00C5
+0x00B6: 23       ; INX H
+0x00B7: 3A 05 05 ; LDA 0x0505
+0x00BA: 2F       ; CMA
+0x00BB: E6 07    ; ANI 0x07
+0x00BD: BE       ; CMP M
+0x00BE: 3E 01    ; MVI A,0x01
+0x00C0: C8       ; RZ
+0x00C1: AF       ; XRA A
+0x00C2: C9       ; RET
+0x00C3: 3A 05 07 ; LDA 0x0705
+0x00C6: 07       ; RLC
+0x00C7: 07       ; RLC
+0x00C8: 07       ; RLC
+0x00C9: C9       ; RET
+0x00CA: 3E 80    ; MVI A,0x80
+0x00CC: 32 05 04 ; STA 0x0405
+0x00CF: AF       ; XRA A
+0x00D0: 32 02 07 ; STA 0x0702
+0x00D3: CD 63 01 ; CALL 0x0163
+0x00D6: 3A 06 07 ; LDA 0x0706
+0x00D9: 07       ; RLC
+0x00DA: DA 17 00 ; JC 0x0017
+0x00DD: 78       ; MOV A,B
+0x00DE: E6 7F    ; ANI 0x7F
+0x00E0: 47       ; MOV B,A
+0x00E1: E6 60    ; ANI 0x60
+0x00E3: FE 60    ; CPI 0x60
+0x00E5: CA F7 00 ; JZ 0x00F7
+0x00E8: AF       ; XRA A
+0x00E9: 32 0C 04 ; STA 0x040C
+0x00EC: 78       ; MOV A,B
+0x00ED: E6 60    ; ANI 0x60
+0x00EF: C2 F7 00 ; JNZ 0x00F7
+0x00F2: 78       ; MOV A,B
+0x00F3: 21 93 03 ; LXI H,0x0393
+0x00F6: 0E 0A    ; MVI C,0x0A
+0x00F8: CD 4E 01 ; CALL 0x014E
+0x00FB: E9       ; PCHL
+0x00FC: CD 31 01 ; CALL 0x0131
+0x00FF: 3E 02    ; MVI A,0x02
+0x0101: C2 0E 01 ; JNZ 0x010E
+0x0104: CD 9F 00 ; CALL 0x009F
+0x0107: C3 20 00 ; JMP 0x0020
+0x010A: 78       ; MOV A,B
+0x010B: FE 3F    ; CPI 0x3F
+0x010D: C2 20 00 ; JNZ 0x0020
+0x0110: AF       ; XRA A
+0x0111: 32 1F 04 ; STA 0x041F
+0x0114: 0E FD    ; MVI C,0xFD
+0x0116: CD A1 00 ; CALL 0x00A1
+0x0119: C3 20 00 ; JMP 0x0020
+0x011C: CD 31 01 ; CALL 0x0131
+0x011F: 3E 04    ; MVI A,0x04
+0x0121: CA 08 01 ; JZ 0x0108
+0x0124: 0E FB    ; MVI C,0xFB
+0x0126: AF       ; XRA A
+0x0127: CD A1 00 ; CALL 0x00A1
+0x012A: C3 17 00 ; JMP 0x0017
+0x012D: 3A 06 07 ; LDA 0x0706
+0x0130: E6 1F    ; ANI 0x1F
+0x0132: 4F       ; MOV C,A
+0x0133: 78       ; MOV A,B
+0x0134: E6 1F    ; ANI 0x1F
+0x0136: B9       ; CMP C
+0x0137: C9       ; RET
+0x0138: 3A 07 04 ; LDA 0x0407
+0x013B: E6 02    ; ANI 0x02
+0x013D: CA 20 00 ; JZ 0x0020
+0x0140: C3 06 00 ; JMP 0x0006
+0x0143: AF       ; XRA A
+0x0144: 32 0D 04 ; STA 0x040D
+0x0147: C3 20 00 ; JMP 0x0020
+0x014A: D5       ; PUSH D
+0x014B: 11 20 00 ; LXI D,0x0020
+0x014E: BE       ; CMP M
+0x014F: CA 5C 01 ; JZ 0x015C
+0x0152: 19       ; DAD D
+0x0153: 0D       ; DCR C
+0x0154: C2 52 01 ; JNZ 0x0152
+0x0157: 2B       ; DCX H
+0x0158: 23       ; INX H
+0x0159: 5E       ; MOV E,M
+0x015A: 23       ; INX H
+0x015B: 56       ; MOV D,M
+0x015C: EB       ; XCHG
+0x015D: D1       ; POP D
+0x015E: C9       ; RET
+0x015F: 3A 03 04 ; LDA 0x0403
+0x0162: E6 10    ; ANI 0x10
+0x0164: 4F       ; MOV C,A
+0x0165: 11 03 07 ; LXI D,0x0703
+0x0168: 3E 04    ; MVI A,0x04
+0x016A: B1       ; ORA C
+0x016B: 12       ; STAX D
+0x016C: 3E 80    ; MVI A,0x80
+0x016E: 32 04 07 ; STA 0x0704
+0x0171: 21 01 07 ; LXI H,0x0701
+0x0174: 3A 05 04 ; LDA 0x0405
+0x0177: AE       ; XRA M
+0x0178: FA A9 01 ; JM 0x01A9
+0x017B: 7E       ; MOV A,M
+0x017C: E6 01    ; ANI 0x01
+0x017E: CA 78 01 ; JZ 0x0178
+0x0181: 3A 05 04 ; LDA 0x0405
+0x0184: AE       ; XRA M
+0x0185: FA A9 01 ; JM 0x01A9
+0x0188: 3E 06    ; MVI A,0x06
+0x018A: B1       ; ORA C
+0x018B: 12       ; STAX D
+0x018C: 7E       ; MOV A,M
+0x018D: 32 0F 04 ; STA 0x040F
+0x0190: 2B       ; DCX H
+0x0191: 46       ; MOV B,M
+0x0192: 23       ; INX H
+0x0193: 3E 02    ; MVI A,0x02
+0x0195: B1       ; ORA C
+0x0196: 12       ; STAX D
+0x0197: 7E       ; MOV A,M
+0x0198: E6 01    ; ANI 0x01
+0x019A: C2 9B 01 ; JNZ 0x019B
+0x019D: 3E 06    ; MVI A,0x06
+0x019F: B1       ; ORA C
+0x01A0: 12       ; STAX D
+0x01A1: 32 03 04 ; STA 0x0403
+0x01A4: C9       ; RET
+0x01A5: E1       ; POP H
+0x01A6: C3 17 00 ; JMP 0x0017
+0x01A9: FB       ; EI
+0x01AA: 3A 0D 04 ; LDA 0x040D
+0x01AD: B7       ; ORA A
+0x01AE: C2 32 02 ; JNZ 0x0232
+0x01B1: 21 05 06 ; LXI H,0x0605
+0x01B4: 7E       ; MOV A,M
+0x01B5: 0F       ; RRC
+0x01B6: DA B8 01 ; JC 0x01B8
+0x01B9: F3       ; DI
+0x01BA: 11 30 04 ; LXI D,0x0430
+0x01BD: 21 04 06 ; LXI H,0x0604
+0x01C0: CD 42 02 ; CALL 0x0242
+0x01C3: 3E 0F    ; MVI A,0x0F
+0x01C5: 32 00 04 ; STA 0x0400
+0x01C8: FB       ; EI
+0x01C9: 21 30 04 ; LXI H,0x0430
+0x01CC: 22 2E 04 ; SHLD 0x042E
+0x01CF: 21 E4 03 ; LXI H,0x03E4
+0x01D2: 7E       ; MOV A,M
+0x01D3: 23       ; INX H
+0x01D4: 22 1D 04 ; SHLD 0x041D
+0x01D7: FE 19    ; CPI 0x19
+0x01D9: CA 20 00 ; JZ 0x0020
+0x01DC: B7       ; ORA A
+0x01DD: F2 F0 01 ; JP 0x01F0
+0x01E0: E6 40    ; ANI 0x40
+0x01E2: B1       ; ORA C
+0x01E3: 4F       ; MOV C,A
+0x01E4: 2A 2E 04 ; LHLD 0x042E
+0x01E7: 7E       ; MOV A,M
+0x01E8: 23       ; INX H
+0x01E9: 22 2E 04 ; SHLD 0x042E
+0x01EC: 47       ; MOV B,A
+0x01ED: 3A 03 04 ; LDA 0x0403
+0x01F0: E6 10    ; ANI 0x10
+0x01F2: 4F       ; MOV C,A
+0x01F3: 11 03 07 ; LXI D,0x0703
+0x01F6: 12       ; STAX D
+0x01F7: 21 02 07 ; LXI H,0x0702
+0x01FA: 70       ; MOV M,B
+0x01FB: 2B       ; DCX H
+0x01FC: 7E       ; MOV A,M
+0x01FD: 0F       ; RRC
+0x01FE: 00       ; NOP
+0x01FF: 02       ; STAX B
+0x0200: 3E 01    ; MVI A,0x01
+0x0202: B1       ; ORA C
+0x0203: 12       ; STAX D
+0x0204: 7E       ; MOV A,M
+0x0205: 0F       ; RRC
+0x0206: 0F       ; RRC
+0x0207: 0F       ; RRC
+0x0208: DA 0A 02 ; JC 0x020A
+0x020B: F3       ; DI
+0x020C: AF       ; XRA A
+0x020D: 12       ; STAX D
+0x020E: 32 03 04 ; STA 0x0403
+0x0211: 21 00 04 ; LXI H,0x0400
+0x0214: 7E       ; MOV A,M
+0x0215: 36 00    ; MVI M,0x00
+0x0217: B7       ; ORA A
+0x0218: FA 17 00 ; JM 0x0017
+0x021B: CA 2B 02 ; JZ 0x022B
+0x021E: AF       ; XRA A
+0x021F: 32 07 06 ; STA 0x0607
+0x0222: 32 0E 04 ; STA 0x040E
+0x0225: FB       ; EI
+0x0226: 2A 1D 04 ; LHLD 0x041D
+0x0229: C3 D6 01 ; JMP 0x01D6
+0x022C: 3E FF    ; MVI A,0xFF
+0x022E: 32 00 04 ; STA 0x0400
+0x0231: 21 0E 04 ; LXI H,0x040E
+0x0234: 46       ; MOV B,M
+0x0235: 7E       ; MOV A,M
+0x0236: E6 BF    ; ANI 0xBF
+0x0238: 77       ; MOV M,A
+0x0239: C3 F1 01 ; JMP 0x01F1
+0x023C: 06 05    ; MVI B,0x05
+0x023E: 7E       ; MOV A,M
+0x023F: 0F       ; RRC
+0x0240: 0F       ; RRC
+0x0241: 0F       ; RRC
+0x0242: 0F       ; RRC
+0x0243: CD 56 02 ; CALL 0x0256
+0x0246: 7E       ; MOV A,M
+0x0247: CD 56 02 ; CALL 0x0256
+0x024A: 2B       ; DCX H
+0x024B: 05       ; DCR B
+0x024C: C2 44 02 ; JNZ 0x0244
+0x024F: C9       ; RET
+0x0250: 4F       ; MOV C,A
+0x0251: 3A 05 06 ; LDA 0x0605
+0x0254: E6 04    ; ANI 0x04
+0x0256: FE 04    ; CPI 0x04
+0x0258: 79       ; MOV A,C
+0x0259: CA 63 02 ; JZ 0x0263
+0x025C: 2F       ; CMA
+0x025D: E6 0F    ; ANI 0x0F
+0x025F: E5       ; PUSH H
+0x0260: 21 D4 03 ; LXI H,0x03D4
+0x0263: 85       ; ADD L
+0x0264: 6F       ; MOV L,A
+0x0265: 7E       ; MOV A,M
+0x0266: 12       ; STAX D
+0x0267: 13       ; INX D
+0x0268: E1       ; POP H
+0x0269: C9       ; RET
+0x026A: 21 90 03 ; LXI H,0x0390
+0x026D: 78       ; MOV A,B
+0x026E: E6 1F    ; ANI 0x1F
+0x0270: BE       ; CMP M
+0x0271: C2 20 00 ; JNZ 0x0020
+0x0274: 21 07 04 ; LXI H,0x0407
+0x0277: 7E       ; MOV A,M
+0x0278: E6 30    ; ANI 0x30
+0x027A: CA 17 00 ; JZ 0x0017
+0x027D: 0F       ; RRC
+0x027E: 0F       ; RRC
+0x027F: 0F       ; RRC
+0x0280: 77       ; MOV M,A
+0x0281: C3 20 00 ; JMP 0x0020
+0x0284: 3A 07 04 ; LDA 0x0407
+0x0287: E6 02    ; ANI 0x02
+0x0289: CA 20 00 ; JZ 0x0020
+0x028C: 21 07 06 ; LXI H,0x0607
+0x028F: 77       ; MOV M,A
+0x0290: 2B       ; DCX H
+0x0291: 3A C8 03 ; LDA 0x03C8
+0x0294: C3 F9 02 ; JMP 0x02F9
+0x0297: AF       ; XRA A
+0x0298: 32 05 04 ; STA 0x0405
+0x029B: 32 02 07 ; STA 0x0702
+0x029E: F3       ; DI
+0x029F: CD 63 01 ; CALL 0x0163
+0x02A2: 78       ; MOV A,B
+0x02A3: E6 70    ; ANI 0x70
+0x02A5: FE 30    ; CPI 0x30
+0x02A7: C2 05 03 ; JNZ 0x0305
+0x02AA: 21 1F 04 ; LXI H,0x041F
+0x02AD: 7E       ; MOV A,M
+0x02AE: FE 0A    ; CPI 0x0A
+0x02B0: D2 BE 02 ; JNC 0x02BE
+0x02B3: 34       ; INR M
+0x02B4: C6 20    ; ADI 0x20
+0x02B6: 6F       ; MOV L,A
+0x02B7: 70       ; MOV M,B
+0x02B8: 3A 0F 04 ; LDA 0x040F
+0x02BB: E6 C0    ; ANI 0xC0
+0x02BD: FE 40    ; CPI 0x40
+0x02BF: C2 A5 02 ; JNZ 0x02A5
+0x02C2: 21 1F 04 ; LXI H,0x041F
+0x02C5: 4E       ; MOV C,M
+0x02C6: 7E       ; MOV A,M
+0x02C7: B7       ; ORA A
+
+0x02C8: CA 17 00 ; JZ 0x0017
+0x02CB: 36 00    ; MVI M,0x00
+0x02CD: C5       ; PUSH B
+0x02CE: CD 11 03 ; CALL 0x0311
+0x02D1: C1       ; POP B
+0x02D2: 20       ; DB 0x20 (Unknown Opcode)
+0x02D3: 00       ; NOP
+0x02D4: 05       ; DCR B
+0x02D5: 23       ; INX H
+0x02D6: 7E       ; MOV A,M
+0x02D7: E6 0F    ; ANI 0x0F
+0x02D9: 47       ; MOV B,A
+0x02DA: 0D       ; DCR C
+0x02DB: FA F3 02 ; JM 0x02F3
+0x02DE: 23       ; INX H
+0x02DF: 7E       ; MOV A,M
+0x02E0: E6 0F    ; ANI 0x0F
+0x02E2: 07       ; RLC
+0x02E3: 07       ; RLC
+0x02E4: 07       ; RLC
+0x02E5: 07       ; RLC
+0x02E6: B0       ; ORA B
+0x02E7: 0D       ; DCR C
+0x02E8: 12       ; STAX D
+0x02E9: 13       ; INX D
+0x02EA: 02       ; STAX B
+0x02EB: 21 06 05 ; LXI H,0x0506
+0x02EE: 3A C4 03 ; LDA 0x03C4
+0x02F1: 47       ; MOV B,A
+0x02F2: EE 03    ; XRI 0x03
+0x02F4: 77       ; MOV M,A
+0x02F5: E5       ; PUSH H
+0x02F6: E5       ; PUSH H
+0x02F7: E1       ; POP H
+0x02F8: E1       ; POP H
+0x02F9: 70       ; MOV M,B
+0x02FA: C3 17 00 ; JMP 0x0017
+0x02FD: 78       ; MOV A,B
+0x02FE: E6 7F    ; ANI 0x7F
+0x0300: 0E 03    ; MVI C,0x03
+0x0302: 21 F5 03 ; LXI H,0x03F5
+0x0305: CD 4E 01 ; CALL 0x014E
+0x0308: E9       ; PCHL
+0x0309: 3A 05 05 ; LDA 0x0505
+0x030C: E6 08    ; ANI 0x08
+0x030E: FE 08    ; CPI 0x08
+0x0310: C0       ; RNZ
+0x0311: E5       ; PUSH H
+0x0312: 23       ; INX H
+0x0313: 7E       ; MOV A,M
+0x0314: 2F       ; CMA
+0x0315: 77       ; MOV M,A
+0x0316: 0D       ; DCR C
+0x0317: C2 1A 03 ; JNZ 0x031A
+0x031A: E1       ; POP H
+0x031B: C9       ; RET
+0x031C: 3A 0C 04 ; LDA 0x040C
+0x031F: B7       ; ORA A
+0x0320: CA 17 00 ; JZ 0x0017
+0x0323: 78       ; MOV A,B
+0x0324: FE 70    ; CPI 0x70
+0x0326: CA 6D 03 ; JZ 0x036D
+0x0329: 32 01 04 ; STA 0x0401
+0x032C: E6 07    ; ANI 0x07
+0x032E: 4F       ; MOV C,A
+0x032F: 78       ; MOV A,B
+0x0330: E6 08    ; ANI 0x08
+0x0332: 3A 07 04 ; LDA 0x0407
+0x0335: CA 42 03 ; JZ 0x0342
+0x0338: EE 01    ; XRI 0x01
+0x033A: E6 01    ; ANI 0x01
+0x033C: 0F       ; RRC
+0x033D: 0C       ; INR C
+0x033E: 07       ; RLC
+0x033F: 0C       ; INR C
+0x0340: C2 46 03 ; JNZ 0x0346
+0x0343: 32 0B 04 ; STA 0x040B
+0x0346: 21 07 04 ; LXI H,0x0407
+0x0349: 7E       ; MOV A,M
+0x034A: F6 08    ; ORI 0x08
+0x034C: 77       ; MOV M,A
+0x034D: 21 04 07 ; LXI H,0x0704
+0x0350: 36 00    ; MVI M,0x00
+0x0352: 21 02 07 ; LXI H,0x0702
+0x0355: 3A 0B 04 ; LDA 0x040B
+0x0358: 77       ; MOV M,A
+0x0359: 23       ; INX H
+0x035A: 36 00    ; MVI M,0x00
+0x035C: 2E 07    ; MVI L,0x07
+0x035E: 3A 07 04 ; LDA 0x0407
+0x0361: 77       ; MOV M,A
+0x0362: C3 1F 00 ; JMP 0x001F
+0x0365: AF       ; XRA A
+0x0366: 32 01 04 ; STA 0x0401
+0x0369: 21 07 04 ; LXI H,0x0407
+0x036C: 7E       ; MOV A,M
+0x036D: E6 F7    ; ANI 0xF7
+0x036F: 77       ; MOV M,A
+0x0370: C3 17 00 ; JMP 0x0017
+0x0373: 3A 07 04 ; LDA 0x0407
+0x0376: E6 02    ; ANI 0x02
+0x0378: CA 17 00 ; JZ 0x0017
+0x037B: 78       ; MOV A,B
+0x037C: B2       ; ORA D
+0x037D: 0C       ; INR C
+0x037E: 04       ; INR B
+0x037F: C3 20 00 ; JMP 0x0020
+0x0382: 00       ; NOP
+0x0383: 02       ; STAX B
+0x0384: 05       ; DCR B
+0x0385: 04       ; INR B
+0x0386: 3C       ; INR A
+0x0387: 01 14 06 ; LXI B,0x0614
+0x038A: 00       ; NOP
+0x038B: 15       ; DCR D
+0x038C: 6D       ; MOV L,L
+0x038D: 03       ; INX B
+0x038E: 18       ; DB 0x18 (Unknown Opcode)
+0x038F: 48       ; MOV C,B
+0x0390: 01 19 47 ; LXI B,0x4719
+0x0393: 01 08 8A ; LXI B,0x8A08
+0x0396: 02       ; STAX B
+0x0397: 20       ; DB 0x20 (Unknown Opcode)
+0x0398: 00       ; NOP
+0x0399: 01 40 20 ; LXI B,0x2040
+0x039C: 01 05 7B ; LXI B,0x7B05
+0x039F: 03       ; INX B
+0x03A0: 60       ; MOV H,B
+0x03A1: 24       ; INR H
+0x03A2: 03       ; INX B
+0x03A3: 17       ; RAL
+0x03A4: 00       ; NOP
+0x03A5: 0B       ; DCX B
+0x03A6: 1F       ; RAR
+0x03A7: 04       ; INR B
+0x03A8: 0A       ; LDAX B
+0x03A9: 00       ; NOP
+0x03AA: 20       ; DB 0x20 (Unknown Opcode)
+0x03AB: 00       ; NOP
+0x03AC: 20       ; DB 0x20 (Unknown Opcode)
+0x03AD: 00       ; NOP
+0x03AE: 20       ; DB 0x20 (Unknown Opcode)
+0x03AF: 00       ; NOP
+0x03B0: 20       ; DB 0x20 (Unknown Opcode)
+0x03B1: 00       ; NOP
+0x03B2: 00       ; NOP
+0x03B3: 01 06 05 ; LXI B,0x0506
+0x03B6: 06 02    ; MVI B,0x02
+0x03B8: 06 06    ; MVI B,0x06
+0x03BA: 20       ; DB 0x20 (Unknown Opcode)
+0x03BB: 00       ; NOP
+0x03BC: 06 02    ; MVI B,0x02
+0x03BE: 20       ; DB 0x20 (Unknown Opcode)
+0x03BF: 00       ; NOP
+0x03C0: 00       DB '.' (0x00)
+0x03C1: 80       DB '.' (0x80)
+0x03C2: 20       DB ' ' (0x20)
+0x03C3: 00       DB '.' (0x00)
+0x03C4: 20       DB ' ' (0x20)
+0x03C5: 00       DB '.' (0x00)
+0x03C6: 30       DB '0' (0x30)
+0x03C7: 31       DB '1' (0x31)
+0x03C8: 32       DB '2' (0x32)
+0x03C9: 33       DB '3' (0x33)
+0x03CA: 34       DB '4' (0x34)
+0x03CB: 35       DB '5' (0x35)
+0x03CC: 36       DB '6' (0x36)
+0x03CD: 37       DB '7' (0x37)
+0x03CE: 38       DB '8' (0x38)
+0x03CF: 39       DB '9' (0x39)
+0x03D0: 2B       DB '+' (0x2B)
+0x03D1: 2D       DB '-' (0x2D)
+0x03D2: 2E       DB '.' (0x2E)
+0x03D3: 2C       DB ',' (0x2C)
+0x03D4: 45       DB 'E' (0x45)
+0x03D5: 20       DB ' ' (0x20)
+0x03D6: 80       DB '.' (0x80)
+0x03D7: 80       DB '.' (0x80)
+0x03D8: 80       DB '.' (0x80)
+0x03D9: 80       DB '.' (0x80)
+0x03DA: 80       DB '.' (0x80)
+0x03DB: 80       DB '.' (0x80)
+0x03DC: 80       DB '.' (0x80)
+0x03DD: 80       DB '.' (0x80)
+0x03DE: 80       DB '.' (0x80)
+0x03DF: 80       DB '.' (0x80)
+0x03E0: 0D       DB '.' (0x0D)
+0x03E1: 0A       DB '.' (0x0A)
+0x03E2: 20       DB ' ' (0x20)
+0x03E3: 00       DB '.' (0x00)
+0x03E4: 20       DB ' ' (0x20)
+0x03E5: 00       DB '.' (0x00)
+0x03E6: 19       DB '.' (0x19)
+0x03E7: 0D       DB '.' (0x0D)
+0x03E8: C8       DB '.' (0xC8)
+0x03E9: 02       DB '.' (0x02)
+0x03EA: 0A       DB '.' (0x0A)
+0x03EB: C8       DB '.' (0xC8)
+0x03EC: 02       DB '.' (0x02)
+0x03ED: 2C       DB ',' (0x2C)
+0x03EE: C8       DB '.' (0xC8)
+0x03EF: 02       DB '.' (0x02)
+0x03F0: A5       DB '.' (0xA5)
+0x03F1: 02       DB '.' (0x02)
