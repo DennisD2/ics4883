@@ -37,18 +37,12 @@ L_001F:
         CALL    00A1h           ; CD A1 00 -> Ruft Subroutine an Adresse 00A1h auf
         LDA     0706h           ; 3A 06 07 -> Lädt den Status aus dem Talker-Register 0706h
 
-RLC     RLC                     ; 07       -> Akkumulatorinhalt nach links rotieren
+        RLC                     ; 07       -> Akkumulatorinhalt nach links rotieren
         JMP     003Ch           ; C3 3C 00 -> Unbedingter Sprung zur Routine 003Ch
-    	DB 0E1h	; 0E1h, from byte 38h
-    	DB 0C3h	; 0C3h, from byte 39h
-    	DB 0CEh	; 0CEh, from byte 3ah
-    	DB 000h	; 000h, from byte 3bh
-    	DB 0DCh	; 0DCh, from byte 3ch
-    	DB 09Ch	; 09Ch, from byte 3dh
-    	DB 000h	; 000h, from byte 3eh
-    	DB 021h	; 021h, from byte 3fh
-    	DB 007h	; 007h, from byte 40h
-    	DB 004h	; 004h, from byte 41h
+        POP     H               ; E1       -> Registerpaar HL vom Stack holen (Stack aufräumen)
+        JMP     L_00CE          ; C3 CE 00 -> Sprung zur Service-Routine L_00CE
+        CC      009Ch           ; DC 9C 00 -> Bedingter Unterprogramm-Aufruf, wenn Carry-Flag = 1
+        LXI     H, 0407h        ; 21 07 04 -> Register HL mit Adresse 0407h laden
     	DB 07Eh	; 07Eh, from byte 42h
     	DB 00Fh	; 00Fh, from byte 43h
     	DB 00Fh	; 00Fh, from byte 44h
@@ -86,12 +80,9 @@ RLC     RLC                     ; 07       -> Akkumulatorinhalt nach links rotie
     	DB 0A0h	; 0A0h, from byte 64h
     	DB 0B1h	; 0B1h, from byte 65h
     	DB 077h	; 077h, from byte 66h
-    	DB 032h	; 032h, from byte 67h
-    	DB 003h	; 003h, from byte 68h
-    	DB 007h	; 007h, from byte 69h
-    	DB 0C3h	; 0C3h, from byte 6ah
-    	DB 017h	; 017h, from byte 6bh
-    	DB 000h	; 000h, from byte 6ch
+    	STA     00703h          ; Zwischenspeichern des aktuellen I/O-Status
+    	JMP     0017h           ; C3 17 00  ECHTES ENDE: Springt endlos zurück zum Schleifenstart
+
     	DB 021h	; 021h, from byte 6dh
     	DB 00Eh	; 00Eh, from byte 6eh
     	DB 004h	; 004h, from byte 6fh
