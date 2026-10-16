@@ -4,29 +4,19 @@
     CPU	8080
 	ORG	0000h
 
-	DB 031h	; 031h
-	DB 000h	; 000h, from line 1
-	DB 005h	; 005h, from line 2
-	DB 0CDh	; 0CDh, from line 3
-	DB 08Fh	; 08Fh, from line 4
-	DB 000h	; 000h, from line 5
-	DB 03Ah	; 03Ah, from line 6
-	DB 0C4h	; 0C4h, from line 7
-	DB 003h	; 003h, from line 8
-	DB 0EEh	; 0EEh, from line 9
-	DB 00Ch	; 00Ch, from line 10
-	DB 032h	; 032h, from line 11
-	DB 006h	; 006h, from line 12
-	DB 005h	; 005h, from line 13
-	DB 021h	; 021h, from line 14
-	DB 0B3h	; 0B3h, from line 15
-	DB 003h	; 003h, from line 16
-	DB 0CDh	; 0CDh, from line 17
-	DB 07Bh	; 07Bh, from line 18
-	DB 000h	; 000h, from line 19
-	DB 0C3h	; 0C3h, from line 20
-	DB 0C8h	; 0C8h, from line 21
-	DB 002h	; 002h, from line 22
+; ---------------------------------------------------------------------
+; 0000h - 0016h: Boot-Vektor & Initialisierung (23 Bytes)
+; ---------------------------------------------------------------------
+L_0000:
+    LXI     SP, 0500h       ; 31 00 05 -> Stack-Pointer setzen
+    CALL    008Fh           ; CD 8F 00 -> Erste Hardware-Subroutine aufrufen
+    LDA     03C4h           ; 3A C4 03 -> Konfigurationswert aus dem ROM laden
+    XRI     0Ch             ; EE 0C    -> Maskierung (XOR) für Initialisierung
+    STA     0506h           ; 32 06 05 -> Im System-SRAM wegsichern
+    LXI     H, 03B3h        ; 21 B3 03 -> Zeiger auf ID-String "ICS 4883" laden
+    CALL    007Bh           ; CD 7B 00 -> Speicher-Kopierroutine aufrufen
+    JMP     02C8h           ; C3 C8 02 -> Sprung in die Hauptinitialisierung
+
 	DB 0F3h	; 0F3h, from line 23
 	DB 03Ah	; 03Ah, from line 24
 	DB 001h	; 001h, from line 25
