@@ -10,7 +10,7 @@ ROM dump.
 ### File ics4883_baseline.asm
 This file is created from ROM dump. Per byte, it has a line 
 "DB <bytevalue> ; <from offset>".
-It can be assembled using tools "asl" and p2bin. Result
+It can be assembled using tools "asl" and "p2bin". Result
 is a binary file.
 
 ### File ics4883.asm
