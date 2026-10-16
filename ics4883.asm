@@ -16,24 +16,22 @@ L_0000:
     LXI     H, 03B3h        ; 21 B3 03 -> Zeiger auf ID-String "ICS 4883" laden
     CALL    007Bh           ; CD 7B 00 -> Speicher-Kopierroutine aufrufen
     JMP     02C8h           ; C3 C8 02 -> Sprung in die Hauptinitialisierung
-    	DB 0F3h	; 0F3h, from byte 17h
-    	DB 03Ah	; 03Ah, from byte 18h
-    	DB 001h	; 001h, from byte 19h
-    	DB 004h	; 004h, from byte 1ah
-    	DB 0B7h	; 0B7h, from byte 1bh
-    	DB 0C2h	; 0C2h, from byte 1ch
-    	DB 055h	; 055h, from byte 1dh
-    	DB 003h	; 003h, from byte 1eh
-    	DB 03Ah	; 03Ah, from byte 1fh
-    	DB 001h	; 001h, from byte 20h
-    	DB 007h	; 007h, from byte 21h
-    	DB 0E6h	; 0E6h, from byte 22h
-    	DB 0C0h	; 0C0h, from byte 23h
-    	DB 0FEh	; 0FEh, from byte 24h
-    	DB 080h	; 080h, from byte 25h
-    	DB 0CAh	; 0CAh, from byte 26h
-    	DB 0CEh	; 0CEh, from byte 27h
-    	DB 000h	; 000h, from byte 28h
+
+    ; ------------------------------------------------------------------------------
+    ; Haupt-I/O-Abfrageschleife (Polling Loop)
+    ; ------------------------------------------------------------------------------
+L_0017:
+    DI
+    LDA     0401h           ; Status von GPIB / I/O Interface-Chip laden
+    ORA     A               ; Prüfen, ob der Status 0 ist
+    JNZ     L_0355          ; Wenn ungleich Null -> Zur Service-Routine abzweigen
+
+L_001F:
+        LDA     0701h           ; Status des Talker-Interfaces einlesen
+        ANI     0C0h            ; Die obersten zwei Bits maskieren
+        CPI     80h             ; Prüfen auf Status-Flag 80h
+        JZ      L_00CE          ; Bei Treffer -> Abzweigen zur Routine L_00CE
+
     	DB 0CDh	; 0CDh, from byte 29h
     	DB 0ADh	; 0ADh, from byte 2ah
     	DB 000h	; 000h, from byte 2bh
@@ -199,6 +197,7 @@ L_0000:
     	DB 007h	; 007h, from byte cbh
     	DB 007h	; 007h, from byte cch
     	DB 0C9h	; 0C9h, from byte cdh
+L_00CE:
     	DB 03Eh	; 03Eh, from byte ceh
     	DB 080h	; 080h, from byte cfh
     	DB 032h	; 032h, from byte d0h
@@ -846,6 +845,7 @@ L_0000:
     	DB 0F6h	; 0F6h, from byte 352h
     	DB 008h	; 008h, from byte 353h
     	DB 077h	; 077h, from byte 354h
+L_0355:
     	DB 021h	; 021h, from byte 355h
     	DB 004h	; 004h, from byte 356h
     	DB 007h	; 007h, from byte 357h
