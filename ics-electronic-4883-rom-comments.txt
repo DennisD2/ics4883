@@ -87,6 +87,7 @@
 0x009B: 0E F9    ; MVI C,0xF9
 0x009D: 21 07 04 ; LXI H,0x0407
 0x00A0: 47       ; MOV B,A
+
 0x00A1: 7E       ; MOV A,M
 0x00A2: A1       ; ANA C
 0x00A3: B0       ; ORA B
@@ -137,6 +138,7 @@
 0x00ED: E6 60    ; ANI 0x60
 0x00EF: C2 F7 00 ; JNZ 0x00F7
 0x00F2: 78       ; MOV A,B
+
 0x00F3: 21 93 03 ; LXI H,0x0393
 0x00F6: 0E 0A    ; MVI C,0x0A
 0x00F8: CD 4E 01 ; CALL 0x014E

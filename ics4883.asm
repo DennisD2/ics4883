@@ -34,7 +34,7 @@ L_001F:
 
         CALL    00ADh           ; CD AD 00 -> Ruft Subroutine an Adresse 00ADh auf
         MVI     C, 0FEh         ; 0E FE    -> Lädt Konstante 0FEh in Register C
-        CALL    00A1h           ; CD A1 00 -> Ruft Subroutine an Adresse 00A1h auf
+        CALL    L_00A1          ; CD A1 00 -> Ruft Subroutine an Adresse 00A1h auf
         LDA     0706h           ; 3A 06 07 -> Lädt den Status aus dem Talker-Register 0706h
 
         RLC                     ; 07       -> Akkumulatorinhalt nach links rotieren
@@ -63,7 +63,7 @@ L_001F:
     	ORA     C               ; B1 from byte 65h
     	MOV     M,A             ; 77 from byte 66h
     	STA     00703h          ; Zwischenspeichern des aktuellen I/O-Status
-    	JMP     0017h           ; C3 17 00  back to loop start
+    	JMP     L_0017          ; C3 17 00  back to loop start
 
 ; ------------------------------------------------------------------------------
 ; Ausgelagerter Talker-Status-Handler (Deine Zeilen 68-74)
@@ -124,6 +124,7 @@ L_00C9:
         RLC                     ; 07       -> Nochmals nach links rotieren
         RLC                     ; 07       -> Ein drittes Mal nach links rotieren
     	MVI     C, 0F9h         ; 0E F9    -> Lädt die Konstante 0F9h (mask 11111001b) direkt in Register C
+L_00A1:
         LXI     H, 0407h        ; 21 07 04 -> Richtet den HL-Zeiger auf Speicher/Register 0407h aus
         MOV     B, A            ; 47       -> Sichert das bearbeitete Byte in Register B
         MOV     A, M            ; 7E       -> Holt den aktuellen Wert aus [HL] (0407h)
@@ -170,28 +171,22 @@ L_00CE:
         LDA     0706h           ; 3A 06 07 -> Lädt aktuellen Status aus dem Talker-Register
         RLC                     ; 07       -> Akkumulator nach links rotieren (Bit-Prüfung)
         JC      0017h           ; DA 17 00 -> Wenn Carry=1, springe hart zurück zum Schleifenstart L_0017
-    	DB 078h	; 078h, from byte e1h
-    	DB 0E6h	; 0E6h, from byte e2h
-    	DB 07Fh	; 07Fh, from byte e3h
-    	DB 047h	; 047h, from byte e4h
-    	DB 0E6h	; 0E6h, from byte e5h
-    	DB 060h	; 060h, from byte e6h
-    	DB 0FEh	; 0FEh, from byte e7h
-    	DB 060h	; 060h, from byte e8h
-    	DB 0CAh	; 0CAh, from byte e9h
-    	DB 0F7h	; 0F7h, from byte eah
-    	DB 000h	; 000h, from byte ebh
-    	DB 0AFh	; 0AFh, from byte ech
-    	DB 032h	; 032h, from byte edh
-    	DB 00Ch	; 00Ch, from byte eeh
-    	DB 004h	; 004h, from byte efh
-    	DB 078h	; 078h, from byte f0h
-    	DB 0E6h	; 0E6h, from byte f1h
-    	DB 060h	; 060h, from byte f2h
-    	DB 0C2h	; 0C2h, from byte f3h
-    	DB 0F7h	; 0F7h, from byte f4h
-    	DB 000h	; 000h, from byte f5h
-    	DB 078h	; 078h, from byte f6h
+        ; ------------------------------------------------------------------------------
+        ; ASCII-Validierung & Protokoll-Verzweigung (Adresse 00E1h - 00F6h)
+        ; ------------------------------------------------------------------------------
+        MOV     A, B            ; 78       -> Holt das gesicherte Byte aus Register B in den Akkumulator
+        ANI     07Fh            ; E6 7F    -> Auf 7-Bit-ASCII maskieren
+        MOV     B,A             ; 47       -> In Register B sichern
+        ANI     060h            ; E6 60    -> Prüfe die oberen Kontrollbits des Zeichens
+        CPI     060h            ; FE 60    -> Vergleiche mit dem Kontrollwert 60h
+        JZ      00F7h           ; CA F7 00 -> Wenn gleich, springe vor zur Service-Routine 00F7h
+        XRA     A               ; AF       -> Akkumulator löschen (A = 0)
+        STA     040Ch           ; 32 0C 04 -> Schreibt die Null in das Kontrollregister 040Ch
+        MOV     A, B            ; 78       -> Holt das originale Zeichen erneut aus Register B
+        ANI     060h            ; E6 60    -> Erneute Bitmaskierung
+        JNZ     00F7h           ; C2 F7 00 -> Wenn ungleich Null, springe vor zur Service-Routine 00F7h
+        MOV     A, B            ; 78       -> Holt das Zeichen ein letztes Mal
+
     	DB 021h	; 021h, from byte f7h
     	DB 093h	; 093h, from byte f8h
     	DB 003h	; 003h, from byte f9h
