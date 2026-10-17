@@ -32,16 +32,17 @@ L_001F:
         CPI     80h             ; Prüfen auf Status-Flag 80h
         JZ      L_00CE          ; Bei Treffer -> Abzweigen zur Routine L_00CE
 
-        CALL    00ADh           ; CD AD 00 -> Ruft Subroutine an Adresse 00ADh auf
+        CALL    L_00AD          ; CD AD 00 -> Ruft Subroutine an Adresse 00ADh auf
         MVI     C, 0FEh         ; 0E FE    -> Lädt Konstante 0FEh in Register C
         CALL    L_00A1          ; CD A1 00 -> Ruft Subroutine an Adresse 00A1h auf
         LDA     0706h           ; 3A 06 07 -> Lädt den Status aus dem Talker-Register 0706h
-
         RLC                     ; 07       -> Akkumulatorinhalt nach links rotieren
-        JMP     003Ch           ; C3 3C 00 -> Unbedingter Sprung zur Routine 003Ch
+        JMP     L_003C          ; C3 3C 00 -> Unbedingter Sprung zur Routine 003Ch
         POP     H               ; E1       -> Registerpaar HL vom Stack holen (Stack aufräumen)
         JMP     L_00CE          ; C3 CE 00 -> Sprung zur Service-Routine L_00CE
-        CC      009Ch           ; DC 9C 00 -> Bedingter Unterprogramm-Aufruf, wenn Carry-Flag = 1
+
+L_003C:
+        CC      L_00C9          ; DC 9C 00 -> Bedingter Unterprogramm-Aufruf, wenn Carry-Flag = 1
         LXI     H, 0407h        ; 21 07 04 -> Register HL mit Adresse 0407h laden
     	MOV     A,M             ; 7E
     	RRC                     ; 0F
