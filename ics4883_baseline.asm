@@ -112,6 +112,7 @@
 	DB 0C3h	; 0C3h, from byte 6ah
 	DB 017h	; 017h, from byte 6bh
 	DB 000h	; 000h, from byte 6ch
+
 	DB 021h	; 021h, from byte 6dh
 	DB 00Eh	; 00Eh, from byte 6eh
 	DB 004h	; 004h, from byte 6fh

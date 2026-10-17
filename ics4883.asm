@@ -54,10 +54,11 @@ L_003C:
         LDA     0605h           ; 3A 05 06 -> Holt das Daten-Byte vom I/O-Schnittstellenregister
     	CMA                     ; 2F       -> Akkumulator invertieren (Low-Aktive Signale)
     	RRC                     ; 0F       -> Bit nach rechts rotieren
-    	JNC     0060h           ; D2 60 00 -> Wenn kein Carry, springe vor zu Adresse 0060h
+    	JNC     L_0060          ; D2 60 00 -> Wenn kein Carry, springe vor zu Adresse 0060h
     	CALL    00C7h           ; CD C7 00 -> Unterfunktion an Adresse 00C7h ausf
-        JC      006Dh           ; DA 6D 00 -> Wenn Carry=1, springe zu Adresse 006Dh
+        JC      L_006D          ; DA 6D 00 -> Wenn Carry=1, springe zu Adresse 006Dh
         STA     0607h           ; 32 07 06 -> Berechneten Zustand im RAM 0607h sichern
+L_0060:
     	LXI     H, 0403h        ; 21 03 04 -> HL-Zeiger auf I/O-Schnittstelle 0403h ausrichten
     	MOV     A,M             ; 7E from byte 63h
     	ANA     B               ; A0 from byte 64h
@@ -69,6 +70,7 @@ L_003C:
 ; ------------------------------------------------------------------------------
 ; Ausgelagerter Talker-Status-Handler (Deine Zeilen 68-74)
 ; ------------------------------------------------------------------------------
+L_006D:
         LXI     H, 040Eh        ; 21 0E 04 -> HL auf Register 040Eh (GPIB/Bus-Steuerung) ausrichten
         MOV     A, M            ; 7E       -> Status-Byte aus 040Eh in den Akkumulator laden
         RRC                     ; 0F       -> Nach rechts rotieren (Bit-Prüfung)
