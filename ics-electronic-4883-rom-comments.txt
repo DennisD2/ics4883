@@ -180,6 +180,7 @@
 0x0143: AF       ; XRA A
 0x0144: 32 0D 04 ; STA 0x040D
 0x0147: C3 20 00 ; JMP 0x0020
+
 0x014A: D5       ; PUSH D
 0x014B: 11 20 00 ; LXI D,0x0020
 0x014E: BE       ; CMP M
@@ -195,6 +196,7 @@
 0x015C: EB       ; XCHG
 0x015D: D1       ; POP D
 0x015E: C9       ; RET
+
 0x015F: 3A 03 04 ; LDA 0x0403
 0x0162: E6 10    ; ANI 0x10
 0x0164: 4F       ; MOV C,A
