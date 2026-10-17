@@ -241,20 +241,14 @@ L_0131:
         ; Talker-Statusprüfung & Bitmaskierungs-Unterprogramm (Adresse 013Ch - 014Fh)
         ; ------------------------------------------------------------------------------
 L_013C:
-    	LDA     0407h           ; DB 03Ah	; 03Ah, from address 13ch
-    	                        ;DB 007h	; 007h, from address 13dh
-    	                        ;DB 004h	; 004h, from address 13eh
-    	ANI     02h             ;DB 0E6h	; 0E6h, from address 13fh
-    	                        ;DB 002h	; 002h, from address 140h
+    	LDA     0407h           ; 3A 07 04 from address 13ch
+    	ANI     02h             ; E6 02 from address 13fh
     	JZ      L_0017          ; CA 17 00 from address 141h
     	JMP     L_0006          ; C3 06 00 from address 144h
-    	DB 0AFh	; 0AFh, from address 147h
-    	DB 032h	; 032h, from address 148h
-    	DB 00Dh	; 00Dh, from address 149h
-    	DB 004h	; 004h, from address 14ah
-    	DB 0C3h	; 0C3h, from address 14bh
-    	DB 017h	; 017h, from address 14ch
-    	DB 000h	; 000h, from address 14dh
+    	XRA     A               ; AF from address 147h
+    	STA     040Dh           ; 32 from address 148h
+    	JMP     L_0017          ; C3 17 00
+
 L_014E:
     	DB 0D5h	; 0D5h, from address 14eh
     	DB 011h	; 011h, from address 14fh
