@@ -55,7 +55,7 @@ L_003C:
     	CMA                     ; 2F       -> Akkumulator invertieren (Low-Aktive Signale)
     	RRC                     ; 0F       -> Bit nach rechts rotieren
     	JNC     L_0060          ; D2 60 00 -> Wenn kein Carry, springe vor zu Adresse 0060h
-    	CALL    00C7h           ; CD C7 00 -> Unterfunktion an Adresse 00C7h ausf
+    	CALL    L_00C7          ; CD C7 00 -> Unterfunktion an Adresse 00C7h ausf
         JC      L_006D          ; DA 6D 00 -> Wenn Carry=1, springe zu Adresse 006Dh
         STA     0607h           ; 32 07 06 -> Berechneten Zustand im RAM 0607h sichern
 L_0060:
@@ -74,10 +74,10 @@ L_006D:
         LXI     H, 040Eh        ; 21 0E 04 -> HL auf Register 040Eh (GPIB/Bus-Steuerung) ausrichten
         MOV     A, M            ; 7E       -> Status-Byte aus 040Eh in den Akkumulator laden
         RRC                     ; 0F       -> Nach rechts rotieren (Bit-Prüfung)
-        JC      0060h           ; DA 60 00 -> Wenn Carry=1, springe vor zu Adresse 0060h
+        JC      L_0060          ; DA 60 00 -> Wenn Carry=1, springe vor zu Adresse 0060h
         MVI     M, 41h          ; 36 41    -> Schreibe den Wert 41h (ASCII 'A') nach 040Eh
         MOV     C, B            ; 48       -> Kopiere Register B nach C
-        JMP     0060h           ; C3 60 00 -> Unbedingter Sprung vor zu Adresse 0060h
+        JMP     L_0060          ; C3 60 00 -> Unbedingter Sprung vor zu Adresse 0060h
 
 ; ------------------------------------------------------------------------------
 ; 007Bh - 008Eh: Universeller, tabellengesteuerter Block-Kopierer (Data Dispatcher)
@@ -144,7 +144,7 @@ L_00AD:
         CMA                     ; 2F       -> Akkumulator invertieren (Low-Aktiv Pegel)
         ANI     02h             ; E6 02    -> Bit 1 maskieren (Prüfung eines bestimmten Bus-Signals)
         CMP     M               ; BE       -> Vergleiche das Ergebnis mit dem Wert im ROM [HL]
-        JNZ     00C5h           ; C2 C5 00 -> Wenn ungleich, springe vor zu Adresse 00C5h
+        JNZ     L_00C5          ; C2 C5 00 -> Wenn ungleich, springe vor zu Adresse 00C5h
         INX     H               ; 23       -> HL-Zeiger auf das nächste Tabellenbyte erhöhen
         LDA     0505h           ; 3A 05 05 -> weiteres I/O-Datenbyte einlesen
         CMA                     ; 2F       -> Invertieren
@@ -152,6 +152,7 @@ L_00AD:
         CMP     M               ; BE       -> Mit dem nächsten Tabellenwert im ROM vergleichen
         MVI     A, 01h          ; 3E 01    -> Lade Konstante 01h in den Akkumulator
         RZ                      ; C8       -> Bedingter Rücksprung, wenn der Vergleich gleich war (Zero-Flag = 1)
+L_00C5:
         XRA     A               ; AF       -> Akkumulator löschen (A = 0)
     	RET                     ; C9
 
@@ -170,10 +171,10 @@ L_00CE:
         STA     0405h           ; 32 05 04 -> Schreibe das Flag in das GPIB-Schnittstellenregister
         XRA     A               ; AF       -> Akkumulator löschen (A = 0)
         STA     0702h           ; 32 02 07 -> Lösche das Statusregister 0702h im Talker-Interface
-        CALL    0163h           ; CD 63 01 -> Ruft Unterfunktion an Adresse 0163h auf
+        CALL    L_0163          ; CD 63 01 -> Ruft Unterfunktion an Adresse 0163h auf
         LDA     0706h           ; 3A 06 07 -> Lädt aktuellen Status aus dem Talker-Register
         RLC                     ; 07       -> Akkumulator nach links rotieren (Bit-Prüfung)
-        JC      0017h           ; DA 17 00 -> Wenn Carry=1, springe hart zurück zum Schleifenstart L_0017
+        JC      L_0017          ; DA 17 00 -> Wenn Carry=1, springe hart zurück zum Schleifenstart L_0017
         ; ------------------------------------------------------------------------------
         ; ASCII-Validierung & Protokoll-Verzweigung (Adresse 00E1h - 00F6h)
         ; ------------------------------------------------------------------------------
@@ -182,14 +183,14 @@ L_00CE:
         MOV     B,A             ; 47       -> In Register B sichern
         ANI     060h            ; E6 60    -> Prüfe die oberen Kontrollbits des Zeichens
         CPI     060h            ; FE 60    -> Vergleiche mit dem Kontrollwert 60h
-        JZ      00F7h           ; CA F7 00 -> Wenn gleich, springe vor zur Service-Routine 00F7h
+        JZ      L_00F7          ; CA F7 00 -> Wenn gleich, springe vor zur Service-Routine 00F7h
         XRA     A               ; AF       -> Akkumulator löschen (A = 0)
         STA     040Ch           ; 32 0C 04 -> Schreibt die Null in das Kontrollregister 040Ch
         MOV     A, B            ; 78       -> Holt das originale Zeichen erneut aus Register B
         ANI     060h            ; E6 60    -> Erneute Bitmaskierung
-        JNZ     00F7h           ; C2 F7 00 -> Wenn ungleich Null, springe vor zur Service-Routine 00F7h
+        JNZ     L_00F7          ; C2 F7 00 -> Wenn ungleich Null, springe vor zur Service-Routine 00F7h
         MOV     A, B            ; 78       -> Holt das Zeichen ein letztes Mal
-
+L_00F7:
     	DB 021h	; 021h, from byte f7h
     	DB 093h	; 093h, from byte f8h
     	DB 003h	; 003h, from byte f9h
@@ -299,6 +300,7 @@ L_00CE:
     	DB 0EBh	; 0EBh, from byte 160h
     	DB 0D1h	; 0D1h, from byte 161h
     	DB 0C9h	; 0C9h, from byte 162h
+L_0163:
     	DB 03Ah	; 03Ah, from byte 163h
     	DB 003h	; 003h, from byte 164h
     	DB 004h	; 004h, from byte 165h
