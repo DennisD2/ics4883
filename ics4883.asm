@@ -93,7 +93,6 @@ L_007B:
         INX     H               ; 23       -> Zeiger auf das nächste Tabellenbyte (Zieladresse High)
         MOV     D, M            ; 56       -> Lädt die Zieladresse (oberes Byte) nach D
         INX     H               ; 23       -> Zeiger auf das erste tatsächliche Datenbyte im ROM
-
 L_0084:
         MOV     A, M            ; 7E       -> Holt das aktuelle Datenbyte aus der ROM-Tabelle
         STAX    D               ; 12       -> Schreibt es an die physische Zieladresse [DE]
