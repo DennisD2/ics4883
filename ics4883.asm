@@ -222,24 +222,18 @@ L_00F7:
         MVI     A, 04h          ; 3E 04    -> Konstante 04h in den Akkumulator laden
         JZ      0108h           ; CA 08 01 -> Wenn Zero-Flag gesetzt, springe zu Adresse 0104h
         MVI     C, 0FBh         ; 0E FB    -> Lädt die nächste Steuermaske 0FBh in Register C
-    	DB 0AFh	; 0AFh, from byte 12ah
-    	DB 0CDh	; 0CDh, from byte 12bh
-    	DB 0A1h	; 0A1h, from byte 12ch
-    	DB 000h	; 000h, from byte 12dh
-    	DB 0C3h	; 0C3h, from byte 12eh
-    	DB 017h	; 017h, from byte 12fh
-    	DB 000h	; 000h, from byte 130h
-    	DB 03Ah	; 03Ah, from byte 131h
-    	DB 006h	; 006h, from byte 132h
-    	DB 007h	; 007h, from byte 133h
-    	DB 0E6h	; 0E6h, from byte 134h
-    	DB 01Fh	; 01Fh, from byte 135h
-    	DB 04Fh	; 04Fh, from byte 136h
-    	DB 078h	; 078h, from byte 137h
-    	DB 0E6h	; 0E6h, from byte 138h
-    	DB 01Fh	; 01Fh, from byte 139h
-    	DB 0B9h	; 0B9h, from byte 13ah
-    	DB 0C9h	; 0C9h, from byte 13bh
+        XRA     A               ; AF       -> Akkumulator löschen (A = 0)
+        CALL    L_00A1          ; CD A1 00 -> Ruft die I/O-Ausgabestufe auf
+    	JMP     L_0017          ; C3 17 00  from byte 12eh
+
+    	LDA     0706h           ; 3A 06 07 -> Lädt den Status aus dem Talker-Register 0706h
+    	ANI     01Fh            ; E6 1F Bits maskieren
+        MOV     C, A            ; 4F       -> Zwischenspeichern in Register C
+    	MOV     A,B             ; 78 from byte 137h
+    	ANI     01Fh            ; E6 1F Bits maskieren
+        CMP     C               ; B9       -> Vergleiche das Ergebnis mit Register C
+        RET                     ; C9       -> Wenn gleich, Unterprogramm beenden
+
 
     	DB 03Ah	; 03Ah, from byte 13ch
     	DB 007h	; 007h, from byte 13dh
