@@ -282,6 +282,7 @@
 	DB 0C3h	; 0C3h, from address 10bh
 	DB 017h	; 017h, from address 10ch
 	DB 000h	; 000h, from address 10dh
+
 	DB 078h	; 078h, from address 10eh
 	DB 0FEh	; 0FEh, from address 10fh
 	DB 03Fh	; 03Fh, from address 110h
@@ -347,6 +348,7 @@
 	DB 0C3h	; 0C3h, from address 14bh
 	DB 017h	; 017h, from address 14ch
 	DB 000h	; 000h, from address 14dh
+
 	DB 0D5h	; 0D5h, from address 14eh
 	DB 011h	; 011h, from address 14fh
 	DB 003h	; 003h, from address 150h

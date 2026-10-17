@@ -198,11 +198,11 @@ L_00CE:
 L_00F7:
         LXI     H, 0393h        ; 21 93 03 -> HL-Zeiger auf Adresse 0393h im ROM ausrichten
         MVI     C, 0Ah          ; 0E 0A    -> Schleifenzähler C auf 10 setzen
-        CALL    014Eh           ; CD 4E 01 -> Unterprogramm an Adresse 014Eh aufrufen
+        CALL    L_014E          ; CD 4E 01 -> Unterprogramm an Adresse 014Eh aufrufen
         PCHL                    ; E9       -> Indirekter Sprung: Kopiert HL in den Program Counter!
         CALL    L_0131          ; CD 31 01 -> Unterprogramm an Adresse 0131h aufrufen
         MVI     A, 02h          ; 3E 02    -> Konstante 02h in den Akkumulator laden
-        JNZ     010Eh           ; C2 0E 01 -> Wenn ungleich Null, springe vor zu Adresse 010Eh
+        JNZ     L_010E          ; C2 0E 01 -> Wenn ungleich Null, springe vor zu Adresse 010Eh
 L_0108:
         CALL    L_009F          ; CD 9F 00 -> Unterprogramm an Adresse 009Fh aufrufen
         JMP     L_0017          ; C3 17 00 -> Unbedingter Rücksprung zum Schleifenstart L_0017
@@ -210,6 +210,7 @@ L_0108:
         ; ------------------------------------------------------------------------------
         ; GPIB-Protokollprüfung (? Abfrage) & Bus-Handshake (Adresse 010Eh - 0130h)
         ; ------------------------------------------------------------------------------
+L_010E:
         MOV     A, B            ; 78       -> Holt das aktuelle Zeichen aus Register B
         CPI     03Fh            ; FE 3F    -> Vergleiche mit ASCII '?' (GPIB Talker Query)
         JNZ     L_0017          ; C2 17 00 -> Wenn kein '?', zurück zum Schleifenstart L_0017
@@ -257,6 +258,7 @@ L_013C:
     	DB 0C3h	; 0C3h, from address 14bh
     	DB 017h	; 017h, from address 14ch
     	DB 000h	; 000h, from address 14dh
+L_014E:
     	DB 0D5h	; 0D5h, from address 14eh
     	DB 011h	; 011h, from address 14fh
     	DB 003h	; 003h, from address 150h
