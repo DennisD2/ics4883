@@ -190,30 +190,21 @@ L_00CE:
         ANI     060h            ; E6 60    -> Erneute Bitmaskierung
         JNZ     L_00F7          ; C2 F7 00 -> Wenn ungleich Null, springe vor zur Service-Routine 00F7h
         MOV     A, B            ; 78       -> Holt das Zeichen ein letztes Mal
+
+        ; ------------------------------------------------------------------------------
+        ; Indirekte Sprungsteuerung & indir. Funktionsaufrufe (Adresse 00F7h - 0010Dh)
+        ; ------------------------------------------------------------------------------
 L_00F7:
-    	DB 021h	; 021h, from byte f7h
-    	DB 093h	; 093h, from byte f8h
-    	DB 003h	; 003h, from byte f9h
-    	DB 00Eh	; 00Eh, from byte fah
-    	DB 00Ah	; 00Ah, from byte fbh
-    	DB 0CDh	; 0CDh, from byte fch
-    	DB 04Eh	; 04Eh, from byte fdh
-    	DB 001h	; 001h, from byte feh
-    	DB 0E9h	; 0E9h, from byte ffh
-    	DB 0CDh	; 0CDh, from byte 100h
-    	DB 031h	; 031h, from byte 101h
-    	DB 001h	; 001h, from byte 102h
-    	DB 03Eh	; 03Eh, from byte 103h
-    	DB 002h	; 002h, from byte 104h
-    	DB 0C2h	; 0C2h, from byte 105h
-    	DB 00Eh	; 00Eh, from byte 106h
-    	DB 001h	; 001h, from byte 107h
-    	DB 0CDh	; 0CDh, from byte 108h
-    	DB 09Fh	; 09Fh, from byte 109h
-    	DB 000h	; 000h, from byte 10ah
-    	DB 0C3h	; 0C3h, from byte 10bh
-    	DB 017h	; 017h, from byte 10ch
-    	DB 000h	; 000h, from byte 10dh
+        LXI     H, 0393h        ; 21 93 03 -> HL-Zeiger auf Adresse 0393h im ROM ausrichten
+        MVI     C, 0Ah          ; 0E 0A    -> Schleifenzähler C auf 10 setzen
+        CALL    014Eh           ; CD 4E 01 -> Unterprogramm an Adresse 014Eh aufrufen
+        PCHL                    ; E9       -> Indirekter Sprung: Kopiert HL in den Program Counter!
+        CALL    0131h           ; CD 31 01 -> Unterprogramm an Adresse 0131h aufrufen
+        MVI     A, 02h          ; 3E 02    -> Konstante 02h in den Akkumulator laden
+        JNZ     010Eh           ; C2 0E 01 -> Wenn ungleich Null, springe vor zu Adresse 010Eh
+        CALL    009Fh           ; CD 9F 00 -> Unterprogramm an Adresse 009Fh aufrufen
+        JMP     L_0017          ; C3 17 00 -> Unbedingter Rücksprung zum Schleifenstart L_0017
+
     	DB 078h	; 078h, from byte 10eh
     	DB 0FEh	; 0FEh, from byte 10fh
     	DB 03Fh	; 03Fh, from byte 110h
