@@ -205,7 +205,7 @@ L_00F7:
         CALL    009Fh           ; CD 9F 00 -> Unterprogramm an Adresse 009Fh aufrufen
         JMP     L_0017          ; C3 17 00 -> Unbedingter Rücksprung zum Schleifenstart L_0017
 
-; ------------------------------------------------------------------------------
+        ; ------------------------------------------------------------------------------
         ; GPIB-Protokollprüfung (? Abfrage) & Bus-Handshake (Adresse 010Eh - 0130h)
         ; ------------------------------------------------------------------------------
         MOV     A, B            ; 78       -> Holt das aktuelle Zeichen aus Register B
