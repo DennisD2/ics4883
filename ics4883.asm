@@ -9,12 +9,12 @@
 ; ---------------------------------------------------------------------
 L_0000:
         LXI     SP, 0500h       ; 31 00 05 -> Stack-Pointer setzen
-        CALL    008Fh           ; CD 8F 00 -> Erste Hardware-Subroutine aufrufen
+        CALL    L_008F          ; CD 8F 00 -> Erste Hardware-Subroutine aufrufen
         LDA     03C4h           ; 3A C4 03 -> Konfigurationswert aus dem ROM laden
         XRI     0Ch             ; EE 0C    -> Maskierung (XOR) für Initialisierung
         STA     0506h           ; 32 06 05 -> Im System-SRAM wegsichern
         LXI     H, 03B3h        ; 21 B3 03 -> Zeiger auf ID-String "ICS 4883" laden
-        CALL    007Bh           ; CD 7B 00 -> Speicher-Kopierroutine aufrufen
+        CALL    L_007B          ; CD 7B 00 -> Speicher-Kopierroutine aufrufen
         JMP     02C8h           ; C3 C8 02 -> Sprung in die Hauptinitialisierung
 
 ; ------------------------------------------------------------------------------
@@ -76,6 +76,7 @@ L_001F:
         MOV     C, B            ; 48       -> Kopiere Register B nach C
         JMP     0060h           ; C3 60 00 -> Unbedingter Sprung vor zu Adresse 0060h
 
+L_007B:
     	MOV     A,M             ; 7E from byte 7bh
     	ORA     A 	            ; B7 from byte 7ch
     	RZ                      ; C8 from byte 7dh
