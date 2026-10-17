@@ -9,7 +9,7 @@
 ; ---------------------------------------------------------------------
 L_0000:
         LXI     SP, 0500h       ; 31 00 05 -> Stack-Pointer setzen
-        CALL    L_008F          ; CD 8F 00 -> Erste Hardware-Subroutine aufrufen
+        CALL    L_008F          ; CD 8F 00 -> memory init for variables
         LDA     03C4h           ; 3A C4 03 -> Konfigurationswert aus dem ROM laden
         XRI     0Ch             ; EE 0C    -> Maskierung (XOR) für Initialisierung
         STA     0506h           ; 32 06 05 -> Im System-SRAM wegsichern
@@ -125,6 +125,7 @@ L_0094:
     	DB 007h	; 007h, from byte aah
     	DB 077h	; 077h, from byte abh
     	DB 0C9h	; 0C9h, from byte ach
+
     	DB 021h	; 021h, from byte adh
     	DB 091h	; 091h, from byte aeh
     	DB 003h	; 003h, from byte afh

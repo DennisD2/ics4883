@@ -94,6 +94,7 @@
 0x00A5: 26 07    ; MVI H,0x07
 0x00A7: 77       ; MOV M,A
 0x00A8: C9       ; RET
+
 0x00A9: 21 91 03 ; LXI H,0x0391
 0x00AC: 3A 05 06 ; LDA 0x0605
 0x00AF: 2F       ; CMA
@@ -109,11 +110,13 @@
 0x00C0: C8       ; RZ
 0x00C1: AF       ; XRA A
 0x00C2: C9       ; RET
+
 0x00C3: 3A 05 07 ; LDA 0x0705
 0x00C6: 07       ; RLC
 0x00C7: 07       ; RLC
 0x00C8: 07       ; RLC
 0x00C9: C9       ; RET
+
 0x00CA: 3E 80    ; MVI A,0x80
 0x00CC: 32 05 04 ; STA 0x0405
 0x00CF: AF       ; XRA A
