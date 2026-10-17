@@ -42,7 +42,7 @@ L_001F:
         JMP     L_00CE          ; C3 CE 00 -> Sprung zur Service-Routine L_00CE
 
 L_003C:
-        CC      L_00C9          ; DC 9C 00 -> Bedingter Unterprogramm-Aufruf, wenn Carry-Flag = 1
+        CC      L_009C          ; DC 9C 00 -> Bedingter Unterprogramm-Aufruf, wenn Carry-Flag = 1
         LXI     H, 0407h        ; 21 07 04 -> Register HL mit Adresse 0407h laden
     	MOV     A,M             ; 7E
     	RRC                     ; 0F
@@ -122,10 +122,11 @@ L_0094:
 ; ------------------------------------------------------------------------------
 ; Bit-Manipulation & I/O-Schnittstellen-Ausgabe (Zeile 119 bis 133)
 ; ------------------------------------------------------------------------------
-L_00C9:
+L_009C:
         RLC                     ; 07       -> Akkumulatorinhalt nach links rotieren
         RLC                     ; 07       -> Nochmals nach links rotieren
         RLC                     ; 07       -> Ein drittes Mal nach links rotieren
+L_009F:
     	MVI     C, 0F9h         ; 0E F9    -> Lädt die Konstante 0F9h (mask 11111001b) direkt in Register C
 L_00A1:
         LXI     H, 0407h        ; 21 07 04 -> Richtet den HL-Zeiger auf Speicher/Register 0407h aus
@@ -199,11 +200,11 @@ L_00F7:
         MVI     C, 0Ah          ; 0E 0A    -> Schleifenzähler C auf 10 setzen
         CALL    014Eh           ; CD 4E 01 -> Unterprogramm an Adresse 014Eh aufrufen
         PCHL                    ; E9       -> Indirekter Sprung: Kopiert HL in den Program Counter!
-        CALL    0131h           ; CD 31 01 -> Unterprogramm an Adresse 0131h aufrufen
+        CALL    L_0131          ; CD 31 01 -> Unterprogramm an Adresse 0131h aufrufen
         MVI     A, 02h          ; 3E 02    -> Konstante 02h in den Akkumulator laden
         JNZ     010Eh           ; C2 0E 01 -> Wenn ungleich Null, springe vor zu Adresse 010Eh
 L_0108:
-        CALL    009Fh           ; CD 9F 00 -> Unterprogramm an Adresse 009Fh aufrufen
+        CALL    L_009F          ; CD 9F 00 -> Unterprogramm an Adresse 009Fh aufrufen
         JMP     L_0017          ; C3 17 00 -> Unbedingter Rücksprung zum Schleifenstart L_0017
 
         ; ------------------------------------------------------------------------------
@@ -234,11 +235,15 @@ L_0131:
         CMP     C               ; B9       -> Vergleiche das Ergebnis mit Register C
         RET                     ; C9       -> Wenn gleich, Unterprogramm beenden
 
-    	DB 03Ah	; 03Ah, from address 13ch
-    	DB 007h	; 007h, from address 13dh
-    	DB 004h	; 004h, from address 13eh
-    	DB 0E6h	; 0E6h, from address 13fh
-    	DB 002h	; 002h, from address 140h
+        ; ------------------------------------------------------------------------------
+        ; Talker-Statusprüfung & Bitmaskierungs-Unterprogramm (Adresse 013Ch - 014Fh)
+        ; ------------------------------------------------------------------------------
+L_013C:
+    	LDA     0407h           ; DB 03Ah	; 03Ah, from address 13ch
+    	                        ;DB 007h	; 007h, from address 13dh
+    	                        ;DB 004h	; 004h, from address 13eh
+    	 ANI    02h             ;DB 0E6h	; 0E6h, from address 13fh
+    	                        ;DB 002h	; 002h, from address 140h
     	DB 0CAh	; 0CAh, from address 141h
     	DB 017h	; 017h, from address 142h
     	DB 000h	; 000h, from address 143h

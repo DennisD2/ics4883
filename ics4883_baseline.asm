@@ -160,9 +160,11 @@
 	DB 094h	; 094h, from address 99h
 	DB 000h	; 000h, from address 9ah
 	DB 0C9h	; 0C9h, from address 9bh
+
 	DB 007h	; 007h, from address 9ch
 	DB 007h	; 007h, from address 9dh
 	DB 007h	; 007h, from address 9eh
+
 	DB 00Eh	; 00Eh, from address 9fh
 	DB 0F9h	; 0F9h, from address a0h
 
@@ -326,6 +328,7 @@
 	DB 01Fh	; 01Fh, from address 139h
 	DB 0B9h	; 0B9h, from address 13ah
 	DB 0C9h	; 0C9h, from address 13bh
+
 	DB 03Ah	; 03Ah, from address 13ch
 	DB 007h	; 007h, from address 13dh
 	DB 004h	; 004h, from address 13eh
