@@ -205,21 +205,18 @@ L_00F7:
         CALL    009Fh           ; CD 9F 00 -> Unterprogramm an Adresse 009Fh aufrufen
         JMP     L_0017          ; C3 17 00 -> Unbedingter Rücksprung zum Schleifenstart L_0017
 
-    	DB 078h	; 078h, from byte 10eh
-    	DB 0FEh	; 0FEh, from byte 10fh
-    	DB 03Fh	; 03Fh, from byte 110h
-    	DB 0C2h	; 0C2h, from byte 111h
-    	DB 017h	; 017h, from byte 112h
-    	DB 000h	; 000h, from byte 113h
-    	DB 0AFh	; 0AFh, from byte 114h
-    	DB 032h	; 032h, from byte 115h
-    	DB 01Fh	; 01Fh, from byte 116h
-    	DB 004h	; 004h, from byte 117h
-    	DB 00Eh	; 00Eh, from byte 118h
-    	DB 0FDh	; 0FDh, from byte 119h
-    	DB 0CDh	; 0CDh, from byte 11ah
-    	DB 0A1h	; 0A1h, from byte 11bh
-    	DB 000h	; 000h, from byte 11ch
+; ------------------------------------------------------------------------------
+        ; GPIB-Protokollprüfung (? Abfrage) & Bus-Handshake (Adresse 010Eh - 0130h)
+        ; ------------------------------------------------------------------------------
+        MOV     A, B            ; 78       -> Holt das aktuelle Zeichen aus Register B
+        CPI     03Fh            ; FE 3F    -> Vergleiche mit ASCII '?' (GPIB Talker Query)
+        JNZ     L_0017          ; C2 17 00 -> Wenn kein '?', zurück zum Schleifenstart L_0017
+    	XRA     A               ; DB 0AFh	; 0AFh, from byte 114h
+    	STA     0041Fh          ; DB 032h	; 032h, from byte 115h
+    	                        ;DB 01Fh	; 01Fh, from byte 116h
+    	                        ;DB 004h	; 004h, from byte 117h
+    	MVI     C, 0FDh         ; 0E FD    -> Lädt die Ausgabemaske 0FDh in Register C
+    	CALL    L_00A1          ; CD A1 00 -> Ruft die I/O-Ausgabestufe auf (Zeichen auf den Bus senden)
     	DB 0C3h	; 0C3h, from byte 11dh
     	DB 017h	; 017h, from byte 11eh
     	DB 000h	; 000h, from byte 11fh
@@ -231,8 +228,7 @@ L_00F7:
     	DB 0CAh	; 0CAh, from byte 125h
     	DB 008h	; 008h, from byte 126h
     	DB 001h	; 001h, from byte 127h
-    	DB 00Eh	; 00Eh, from byte 128h
-    	DB 0FBh	; 0FBh, from byte 129h
+        MVI     C, 0FBh         ; 0E FB    -> Lädt die nächste Steuermaske 0FBh in Register C
     	DB 0AFh	; 0AFh, from byte 12ah
     	DB 0CDh	; 0CDh, from byte 12bh
     	DB 0A1h	; 0A1h, from byte 12ch
