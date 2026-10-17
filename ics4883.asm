@@ -76,23 +76,32 @@ L_001F:
         MOV     C, B            ; 48       -> Kopiere Register B nach C
         JMP     0060h           ; C3 60 00 -> Unbedingter Sprung vor zu Adresse 0060h
 
+; ------------------------------------------------------------------------------
+; 007Bh - 008Eh: Universeller, tabellengesteuerter Block-Kopierer (Data Dispatcher)
+; Aufgerufen während des Boot-Vektors (Zeile 18) zur Systeminitialisierung.
+; Erwartet in HL einen Zeiger auf eine ROM-Tabelle im Format:
+; [Länge C] [Ziel-Adresse DE] [Datenbyte 1] [Datenbyte 2] ...
+; Eine Länge von 00h beendet die gesamte Übertragung.
+; ------------------------------------------------------------------------------
 L_007B:
-    	MOV     A,M             ; 7E from byte 7bh
-    	ORA     A 	            ; B7 from byte 7ch
-    	RZ                      ; C8 from byte 7dh
-    	MOV     C,A             ; 4F from byte 7eh
-    	INX     H               ; 23 from byte 7fh
-    	MOV     E,M             ; 5E from byte 80h
-    	INX     H               ; 23 from byte 81h
-    	MOV     D,M             ; 56 from byte 82h
-    	INX     H               ; 23 from byte 83h
-    	MOV     A,M             ; 7E from byte 84h
-    	STAX    D               ; 12 from byte 85h
-    	INX     H               ; 23 from byte 86h
-    	INX     D               ; 13 from byte 87h
-    	DCR     C               ; 0D from byte 88h
-    	JNZ     0084h           ; C2 84 00 from byte 89h
-    	JMP     0007Bh          ; C3 7B 00  from byte 8ch
+        MOV     A, M            ; 7E       -> Lädt das erste Byte (Block-Länge) aus der Tabelle
+        ORA     A               ; B7       -> Prüft, ob die Länge Null ist
+        RZ                      ; C8       -> Wenn Null (End of Table Flag), Unterprogramm beenden
+        MOV     C, A            ; 4F       -> Speichert die Block-Länge als Schleifenzähler in C
+        INX     H               ; 23       -> Zeiger auf das nächste Tabellenbyte (Zieladresse Low)
+        MOV     E, M            ; 5E       -> Lädt die Zieladresse (unteres Byte) nach E
+        INX     H               ; 23       -> Zeiger auf das nächste Tabellenbyte (Zieladresse High)
+        MOV     D, M            ; 56       -> Lädt die Zieladresse (oberes Byte) nach D
+        INX     H               ; 23       -> Zeiger auf das erste tatsächliche Datenbyte im ROM
+
+L_0084:
+        MOV     A, M            ; 7E       -> Holt das aktuelle Datenbyte aus der ROM-Tabelle
+        STAX    D               ; 12       -> Schreibt es an die physische Zieladresse [DE]
+        INX     H               ; 23       -> Erhöhe ROM-Quellzeiger für das nächste Byte
+        INX     D               ; 13       -> Erhöhe RAM-Zielzeiger für das nächste Byte
+        DCR     C               ; 0D       -> Block-Schleifenzähler um 1 verringern
+        JNZ     L_0084          ; C2 84 00 -> Wenn Block noch nicht fertig (C > 0), nächstes Byte holen
+        JMP     L_007B          ; C3 7B 00 -> Block fertig! Zurück zum Start, um nächsten Tabelleneintrag zu lesen
 
 ; ------------------------------------------------------------------------------
 ; RAM-Initialisierung / Block-Clear Routine (Deine Zeilen 79-101)
