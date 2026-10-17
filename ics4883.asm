@@ -49,7 +49,7 @@ L_001F:
         JC      029Dh           ; DA 9D 02 -> Wenn Carry=1, springe zu Adresse 029Dh
         RRC                     ; 0F       -> Akkumulator nach rechts rotieren
         JC      01ADh           ; DA AD 01 -> Wenn Carry=1, springe zu Adresse 01ADh
-        LXI     B,01000h        ;
+        LXI     B,01000h        ; 01 00 10 -> lade 01000h in B
         LDA     0605h           ; 3A 05 06 -> Holt das Daten-Byte vom I/O-Schnittstellenregister
     	CMA                     ; 2F       -> Akkumulator invertieren (Low-Aktive Signale)
     	RRC                     ; 0F       -> Bit nach rechts rotieren
@@ -65,48 +65,33 @@ L_001F:
     	STA     00703h          ; Zwischenspeichern des aktuellen I/O-Status
     	JMP     0017h           ; C3 17 00  back to loop start
 
-    	DB 021h	; 021h, from byte 6dh
-    	DB 00Eh	; 00Eh, from byte 6eh
-    	DB 004h	; 004h, from byte 6fh
-    	DB 07Eh	; 07Eh, from byte 70h
-    	DB 00Fh	; 00Fh, from byte 71h
-    	DB 0DAh	; 0DAh, from byte 72h
-    	DB 060h	; 060h, from byte 73h
-    	DB 000h	; 000h, from byte 74h
-    	DB 036h	; 036h, from byte 75h
-    	DB 041h	; 041h, from byte 76h
-    	DB 048h	; 048h, from byte 77h
-    	DB 0C3h	; 0C3h, from byte 78h
-    	DB 060h	; 060h, from byte 79h
-    	DB 000h	; 000h, from byte 7ah
-    	DB 07Eh	; 07Eh, from byte 7bh
-    	DB 0B7h	; 0B7h, from byte 7ch
-    	DB 0C8h	; 0C8h, from byte 7dh
-    	DB 04Fh	; 04Fh, from byte 7eh
-    	DB 023h	; 023h, from byte 7fh
-    	DB 05Eh	; 05Eh, from byte 80h
-    	DB 023h	; 023h, from byte 81h
-    	DB 056h	; 056h, from byte 82h
-    	DB 023h	; 023h, from byte 83h
-    	DB 07Eh	; 07Eh, from byte 84h
-    	DB 012h	; 012h, from byte 85h
-    	DB 023h	; 023h, from byte 86h
-    	DB 013h	; 013h, from byte 87h
-    	DB 00Dh	; 00Dh, from byte 88h
-    	DB 0C2h	; 0C2h, from byte 89h
-    	DB 084h	; 084h, from byte 8ah
-    	DB 000h	; 000h, from byte 8bh
-    	DB 0C3h	; 0C3h, from byte 8ch
-    	DB 07Bh	; 07Bh, from byte 8dh
-    	DB 000h	; 000h, from byte 8eh
-    	DB 00Eh	; 00Eh, from byte 8fh
-    	DB 040h	; 040h, from byte 90h
-    	DB 021h	; 021h, from byte 91h
-    	DB 000h	; 000h, from byte 92h
-    	DB 004h	; 004h, from byte 93h
-    	DB 036h	; 036h, from byte 94h
-    	DB 000h	; 000h, from byte 95h
-    	DB 023h	; 023h, from byte 96h
+    	LXI     H,040Eh         ; 21 0E 04 from byte 6dh
+    	MOV     A,M             ; 7E from byte 70h
+    	RRC                     ; 0F from byte 71h
+    	JC      0060h           ; DA 60 00 from byte 72h
+    	MVI     M,041h          ; 36 41 from byte 75h
+    	MOV     C,B             ; 48 from byte 77h
+    	JMP     0060h           ; C3 60 00 from byte 78h
+    	MOV     A,M             ; 7E from byte 7bh
+    	ORA     A 	            ; B7 from byte 7ch
+    	RZ                      ; C8 from byte 7dh
+    	MOV     C,A             ; 4F from byte 7eh
+    	INX     H               ; 23 from byte 7fh
+    	MOV     E,M             ; 5E from byte 80h
+    	INX     H               ; 23 from byte 81h
+    	MOV     D,M             ; 56 from byte 82h
+    	INX     H               ; 23 from byte 83h
+    	MOV     A,M             ; 7E from byte 84h
+    	STAX    D               ; 12 from byte 85h
+    	INX     H               ; 23 from byte 86h
+    	INX     D               ; 13 from byte 87h
+    	DCR     C               ; 0D from byte 88h
+    	JNZ     0084h           ; C2 84 00 from byte 89h
+    	JMP     0007Bh          ; C3 7B 00  from byte 8ch
+    	MVI     C,040h          ; 0E 40 from byte 8fh
+    	LXI     H,0400h         ; 21 00 04 from byte 91h
+    	MVI     M,00h           ; 36 00 from byte 94h
+    	INX     H               ; 23 from byte 96h
     	DB 00Dh	; 00Dh, from byte 97h
     	DB 0C2h	; 0C2h, from byte 98h
     	DB 094h	; 094h, from byte 99h
