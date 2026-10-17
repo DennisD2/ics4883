@@ -250,27 +250,25 @@ L_013C:
     	JMP     L_0017          ; C3 17 00
 
 L_014E:
-    	DB 0D5h	; 0D5h, from address 14eh
-    	DB 011h	; 011h, from address 14fh
-    	DB 003h	; 003h, from address 150h
-    	DB 000h	; 000h, from address 151h
-    	DB 0BEh	; 0BEh, from address 152h
-    	DB 0CAh	; 0CAh, from address 153h
-    	DB 05Ch	; 05Ch, from address 154h
-    	DB 001h	; 001h, from address 155h
-    	DB 019h	; 019h, from address 156h
-    	DB 00Dh	; 00Dh, from address 157h
-    	DB 0C2h	; 0C2h, from address 158h
-    	DB 052h	; 052h, from address 159h
-    	DB 001h	; 001h, from address 15ah
-    	DB 02Bh	; 02Bh, from address 15bh
-    	DB 023h	; 023h, from address 15ch
-    	DB 05Eh	; 05Eh, from address 15dh
-    	DB 023h	; 023h, from address 15eh
-    	DB 056h	; 056h, from address 15fh
-    	DB 0EBh	; 0EBh, from address 160h
-    	DB 0D1h	; 0D1h, from address 161h
-    	DB 0C9h	; 0C9h, from address 162h
+        ; ------------------------------------------------------------------------------
+        ; Tabellen-Suchschleife & Register-Sicherung (Adresse 014Eh - 0162h)
+        ; ------------------------------------------------------------------------------
+        PUSH    D               ; D5       -> Sichert das Registerpaar DE auf dem Stack
+        LXI     D, 0003h        ; 11 03 00 -> Lädt Konstante 0003h in das Registerpaar DE
+        CMP     M               ; BE       -> Vergleiche Akkumulator mit dem Speicher [HL]
+        JZ      015Ch           ; CA 5C 01 -> Wenn gleich (Zero=1), springe vor zu Adresse 015Ch
+        DAD     D               ; 19       -> Addiere Registerpaar DE zu HL (HL = HL + DE)
+        DCR     C               ; 0D       -> Schleifenzähler C um 1 verringern
+        JNZ     0152h           ; C2 52 01 -> Wenn C noch nicht Null ist, zurück zur Schleife springe
+        DCX     H               ; 2B       -> Verringere Registerpaar HL um 1
+        INX     H               ; 23       -> Erhöhe Registerpaar HL um 1
+        MOV     E, M            ; 5E       -> Lädt das untere Byte der Zieladresse nach E
+        INX     H               ; 23       -> Erhöhe Registerpaar HL um 1
+        MOV     D, M            ; 56       -> Lädt das obere Byte der Zieladresse nach D
+        XCHG                    ; EB       -> Tausche die Registerpaare HL und DE
+        POP     D               ; D1       -> Holt das gesicherte Registerpaar DE vom Stack zurück
+        RET                     ; C9       -> Unterprogramm beenden (Rücksprung zum Aufrufer)
+
 L_0163:
     	DB 03Ah	; 03Ah, from address 163h
     	DB 003h	; 003h, from address 164h
@@ -342,6 +340,7 @@ L_0163:
     	DB 003h	; 003h, from address 1a6h
     	DB 004h	; 004h, from address 1a7h
     	DB 0C9h	; 0C9h, from address 1a8h
+
     	DB 0E1h	; 0E1h, from address 1a9h
     	DB 0C3h	; 0C3h, from address 1aah
     	DB 017h	; 017h, from address 1abh
@@ -516,6 +515,7 @@ L_01AD:
     	DB 044h	; 044h, from address 253h
     	DB 002h	; 002h, from address 254h
     	DB 0C9h	; 0C9h, from address 255h
+
     	DB 04Fh	; 04Fh, from address 256h
     	DB 03Ah	; 03Ah, from address 257h
     	DB 005h	; 005h, from address 258h
@@ -542,6 +542,7 @@ L_01AD:
     	DB 013h	; 013h, from address 26dh
     	DB 0E1h	; 0E1h, from address 26eh
     	DB 0C9h	; 0C9h, from address 26fh
+
     	DB 021h	; 021h, from address 270h
     	DB 090h	; 090h, from address 271h
     	DB 003h	; 003h, from address 272h
@@ -726,6 +727,7 @@ L_02C8:
     	DB 003h	; 003h, from address 321h
     	DB 0E1h	; 0E1h, from address 322h
     	DB 0C9h	; 0C9h, from address 323h
+
     	DB 03Ah	; 03Ah, from address 324h
     	DB 00Ch	; 00Ch, from address 325h
     	DB 004h	; 004h, from address 326h
