@@ -65,13 +65,16 @@ L_001F:
     	STA     00703h          ; Zwischenspeichern des aktuellen I/O-Status
     	JMP     0017h           ; C3 17 00  back to loop start
 
-    	LXI     H,040Eh         ; 21 0E 04 from byte 6dh
-    	MOV     A,M             ; 7E from byte 70h
-    	RRC                     ; 0F from byte 71h
-    	JC      0060h           ; DA 60 00 from byte 72h
-    	MVI     M,041h          ; 36 41 from byte 75h
-    	MOV     C,B             ; 48 from byte 77h
-    	JMP     0060h           ; C3 60 00 from byte 78h
+; ------------------------------------------------------------------------------
+; Ausgelagerter Talker-Status-Handler (Deine Zeilen 68-74)
+; ------------------------------------------------------------------------------
+        LXI     H, 040Eh        ; 21 0E 04 -> HL auf Register 040Eh (GPIB/Bus-Steuerung) ausrichten
+        MOV     A, M            ; 7E       -> Status-Byte aus 040Eh in den Akkumulator laden
+        RRC                     ; 0F       -> Nach rechts rotieren (Bit-Prüfung)
+        JC      0060h           ; DA 60 00 -> Wenn Carry=1, springe vor zu Adresse 0060h
+        MVI     M, 41h          ; 36 41    -> Schreibe den Wert 41h (ASCII 'A') nach 040Eh
+        MOV     C, B            ; 48       -> Kopiere Register B nach C
+        JMP     0060h           ; C3 60 00 -> Unbedingter Sprung vor zu Adresse 0060h
 
     	MOV     A,M             ; 7E from byte 7bh
     	ORA     A 	            ; B7 from byte 7ch
