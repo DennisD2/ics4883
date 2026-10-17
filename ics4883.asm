@@ -158,26 +158,18 @@ L_00C7:
         RLC                     ; 07       -> Ein drittes Mal nach links rotieren
     	RET                     ; C9       -> Unterprogramm beenden (Rücksprung)
 
+; ------------------------------------------------------------------------------
+; Status-Reset & Polling-Handler (Adresse 00CEh - 00E0h)
+; ------------------------------------------------------------------------------
 L_00CE:
-    	DB 03Eh	; 03Eh, from byte ceh
-    	DB 080h	; 080h, from byte cfh
-    	DB 032h	; 032h, from byte d0h
-    	DB 005h	; 005h, from byte d1h
-    	DB 004h	; 004h, from byte d2h
-    	DB 0AFh	; 0AFh, from byte d3h
-    	DB 032h	; 032h, from byte d4h
-    	DB 002h	; 002h, from byte d5h
-    	DB 007h	; 007h, from byte d6h
-    	DB 0CDh	; 0CDh, from byte d7h
-    	DB 063h	; 063h, from byte d8h
-    	DB 001h	; 001h, from byte d9h
-    	DB 03Ah	; 03Ah, from byte dah
-    	DB 006h	; 006h, from byte dbh
-    	DB 007h	; 007h, from byte dch
-    	DB 007h	; 007h, from byte ddh
-    	DB 0DAh	; 0DAh, from byte deh
-    	DB 017h	; 017h, from byte dfh
-    	DB 000h	; 000h, from byte e0h
+        MVI     A, 80h          ; 3E 80    -> Lade Status-Flag 80h in den Akkumulator
+        STA     0405h           ; 32 05 04 -> Schreibe das Flag in das GPIB-Schnittstellenregister
+        XRA     A               ; AF       -> Akkumulator löschen (A = 0)
+        STA     0702h           ; 32 02 07 -> Lösche das Statusregister 0702h im Talker-Interface
+        CALL    0163h           ; CD 63 01 -> Ruft Unterfunktion an Adresse 0163h auf
+        LDA     0706h           ; 3A 06 07 -> Lädt aktuellen Status aus dem Talker-Register
+        RLC                     ; 07       -> Akkumulator nach links rotieren (Bit-Prüfung)
+        JC      0017h           ; DA 17 00 -> Wenn Carry=1, springe hart zurück zum Schleifenstart L_0017
     	DB 078h	; 078h, from byte e1h
     	DB 0E6h	; 0E6h, from byte e2h
     	DB 07Fh	; 07Fh, from byte e3h
