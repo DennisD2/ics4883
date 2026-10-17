@@ -200,6 +200,7 @@
 	DB 0C8h	; 0C8h, from byte c4h
 	DB 0AFh	; 0AFh, from byte c5h
 	DB 0C9h	; 0C9h, from byte c6h
+
 	DB 03Ah	; 03Ah, from byte c7h
 	DB 005h	; 005h, from byte c8h
 	DB 007h	; 007h, from byte c9h
@@ -207,6 +208,7 @@
 	DB 007h	; 007h, from byte cbh
 	DB 007h	; 007h, from byte cch
 	DB 0C9h	; 0C9h, from byte cdh
+
 	DB 03Eh	; 03Eh, from byte ceh
 	DB 080h	; 080h, from byte cfh
 	DB 032h	; 032h, from byte d0h

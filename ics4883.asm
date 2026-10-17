@@ -116,57 +116,48 @@ L_0094:
         JNZ     L_0094          ; C2 94 00 -> Wenn C noch nicht Null, Schleife wiederholen
         RET                     ; C9       -> Ruecksprung zum Aufrufer (Boot-Vektor)
 
-    	DB 007h	; 007h, from byte 9ch
-    	DB 007h	; 007h, from byte 9dh
-    	DB 007h	; 007h, from byte 9eh
-    	DB 00Eh	; 00Eh, from byte 9fh
-    	DB 0F9h	; 0F9h, from byte a0h
-    	DB 021h	; 021h, from byte a1h
-    	DB 007h	; 007h, from byte a2h
-    	DB 004h	; 004h, from byte a3h
-    	DB 047h	; 047h, from byte a4h
-    	DB 07Eh	; 07Eh, from byte a5h
-    	DB 0A1h	; 0A1h, from byte a6h
-    	DB 0B0h	; 0B0h, from byte a7h
-    	DB 077h	; 077h, from byte a8h
-    	DB 026h	; 026h, from byte a9h
-    	DB 007h	; 007h, from byte aah
-    	DB 077h	; 077h, from byte abh
-    	DB 0C9h	; 0C9h, from byte ach
+; ------------------------------------------------------------------------------
+; Bit-Manipulation & I/O-Schnittstellen-Ausgabe (Zeile 119 bis 133)
+; ------------------------------------------------------------------------------
+L_00C9:
+        RLC                     ; 07       -> Akkumulatorinhalt nach links rotieren
+        RLC                     ; 07       -> Nochmals nach links rotieren
+        RLC                     ; 07       -> Ein drittes Mal nach links rotieren
+    	MVI     C, 0F9h         ; 0E F9    -> Lädt die Konstante 0F9h (mask 11111001b) direkt in Register C
+        LXI     H, 0407h        ; 21 07 04 -> Richtet den HL-Zeiger auf Speicher/Register 0407h aus
+        MOV     B, A            ; 47       -> Sichert das bearbeitete Byte in Register B
+        MOV     A, M            ; 7E       -> Holt den aktuellen Wert aus [HL] (0407h)
+        ANA     C               ; A1       -> Logisches UND mit Register C (Maskierung)
+        ORA     B               ; B0       -> Logisches ODER mit Register B (Bits zusammenführen)
+        MOV     M, A            ; 77       -> Schreibt das Ergebnis zurück nach [HL] (0407h)
+        MVI     H, 07h          ; 26 07    -> Biegt das obere Byte von HL auf 07h um (HL zeigt nun auf 0707h!)
+        MOV     M, A            ; 77       -> Feuert das Zeichen direkt auf das I/O-Register 0707h raus!
+        RET                     ; C9       -> Unterprogramm beenden (Rücksprung)
 
-    	DB 021h	; 021h, from byte adh
-    	DB 091h	; 091h, from byte aeh
-    	DB 003h	; 003h, from byte afh
-    	DB 03Ah	; 03Ah, from byte b0h
-    	DB 005h	; 005h, from byte b1h
-    	DB 006h	; 006h, from byte b2h
-    	DB 02Fh	; 02Fh, from byte b3h
-    	DB 0E6h	; 0E6h, from byte b4h
-    	DB 002h	; 002h, from byte b5h
-    	DB 0BEh	; 0BEh, from byte b6h
-    	DB 0C2h	; 0C2h, from byte b7h
-    	DB 0C5h	; 0C5h, from byte b8h
-    	DB 000h	; 000h, from byte b9h
-    	DB 023h	; 023h, from byte bah
-    	DB 03Ah	; 03Ah, from byte bbh
-    	DB 005h	; 005h, from byte bch
-    	DB 005h	; 005h, from byte bdh
-    	DB 02Fh	; 02Fh, from byte beh
-    	DB 0E6h	; 0E6h, from byte bfh
-    	DB 007h	; 007h, from byte c0h
-    	DB 0BEh	; 0BEh, from byte c1h
-    	DB 03Eh	; 03Eh, from byte c2h
-    	DB 001h	; 001h, from byte c3h
-    	DB 0C8h	; 0C8h, from byte c4h
-    	DB 0AFh	; 0AFh, from byte c5h
-    	DB 0C9h	; 0C9h, from byte c6h
-    	DB 03Ah	; 03Ah, from byte c7h
-    	DB 005h	; 005h, from byte c8h
-    	DB 007h	; 007h, from byte c9h
-    	DB 007h	; 007h, from byte cah
-    	DB 007h	; 007h, from byte cbh
-    	DB 007h	; 007h, from byte cch
-    	DB 0C9h	; 0C9h, from byte cdh
+L_00AD:
+        LXI     H, 0391h        ; 21 91 03 -> HL-Zeiger auf ROM-Tabelle/String 0391h ausrichten
+    	LDA     0605h           ; 3A 05 06 -> Holt das aktuelle I/O-Datenbyte vom Talker
+        CMA                     ; 2F       -> Akkumulator invertieren (Low-Aktiv Pegel)
+        ANI     02h             ; E6 02    -> Bit 1 maskieren (Prüfung eines bestimmten Bus-Signals)
+        CMP     M               ; BE       -> Vergleiche das Ergebnis mit dem Wert im ROM [HL]
+        JNZ     00C5h           ; C2 C5 00 -> Wenn ungleich, springe vor zu Adresse 00C5h
+        INX     H               ; 23       -> HL-Zeiger auf das nächste Tabellenbyte erhöhen
+        LDA     0505h           ; 3A 05 05 -> weiteres I/O-Datenbyte einlesen
+        CMA                     ; 2F       -> Invertieren
+        ANI     07h             ; E6 07    -> Die untersten 3 Bits maskieren
+        CMP     M               ; BE       -> Mit dem nächsten Tabellenwert im ROM vergleichen
+        MVI     A, 01h          ; 3E 01    -> Lade Konstante 01h in den Akkumulator
+        RZ                      ; C8       -> Bedingter Rücksprung, wenn der Vergleich gleich war (Zero-Flag = 1)
+        XRA     A               ; AF       -> Akkumulator löschen (A = 0)
+    	RET                     ; C9
+
+L_00C7:
+    	LDA     0705h           ; 3A 07 05 -> Statuswert aus dem SRAM-Bereich laden
+        RLC                     ; 07       -> Akkumulatorinhalt nach links rotieren
+        RLC                     ; 07       -> Nochmals nach links rotieren
+        RLC                     ; 07       -> Ein drittes Mal nach links rotieren
+    	RET                     ; C9       -> Unterprogramm beenden (Rücksprung)
+
 L_00CE:
     	DB 03Eh	; 03Eh, from byte ceh
     	DB 080h	; 080h, from byte cfh
@@ -278,6 +269,7 @@ L_00CE:
     	DB 01Fh	; 01Fh, from byte 139h
     	DB 0B9h	; 0B9h, from byte 13ah
     	DB 0C9h	; 0C9h, from byte 13bh
+
     	DB 03Ah	; 03Ah, from byte 13ch
     	DB 007h	; 007h, from byte 13dh
     	DB 004h	; 004h, from byte 13eh
