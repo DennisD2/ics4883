@@ -6,6 +6,7 @@
 	DB 0CDh	; 0CDh, from address 03h
 	DB 08Fh	; 08Fh, from address 04h
 	DB 000h	; 000h, from address 05h
+
 	DB 03Ah	; 03Ah, from address 06h
 	DB 0C4h	; 0C4h, from address 07h
 	DB 003h	; 003h, from address 08h
