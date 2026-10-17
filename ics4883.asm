@@ -217,17 +217,10 @@ L_00F7:
     	                        ;DB 004h	; 004h, from byte 117h
     	MVI     C, 0FDh         ; 0E FD    -> Lädt die Ausgabemaske 0FDh in Register C
     	CALL    L_00A1          ; CD A1 00 -> Ruft die I/O-Ausgabestufe auf (Zeichen auf den Bus senden)
-    	DB 0C3h	; 0C3h, from byte 11dh
-    	DB 017h	; 017h, from byte 11eh
-    	DB 000h	; 000h, from byte 11fh
-    	DB 0CDh	; 0CDh, from byte 120h
-    	DB 031h	; 031h, from byte 121h
-    	DB 001h	; 001h, from byte 122h
-    	DB 03Eh	; 03Eh, from byte 123h
-    	DB 004h	; 004h, from byte 124h
-    	DB 0CAh	; 0CAh, from byte 125h
-    	DB 008h	; 008h, from byte 126h
-    	DB 001h	; 001h, from byte 127h
+        JMP     L_0017          ; C3 17 00 -> Unbedingter Rücksprung zu L_0017
+        CALL    0131h           ; CD 31 01 -> Unterfunktion an Adresse 0131h aufrufen
+        MVI     A, 04h          ; 3E 04    -> Konstante 04h in den Akkumulator laden
+        JZ      0108h           ; CA 08 01 -> Wenn Zero-Flag gesetzt, springe zu Adresse 0104h
         MVI     C, 0FBh         ; 0E FB    -> Lädt die nächste Steuermaske 0FBh in Register C
     	DB 0AFh	; 0AFh, from byte 12ah
     	DB 0CDh	; 0CDh, from byte 12bh
