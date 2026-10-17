@@ -72,6 +72,7 @@ L_001F:
     	MVI     M,041h          ; 36 41 from byte 75h
     	MOV     C,B             ; 48 from byte 77h
     	JMP     0060h           ; C3 60 00 from byte 78h
+
     	MOV     A,M             ; 7E from byte 7bh
     	ORA     A 	            ; B7 from byte 7ch
     	RZ                      ; C8 from byte 7dh
@@ -92,11 +93,10 @@ L_001F:
     	LXI     H,0400h         ; 21 00 04 from byte 91h
     	MVI     M,00h           ; 36 00 from byte 94h
     	INX     H               ; 23 from byte 96h
-    	DB 00Dh	; 00Dh, from byte 97h
-    	DB 0C2h	; 0C2h, from byte 98h
-    	DB 094h	; 094h, from byte 99h
-    	DB 000h	; 000h, from byte 9ah
-    	DB 0C9h	; 0C9h, from byte 9bh
+        DCR     C               ; 0D       -> Register C um 1 verringern (Schleifenzähler)
+        JNZ     0094h           ; C2 94 00 -> Wenn C noch nicht Null ist, springe zurück zu 0094h
+        RET                     ; C9       -> Rücksprung aus dem Unterprogramm
+
     	DB 007h	; 007h, from byte 9ch
     	DB 007h	; 007h, from byte 9dh
     	DB 007h	; 007h, from byte 9eh
