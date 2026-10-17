@@ -92,13 +92,20 @@ L_001F:
     	DCR     C               ; 0D from byte 88h
     	JNZ     0084h           ; C2 84 00 from byte 89h
     	JMP     0007Bh          ; C3 7B 00  from byte 8ch
-    	MVI     C,040h          ; 0E 40 from byte 8fh
-    	LXI     H,0400h         ; 21 00 04 from byte 91h
-    	MVI     M,00h           ; 36 00 from byte 94h
-    	INX     H               ; 23 from byte 96h
-        DCR     C               ; 0D       -> Register C um 1 verringern (Schleifenzähler)
-        JNZ     0094h           ; C2 94 00 -> Wenn C noch nicht Null ist, springe zurück zu 0094h
-        RET                     ; C9       -> Rücksprung aus dem Unterprogramm
+
+; ------------------------------------------------------------------------------
+; RAM-Initialisierung / Block-Clear Routine (Deine Zeilen 79-101)
+; Aufgerufen via CALL 008Fh im Boot-Vektor
+; ------------------------------------------------------------------------------
+L_008F:
+        MVI     C, 040h         ; 0E 40    -> Lädt Schleifenzähler (64) in Register C
+        LXI     H, 0400h        ; 21 00 04 -> HL auf Startadresse 0400h ausrichten
+L_0094:
+        MVI     M, 00h          ; 36 00    -> Speicherstelle [HL] mit Null loeschen
+        INX     H               ; 23       -> HL-Zeiger auf die naechste Adresse erhoehen
+        DCR     C               ; 0D       -> Schleifenzaehler C um 1 verringern
+        JNZ     L_0094          ; C2 94 00 -> Wenn C noch nicht Null, Schleife wiederholen
+        RET                     ; C9       -> Ruecksprung zum Aufrufer (Boot-Vektor)
 
     	DB 007h	; 007h, from byte 9ch
     	DB 007h	; 007h, from byte 9dh
