@@ -15,7 +15,7 @@ L_0000:
         STA     0506h           ; 32 06 05 -> Im System-SRAM wegsichern
         LXI     H, 03B3h        ; 21 B3 03 -> Zeiger auf ID-String "ICS 4883" laden
         CALL    L_007B          ; CD 7B 00 -> Speicher-Kopierroutine aufrufen
-        JMP     02C8h           ; C3 C8 02 -> Sprung in die Hauptinitialisierung
+        JMP     L_02C8          ; C3 C8 02 -> Sprung in die Hauptinitialisierung
 
 ; ------------------------------------------------------------------------------
 ; main IO polling loop
@@ -47,9 +47,9 @@ L_003C:
     	MOV     A,M             ; 7E
     	RRC                     ; 0F
     	RRC                     ; 0F
-        JC      029Dh           ; DA 9D 02 -> Wenn Carry=1, springe zu Adresse 029Dh
+        JC      L_029D          ; DA 9D 02 -> Wenn Carry=1, springe zu Adresse 029Dh
         RRC                     ; 0F       -> Akkumulator nach rechts rotieren
-        JC      01ADh           ; DA AD 01 -> Wenn Carry=1, springe zu Adresse 01ADh
+        JC      L_01AD          ; DA AD 01 -> Wenn Carry=1, springe zu Adresse 01ADh
         LXI     B,01000h        ; 01 00 10 -> lade 01000h in B
         LDA     0605h           ; 3A 05 06 -> Holt das Daten-Byte vom I/O-Schnittstellenregister
     	CMA                     ; 2F       -> Akkumulator invertieren (Low-Aktive Signale)
@@ -371,6 +371,7 @@ L_00CE:
     	DB 0C3h	; 0C3h, from byte 1aah
     	DB 017h	; 017h, from byte 1abh
     	DB 000h	; 000h, from byte 1ach
+L_01AD:
     	DB 0FBh	; 0FBh, from byte 1adh
     	DB 03Ah	; 03Ah, from byte 1aeh
     	DB 00Dh	; 00Dh, from byte 1afh
@@ -611,6 +612,8 @@ L_00CE:
     	DB 0C3h	; 0C3h, from byte 29ah
     	DB 0F9h	; 0F9h, from byte 29bh
     	DB 002h	; 002h, from byte 29ch
+
+L_029D:
     	DB 0AFh	; 0AFh, from byte 29dh
     	DB 032h	; 032h, from byte 29eh
     	DB 005h	; 005h, from byte 29fh
@@ -654,6 +657,8 @@ L_00CE:
     	DB 0C2h	; 0C2h, from byte 2c5h
     	DB 0A5h	; 0A5h, from byte 2c6h
     	DB 002h	; 002h, from byte 2c7h
+
+L_02C8:
     	DB 021h	; 021h, from byte 2c8h
     	DB 01Fh	; 01Fh, from byte 2c9h
     	DB 004h	; 004h, from byte 2cah

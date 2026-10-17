@@ -98,6 +98,7 @@
 	DB 032h	; 032h, from byte 5dh
 	DB 007h	; 007h, from byte 5eh
 	DB 006h	; 006h, from byte 5fh
+
 	DB 021h	; 021h, from byte 60h
 	DB 003h	; 003h, from byte 61h
 	DB 004h	; 004h, from byte 62h
@@ -434,6 +435,7 @@
 	DB 0C3h	; 0C3h, from byte 1aah
 	DB 017h	; 017h, from byte 1abh
 	DB 000h	; 000h, from byte 1ach
+
 	DB 0FBh	; 0FBh, from byte 1adh
 	DB 03Ah	; 03Ah, from byte 1aeh
 	DB 00Dh	; 00Dh, from byte 1afh
@@ -674,6 +676,7 @@
 	DB 0C3h	; 0C3h, from byte 29ah
 	DB 0F9h	; 0F9h, from byte 29bh
 	DB 002h	; 002h, from byte 29ch
+
 	DB 0AFh	; 0AFh, from byte 29dh
 	DB 032h	; 032h, from byte 29eh
 	DB 005h	; 005h, from byte 29fh
@@ -717,6 +720,7 @@
 	DB 0C2h	; 0C2h, from byte 2c5h
 	DB 0A5h	; 0A5h, from byte 2c6h
 	DB 002h	; 002h, from byte 2c7h
+
 	DB 021h	; 021h, from byte 2c8h
 	DB 01Fh	; 01Fh, from byte 2c9h
 	DB 004h	; 004h, from byte 2cah
