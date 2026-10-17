@@ -202,6 +202,7 @@ L_00F7:
         CALL    0131h           ; CD 31 01 -> Unterprogramm an Adresse 0131h aufrufen
         MVI     A, 02h          ; 3E 02    -> Konstante 02h in den Akkumulator laden
         JNZ     010Eh           ; C2 0E 01 -> Wenn ungleich Null, springe vor zu Adresse 010Eh
+L_0108:
         CALL    009Fh           ; CD 9F 00 -> Unterprogramm an Adresse 009Fh aufrufen
         JMP     L_0017          ; C3 17 00 -> Unbedingter Rücksprung zum Schleifenstart L_0017
 
@@ -211,21 +212,20 @@ L_00F7:
         MOV     A, B            ; 78       -> Holt das aktuelle Zeichen aus Register B
         CPI     03Fh            ; FE 3F    -> Vergleiche mit ASCII '?' (GPIB Talker Query)
         JNZ     L_0017          ; C2 17 00 -> Wenn kein '?', zurück zum Schleifenstart L_0017
-    	XRA     A               ; DB 0AFh	; 0AFh, from byte 114h
-    	STA     0041Fh          ; DB 032h	; 032h, from byte 115h
-    	                        ;DB 01Fh	; 01Fh, from byte 116h
-    	                        ;DB 004h	; 004h, from byte 117h
+    	XRA     A               ; AF from byte 114h
+    	STA     0041Fh          ; 32 1F 04 from byte 115h
     	MVI     C, 0FDh         ; 0E FD    -> Lädt die Ausgabemaske 0FDh in Register C
     	CALL    L_00A1          ; CD A1 00 -> Ruft die I/O-Ausgabestufe auf (Zeichen auf den Bus senden)
         JMP     L_0017          ; C3 17 00 -> Unbedingter Rücksprung zu L_0017
-        CALL    0131h           ; CD 31 01 -> Unterfunktion an Adresse 0131h aufrufen
+        CALL    L_0131          ; CD 31 01 -> Unterfunktion an Adresse 0131h aufrufen
         MVI     A, 04h          ; 3E 04    -> Konstante 04h in den Akkumulator laden
-        JZ      0108h           ; CA 08 01 -> Wenn Zero-Flag gesetzt, springe zu Adresse 0104h
+        JZ      L_0108          ; CA 08 01 -> Wenn Zero-Flag gesetzt, springe zu Adresse 0104h
         MVI     C, 0FBh         ; 0E FB    -> Lädt die nächste Steuermaske 0FBh in Register C
         XRA     A               ; AF       -> Akkumulator löschen (A = 0)
         CALL    L_00A1          ; CD A1 00 -> Ruft die I/O-Ausgabestufe auf
     	JMP     L_0017          ; C3 17 00  from byte 12eh
 
+L_0131:
     	LDA     0706h           ; 3A 06 07 -> Lädt den Status aus dem Talker-Register 0706h
     	ANI     01Fh            ; E6 1F Bits maskieren
         MOV     C, A            ; 4F       -> Zwischenspeichern in Register C
@@ -233,7 +233,6 @@ L_00F7:
     	ANI     01Fh            ; E6 1F Bits maskieren
         CMP     C               ; B9       -> Vergleiche das Ergebnis mit Register C
         RET                     ; C9       -> Wenn gleich, Unterprogramm beenden
-
 
     	DB 03Ah	; 03Ah, from byte 13ch
     	DB 007h	; 007h, from byte 13dh
