@@ -4,11 +4,65 @@
         CPU	8080
         ORG	0000h
 
+SRAM_START     EQU  0400h       ; Start des internen Arbeitsspeichers
+STACK_BASE     EQU  0500h       ; Initialisierungsadresse für den Stack-Pointer
+
+; ==============================================================================
+; ROM-KONSTANTEN UND TABELLEN-ADRESSEN (038Ah - 03FFh)
+; ==============================================================================
+ROM_DATA_START   EQU  038Ah     ; Startbereich der Datentabellen im ROM
+ROM_CONST_CMP    EQU  0390h     ; Kontroll-Konstanten für den Zeichenvergleich
+ROM_TAB_DISPATCH EQU  0393h     ; Sprung- und Befehlstabelle für den Data Dispatcher
+ROM_TAB_SRAM_INI EQU  03B3h     ; Initialisierungs-Tabelle für den RAM-Puffer
+ROM_CFG_FLAGS    EQU  03C4h     ; System-Konfigurations-Flags im ROM
+ROM_CFG_LIMITS   EQU  03CEh     ; Maskierungs- und Fehler-Grenzwerte
+ROM_TAB_ASCII    EQU  03D4h     ; IEEE-488 Bus ASCII-Übersetzungstabelle ('0123...')
+ROM_PROT_LIMITS  EQU  03E4h     ; Status- und Protokoll-Grenzwerte
+ROM_STR_TERMS    EQU  03EEh     ; String-Terminatoren und Kontroll-Codes (CR/LF)
+ROM_TAB_CMD_VEC  EQU  03F5h     ; Primäre Befehls-Sprungtabelle (für CR, LF, Komma)
+
+REG_BUFFER_STS EQU  0400h       ; Puffer-Status / Aktivitäts-Flag
+REG_IO_STATE   EQU  0401h       ; Letztes empfangenes oder gesendetes E/A-Zeichen
+REG_MODE_SEL   EQU  0402h       ; Modus-Selektor (wird durch 'p'/'q' geschaltet)
+REG_SYS_STATE  EQU  0403h       ; Globaler Systemzustand (Handshake / I/O)
+REG_BCD_DATA   EQU  0404h       ; Speicher für validierte BCD-Ziffern
+REG_GPIB_CTRL  EQU  0405h       ; GPIB Kontroll-Flag (z. B. 80h für Reset/Status)
+REG_SYS_STATUS EQU  0407h       ; Zentrales Statusregister (Remote/Local, Bit 3 LEDs)
+REG_INIT_FLAG  EQU  0408h       ; Initialisierungs- und Reset-Steuerflag
+REG_CMD_LOCK   EQU  040Ch       ; Sperrregister für eingehende Bus-Befehle
+REG_BUS_STATUS EQU  040Eh       ; Bus-Zustandsregister (z. B. Talker/Listener)
+REG_EOS_FLAG   EQU  040Fh       ; End-Of-Sequence / EOI Status-Register
+REG_BUFF_PTR   EQU  041Dh       ; Letzter Tabellenzeiger / Puffer-Pointer
+REG_BUFF_IDX   EQU  041Fh       ; Index-Zähler für den Zeichenpuffer (Max 10)
+REG_ARRAY_PTR  EQU  042Eh       ; Zeiger auf das aktuelle Zeichen im indizierten Array
+RAM_ASCII_BUFF EQU  0430h       ; Startadresse für den übersetzten ASCII-Datenpuffer
+
+; Configuration RAM (0500h - 05FFh)
+RAM_HW_CONFIG1 EQU  0505h       ; Hardware-Konfigurationsbyte 1 (z. B. Pegelsteuerung)
+RAM_HW_CONFIG2 EQU  0506h       ; Hardware-Konfigurationsbyte 2 (beim Booten geladen)
+
+; ==============================================================================
+; HARDWARE-MAPPED I/O REGISTERS (Eingabe & Ausgabe)
+; ==============================================================================
+; Hardware Input Range (0600h - 06FFh)
+IO_HW_INPUT    EQU  0604h       ; Primäres Hardware-Eingangsregister (Datenstrom)
+IO_DIP_SWITCH  EQU  0605h       ; DIP-Schalter für Bus-Adresse & Modus (Hardware-Eingabe)
+IO_SRAM_FLAG1  EQU  0607h       ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung)
+
+; Hardware Output Range (0700h - 07FFh)
+IO_TALK_STATUS EQU  0701h       ; Status des Talker-Interfaces (Eingang/Ausgang)
+IO_TALK_REG02  EQU  0702h       ; Synchronisationsregister 02h für Talker-Schnittstelle
+IO_TALK_REG03  EQU  0703h       ; Synchronisationsregister 03h für Talker-Schnittstelle
+IO_TALK_CTRL   EQU  0704h       ; Kontrollregister für IEEE-488 Buschip
+IO_TALK_DATA   EQU  0705h       ; Datenpuffer-Register des Talker-Interfaces
+IO_TALK_REG06  EQU  0706h       ; Talker-Schnittstellenregister 06h (Adresse/Status)
+IO_HW_OUTPUT   EQU  0707h       ; Zentrales Hardware-Ausgangsregister (z. B. LEDs/Latch)
+
 ; ---------------------------------------------------------------------
 ; 0000h - 0016h: boot vector and initialization
 ; ---------------------------------------------------------------------
 L_0000:
-        LXI     SP, 0500h       ; 31 00 05 -> Stack-Pointer setzen
+        LXI     SP, STACK_BASE       ; 31 00 05 -> Stack-Pointer setzen
         CALL    L_008F          ; CD 8F 00 -> memory init for variables
 L_0006:
         LDA     03C4h           ; 3A C4 03 -> Konfigurationswert aus dem ROM laden
@@ -23,7 +77,7 @@ L_0006:
 ; ------------------------------------------------------------------------------
 L_0017:
         DI
-        LDA     0401h           ; Status von GPIB / I/O Interface-Chip laden
+        LDA     REG_IO_STATE           ; Status von GPIB / I/O Interface-Chip laden
         ORA     A               ; Prüfen, ob der Status 0 ist
         JNZ     L_0355          ; Wenn ungleich Null -> Zur Service-Routine abzweigen
 
@@ -109,10 +163,11 @@ L_0084:
 ; ------------------------------------------------------------------------------
 ; RAM-Initialisierung / Block-Clear Routine (Deine Zeilen 79-101)
 ; Aufgerufen via CALL 008Fh im Boot-Vektor
+; fills 64 bytes ab SRAM_START mit 0 bytes
 ; ------------------------------------------------------------------------------
 L_008F:
         MVI     C, 040h         ; 0E 40    -> Lädt Schleifenzähler (64) in Register C
-        LXI     H, 0400h        ; 21 00 04 -> HL auf Startadresse 0400h ausrichten
+        LXI     H, SRAM_START        ; 21 00 04 -> HL auf Startadresse SRAM_START ausrichten
 L_0094:
         MVI     M, 00h          ; 36 00    -> Speicherstelle [HL] mit Null loeschen
         INX     H               ; 23       -> HL-Zeiger auf die naechste Adresse erhoehen
@@ -341,7 +396,7 @@ L_01B8:
         ; ------------------------------------------------------------------------------
         ; SRAM-Puffer-Verwaltung & Bitmaskierung (Adresse 01C9h - 01F5h)
         ; ------------------------------------------------------------------------------
-        STA     0400h           ; 32 00 04 -> Akkumulator-Inhalt direkt in RAM 0400h sichern
+        STA     SRAM_START           ; 32 00 04 -> Akkumulator-Inhalt direkt in RAM SRAM_START sichern
         EI                      ; FB       -> Interrupts wieder freigeben (Enable Interrupts)
         LXI     H, 0430h        ; 21 30 04 -> HL-Zeiger auf SRAM-Adresse 0430h laden
         SHLD    042Eh           ; 22 2E 04 -> Speicherinhalt von HL nach SRAM 042Eh sichern
@@ -391,7 +446,7 @@ L_020A:
         XRA     A               ; AF       -> Akkumulator nullen
         STAX    D               ; 12
         STA     0403h           ; 32 03 04 -> Systemzustand in RAM 0403h löschen
-        LXI     H, 0400h        ; 21 00 04 -> HL auf RAM-Start 0400h setzen
+        LXI     H, SRAM_START        ; 21 00 04 -> HL auf RAM-Start SRAM_START setzen
         MOV     A, M            ; 7E
         MVI     M, 00h          ; 36 00    -> Speicherzelle mit 00h überschreiben
         ORA     A               ; B7       -> Flags aktualisieren
@@ -406,7 +461,7 @@ L_022B:
         JMP     L_01D6          ; C3 D6 01 -> Sprung zu RAM/ROM-Adresse 01D6h
 L_0232:
         MVI     A, 0FFh         ; 3E FF
-        STA     0400h           ; 32 00 04
+        STA     SRAM_START           ; 32 00 04
         LXI     H, 040Eh        ; 21 0E 04 -> HL auf Kontrollregister setzen
         MOV     B, M            ; 46
         MOV     A, M            ; 7E
@@ -510,7 +565,7 @@ L_029D:
 ; ------------------------------------------------------------------------------
 ; Hauptinitialisierung ab Label L_02C8 (Adresse 02C8h bis 02F8h)
 ; Nibble-Packing Routine: Der Code ab Adresse 02DBh ist ein hocheffizienter Packer. Er nimmt zwei aufeinanderfolgende Bytes, isoliert jeweils deren untere 4 Bits (ANI 00Fh), schiebt das zweite Nibble per Rotation nach oben (RLC) und fügt sie mit ORA B zu einem einzigen, kompakten Daten-Byte zusammen.
-; SRAM-Transfer: Diese gepackten Daten werden sequenziell direkt in den System-SRAM ab Adresse 0500h übertragen (STAX D).
+; SRAM-Transfer: Diese gepackten Daten werden sequenziell direkt in den System-SRAM ab Adresse STACK_BASE übertragen (STAX D).
 ; ------------------------------------------------------------------------------
 L_02C8:
         LXI   H, 041Fh    ; 21 1F 04 -> HL auf RAM-Adresse 041Fh (Index-Zähler) setzen
@@ -522,7 +577,7 @@ L_02C8:
         PUSH  B           ; C5       -> Registerpaar BC auf dem Stack sichern
         CALL  0311h       ; CD 11 03 -> Unterprogramm an Adresse 0311h aufrufen (Puffer-Check)
         POP   B           ; C1       -> Registerpaar BC wieder herstellen
-        LXI   D, 0500h    ; 11 00 05 -> DE auf Zieladresse im SRAM 0500h ausrichten
+        LXI   D, STACK_BASE    ; 11 00 05 -> DE auf Zieladresse im SRAM STACK_BASE ausrichten
         INX   H           ; 23       -> HL-Zeiger erhöhen
         MOV   A, M        ; 7E       -> Byte aus dem Quellpuffer laden
         ANI   00Fh        ; E6 0F    -> Die unteren 4 Bits (unteres Nibble) maskieren
@@ -591,7 +646,7 @@ L_0324:
         MOV   A, B        ; 78       -> Holt den Wert aus Register B zurück nach A
         CPI   070h        ; FE 70    -> Prüfen, ob das Zeichen im Akkumulator 70h entspricht
     	JZ    036Dh       ; CA 6D 03 -> Wenn ja, Sprung nach vorne zu Adresse 036Dh
-        STA   0401h       ; 32 01 04 -> Speichert den Akkumulator in RAM-Adresse 0401h
+        STA   REG_IO_STATE       ; 32 01 04 -> Speichert den Akkumulator in RAM-Adresse REG_IO_STATE
         ANI   007h        ; E6 07    -> Maskiert die unteren 3 Bits (Bit 0-2) des Akkumulators
         MOV   C, A        ; 4F       -> Das maskierte Ergebnis nach Register C retten
         MOV   A, B        ; 78       -> Holt das originale Zeichen aus Register B zurück nach A
@@ -627,7 +682,7 @@ L_0355:
 ; Behandlungsroutinen für Kommandos (Adresse 036Dh bis 0389h)
 ; ------------------------------------------------------------------------------
         XRA   A           ; AF       -> Akkumulator nullen (A = 00h)
-        STA   0401h       ; 32 01 04 -> Schreibt die Null in die RAM-Zelle 0401h
+        STA   REG_IO_STATE       ; 32 01 04 -> Schreibt die Null in die RAM-Zelle REG_IO_STATE
         LXI   H, 0407h    ; 21 07 04 -> HL auf Kontrollregister 0407h ausrichten
         MOV   A, M        ; 7E       -> Aktuellen Statuswert laden
         ANI   0F7h        ; E6 F7    -> Bit 3 gezielt löschen (Maske 1111 0111)
