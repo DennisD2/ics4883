@@ -590,9 +590,7 @@ L_0324:
         JZ    L_0017      ; CA 17 00 -> Wenn der Wert Null ist, Sprung zurück zum Haupt-Polling L_0017
         MOV   A, B        ; 78       -> Holt den Wert aus Register B zurück nach A
         CPI   070h        ; FE 70    -> Prüfen, ob das Zeichen im Akkumulator 70h entspricht
-    	DB 0CAh	; 0CAh, from address 32eh
-    	DB 06Dh	; 06Dh, from address 32fh
-    	DB 003h	; 003h, from address 330h
+    	JZ    036Dh       ; CA 6D 03 -> Wenn ja, Sprung nach vorne zu Adresse 036Dh
     	DB 032h	; 032h, from address 331h
     	DB 001h	; 001h, from address 332h
     	DB 004h	; 004h, from address 333h
