@@ -393,15 +393,15 @@ L_01B8:
         JC      L_01B8          ; DA B8 01 -> Wenn Carry=1, springe zu Adresse 01B8h
         DI                      ; F3       -> Interrupts sperren (Disable Interrupts)
         LXI     D, RAM_ASCII_BUFF        ; 11 30 04 -> Registerpaar DE mit SRAM-Adresse 0430h laden
-        LXI     H, IO_HW_INPUT  ; 21 04 06 -> HL-Zeiger auf I/O-Schnittstellenregister 0604h ausrichten
-    	CALL    L_0242          ; CD 42 02 -> Ruft Unterfunktion an Adresse 0242h auf
+        LXI     H, IO_HW_INPUT  ; 21 04 06 -> HL-Zeiger auf I/O-Schnittstellenregister 0604h ausrichten DD: h := 0x0604 = start address of bytes read from input (5 bytes containing 10 nibbles)
+    	CALL    L_0242          ; CD 42 02 -> Ruft Unterfunktion an Adresse 0242h auf DD: konvertiert 5 inpt bytes
     	MVI     A, 0Fh          ; 3E 0F    -> Lädt die Konstante 0Fh in den Akkumulator
         ; ------------------------------------------------------------------------------
         ; SRAM-Puffer-Verwaltung & Bitmaskierung (Adresse 01C9h - 01F5h)
         ; ------------------------------------------------------------------------------
         STA     SRAM_START      ; 32 00 04 -> Akkumulator-Inhalt direkt in RAM SRAM_START sichern
         EI                      ; FB       -> Interrupts wieder freigeben (Enable Interrupts)
-        LXI     H, RAM_ASCII_BUFF        ; 21 30 04 -> HL-Zeiger auf SRAM-Adresse 0430h laden
+        LXI     H, RAM_ASCII_BUFF        ; 21 30 04 -> HL-Zeiger auf SRAM-Adresse 0430h laden DD: h := address of created 10 bytes
         SHLD    REG_ARRAY_PTR   ; 22 2E 04 -> Speicherinhalt von HL nach SRAM 042Eh sichern
         LXI     H, ROM_PROT_LIMITS        ; 21 E4 03 -> HL-Zeiger auf Übersetzungstabelle im ROM ausrichten
 L_01D6:
@@ -471,19 +471,30 @@ L_0232:
         ANI     0BFh            ; E6 BF    -> Bit 6 löschen (Maskierung)
         MOV     M, A            ; 77
         JMP     L_01F1          ; C3 F1 01 -> Sprung zu RAM/ROM-Adresse 01F1h
+
+; convert all 5 bytes from input IO connector
+	0242 06 05   	mvi b, 05           ;
+
+; convert bytes from input IO connector
+; d is index for created output string
+; h,l points to start address to convert
+; b is num of bytes to convert (5)
+: h,l point to memory location for input byte (is decremented in a loop)
+; it looks that two 4-bit values are in 1 byte as HI/LO nibble
+convert_5input_bytes:
 L_0242:
-        MVI     B, 05h          ; 06 05    -> Schleifenzähler (5) in Register B laden
+        MVI     B, 05h          ; 06 05    -> Schleifenzähler (5) in Register B laden DD: num of bytes to convert
 L_0244:
         MOV     A, M            ; 7E       -> Byte über HL-Zeiger (0604h) laden
-        RRC                     ; 0F       -> Bit-Verschiebungen / Rotation
+        RRC                     ; 0F       -> Bit-Verschiebungen / Rotation DD:  rotate right, 4 times; LO/HI nibble exchange
         RRC                     ; 0F
         RRC                     ; 0F
         RRC                     ; 0F
-        CALL    L_0256          ; CD 56 02 -> Unterfunktion an ROM-Adresse 0256h aufrufen
+        CALL    L_0256          ; CD 56 02 -> Unterfunktion an ROM-Adresse 0256h aufrufen DD: HI nibble is converted call convert_out_char
         MOV     A, M            ; 7E       -> Dasselbe Byte nochmals laden
-        CALL    L_0256          ; CD 56 02 -> Unterfunktion an ROM-Adresse 0256h aufrufen
+        CALL    L_0256          ; CD 56 02 -> Unterfunktion an ROM-Adresse 0256h aufrufen DD: LO nibble is converted
         DCX     H               ; 2B       -> HL-Zeiger dekrementieren
-        DCR     B               ; 05       -> Schleifenzähler verringern
+        DCR     B               ; 05       -> Schleifenzähler verringern DD: decrease num. of bytes to convert
         JNZ     L_0244          ; C2 44 02 -> Schleife wiederholen, wenn Register B ungleich Null
         RET                     ; C9       -> Unterprogramm beenden
 
@@ -492,10 +503,13 @@ L_0244:
 ; Sie entscheidet anhand eines Hardware-Statusbits, ob ein Datenwert invertiert
 ; und über eine Zeichentabelle im ROM übersetzt wird, oder ob es sich um ein
 ; Steuersignal handelt, das das System beeinflusst.
+convert_out_char:
+; convert value in a via conversion table lookup, store it (0x26c)  to somewhere
+; (in RAM or register?), increment index in d, and keep h in original state
 L_0256:
         MOV     C, A            ; 4F       -> Akkumulator in Register C sichern
         LDA     IO_DIP_SWITCH   ; 3A 05 06 -> Status/Datenbyte aus I/O-SRAM laden
-        ANI     04h             ; E6 04    -> Bit 2 isolieren
+        ANI     04h             ; E6 04    -> Bit 2 isolieren DD: check bit 2 (maybe "do we have valid data?)"
         CPI     04h             ; FE 04    -> Mit 04h vergleichen
         MOV     A, C            ; 79       -> Gesichertes Byte zurück nach A holen
         JZ      L_0263          ; CA 63 02 -> Wenn Vergleich gleich (Zero=1), Sprung zu 0263h
