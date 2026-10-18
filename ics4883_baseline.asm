@@ -775,6 +775,7 @@
 	DB 0C2h	; C2 (oct=302), from address h/d = 2f0 752
 	DB 0DBh	; DB (oct=333), from address h/d = 2f1 753
 	DB 002h	; 02 (oct=2), from address h/d = 2f2 754
+
 	DB 021h	; 21 (oct=41), from address h/d = 2f3 755
 	DB 006h	; 06 (oct=6), from address h/d = 2f4 756
 	DB 005h	; 05 (oct=5), from address h/d = 2f5 757

@@ -584,13 +584,14 @@ L_02C8:
         CALL  0311h       ; CD 11 03 -> Unterprogramm an Adresse 0311h aufrufen (Puffer-Check)
         POP   B           ; C1       -> Registerpaar BC wieder herstellen
         LXI   D, STACK_BASE    ; 11 00 05 -> DE auf Zieladresse im SRAM STACK_BASE ausrichten
+L_PACK_LOOP:
 L_02DB:
         INX   H           ; 23       -> HL-Zeiger erhöhen
         MOV   A, M        ; 7E       -> Byte aus dem Quellpuffer laden
         ANI   00Fh        ; E6 0F    -> Die unteren 4 Bits (unteres Nibble) maskieren
         MOV   B, A        ; 47       -> Nibble in Register B zwischenspeichern
         DCR   C           ; 0D       -> Schleifenzähler C dekrementieren
-        JM    02F3h       ; FA F3 02 -> Wenn Zähler negativ wird, Schleife abbrechen nach 02F3h
+        JM    L_02F3       ; FA F3 02 -> Wenn Zähler negativ wird, Schleife abbrechen nach 02F3h
         INX   H           ; 23       -> HL-Zeiger für das nächste Byte erhöhen
         MOV   A, M        ; 7E       -> Nächstes Byte laden
         ANI   00Fh        ; E6 0F    -> Die unteren 4 Bits maskieren
@@ -603,6 +604,8 @@ L_02DB:
         STAX  D           ; 12       -> Das fertige Byte an die SRAM-Zieladresse [DE] schreiben
         INX   D           ; 13       -> SRAM-Zielzeiger DE um 1 erhöhen
         JNZ   L_02DB       ; C2 DB 02 -> Wenn Schleifenzähler C noch nicht Null, nächstes Byte holen
+L_PACK_DONE:
+L_02F3:
         LXI   H, RAM_HW_CONFIG2    ; 21 06 05 -> HL auf SRAM-Adresse 0506h ausrichten
         LDA   ROM_CFG_FLAGS       ; 3A C4 03 -> Konfigurationswert aus dem ROM laden
 L_02F9:
