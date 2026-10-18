@@ -643,6 +643,7 @@ L_037B:
         STA   040Ch       ; 32 0C 04 -> Zeichen in Kontrollregister 040Ch wegsichern
         JMP   L_0017      ; C3 17 00 -> Unbedingter Rücksprung zum Haupt-Polling L_0017
 
+; 038Ah - 038Fh: Padding / Unused ROM-Space (Füllbytes)
     	DB 0FFh	; 0FFh, from address 38ah
     	DB 0FFh	; 0FFh, from address 38bh
     	DB 0FFh	; 0FFh, from address 38ch
@@ -650,6 +651,7 @@ L_037B:
     	DB 0FFh	; 0FFh, from address 38eh
     	DB 0FFh	; 0FFh, from address 38fh
 
+; 0390h: Einzelne Kontroll-Konstanten für Vergleiche
     	DB 000h	; 000h, from address 390h
     	DB 002h	; 002h, from address 391h
     	DB 005h	; 005h, from address 392h
