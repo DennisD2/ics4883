@@ -473,13 +473,11 @@ L_0232:
         JMP     L_01F1          ; C3 F1 01 -> Sprung zu RAM/ROM-Adresse 01F1h
 
 ; convert all 5 bytes from input IO connector
-	0242 06 05   	mvi b, 05           ;
-
 ; convert bytes from input IO connector
 ; d is index for created output string
 ; h,l points to start address to convert
 ; b is num of bytes to convert (5)
-: h,l point to memory location for input byte (is decremented in a loop)
+; h,l point to memory location for input byte (is decremented in a loop)
 ; it looks that two 4-bit values are in 1 byte as HI/LO nibble
 convert_5input_bytes:
 L_0242:
