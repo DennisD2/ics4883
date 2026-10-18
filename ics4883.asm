@@ -547,6 +547,8 @@ L_029D:
         STA   REG_GPIB_CTRL       ; 32 05 04 -> Systemregister 0405h im RAM zurücksetzen
         STA   IO_TALK_REG02       ; 32 02 07 -> Interface-Register 0702h löschen
         DI                ; F3       -> Interrupts global sperren
+L_BUFF_LOOP:
+L_02A5:
         CALL  L_0163      ; CD 63 01 -> Aufruf der Puffer-/Schnittstellenroutine L_0163
         MOV   A, B        ; 78       -> Das in Register B befindliche Zeichen nach A holen
         ANI   070h        ; E6 70    -> Die Bits 4, 5 und 6 maskieren
@@ -555,15 +557,17 @@ L_029D:
         LXI   H, REG_BUFF_IDX    ; 21 1F 04 -> HL auf RAM-Adresse 041Fh (Zähler/Index) setzen
         MOV   A, M        ; 7E       -> Aktuellen Index-Wert laden
         CPI   00Ah        ; FE 0A    -> Prüfen, ob die Obergrenze von 10 Elementen erreicht ist
-        JNC   02BEh       ; D2 BE 02 -> Wenn der Index >= 10 ist, direkt vor zu 02BEh springen
+        JNC   L_02BE       ; D2 BE 02 -> Wenn der Index >= 10 ist, direkt vor zu 02BEh springen
         INR   M           ; 34       -> Ansonsten den Index im RAM [HL] um 1 erhöhen
         ADI   020h        ; C6 20    -> Offset 20h zum Akkumulator addieren
         MOV   L, A        ; 6F       -> Berechneten Offset nach Register L übertragen
         MOV   M, B        ; 70       -> Das originale Zeichen aus B an die berechnete RAM-Adresse schreiben
+L_BUFF_OVERFLOW:
+L_02BE:
         LDA   REG_EOS_FLAG       ; 3A 0F 04 -> Empfangenes Datenbyte aus RAM 040Fh holen
         ANI   0C0h        ; E6 C0    -> Die obersten zwei Bits maskieren
         CPI   040h        ; FE 40    -> Prüfen auf das End-Of-Sequence / EOI Flag (40h)
-        JNZ   02A5h       ; C2 A5 02 -> Sprung wenn != 0
+        JNZ   L_02A5      ; C2 A5 02 -> Sprung wenn != 0
 ; ------------------------------------------------------------------------------
 ; Hauptinitialisierung ab Label L_02C8 (Adresse 02C8h bis 02F8h)
 ; Nibble-Packing Routine: Der Code ab Adresse 02DBh ist ein hocheffizienter Packer. Er nimmt zwei aufeinanderfolgende Bytes, isoliert jeweils deren untere 4 Bits (ANI 00Fh), schiebt das zweite Nibble per Rotation nach oben (RLC) und fügt sie mit ORA B zu einem einzigen, kompakten Daten-Byte zusammen.
@@ -580,6 +584,7 @@ L_02C8:
         CALL  0311h       ; CD 11 03 -> Unterprogramm an Adresse 0311h aufrufen (Puffer-Check)
         POP   B           ; C1       -> Registerpaar BC wieder herstellen
         LXI   D, STACK_BASE    ; 11 00 05 -> DE auf Zieladresse im SRAM STACK_BASE ausrichten
+L_02DB:
         INX   H           ; 23       -> HL-Zeiger erhöhen
         MOV   A, M        ; 7E       -> Byte aus dem Quellpuffer laden
         ANI   00Fh        ; E6 0F    -> Die unteren 4 Bits (unteres Nibble) maskieren
@@ -597,7 +602,7 @@ L_02C8:
         DCR   C           ; 0D       -> Schleifenzähler C erneut dekrementieren
         STAX  D           ; 12       -> Das fertige Byte an die SRAM-Zieladresse [DE] schreiben
         INX   D           ; 13       -> SRAM-Zielzeiger DE um 1 erhöhen
-        JNZ   02DBh       ; C2 DB 02 -> Wenn Schleifenzähler C noch nicht Null, nächstes Byte holen
+        JNZ   L_02DB       ; C2 DB 02 -> Wenn Schleifenzähler C noch nicht Null, nächstes Byte holen
         LXI   H, RAM_HW_CONFIG2    ; 21 06 05 -> HL auf SRAM-Adresse 0506h ausrichten
         LDA   ROM_CFG_FLAGS       ; 3A C4 03 -> Konfigurationswert aus dem ROM laden
 L_02F9:

@@ -693,6 +693,7 @@
 	DB 002h	; 02 (oct=2), from address h/d = 2a2 674
 	DB 007h	; 07 (oct=7), from address h/d = 2a3 675
 	DB 0F3h	; F3 (oct=363), from address h/d = 2a4 676
+
 	DB 0CDh	; CD (oct=315), from address h/d = 2a5 677
 	DB 063h	; 63 (oct=143), from address h/d = 2a6 678
 	DB 001h	; 01 (oct=1), from address h/d = 2a7 679
@@ -718,6 +719,7 @@
 	DB 020h	; 20 (oct=40), from address h/d = 2bb 699
 	DB 06Fh	; 6F (oct=157), from address h/d = 2bc 700
 	DB 070h	; 70 (oct=160), from address h/d = 2bd 701
+
 	DB 03Ah	; 3A (oct=72), from address h/d = 2be 702
 	DB 00Fh	; 0F (oct=17), from address h/d = 2bf 703
 	DB 004h	; 04 (oct=4), from address h/d = 2c0 704
@@ -748,6 +750,7 @@
 	DB 011h	; 11 (oct=21), from address h/d = 2d8 728
 	DB 000h	; 00 (oct=0), from address h/d = 2d9 729
 	DB 005h	; 05 (oct=5), from address h/d = 2da 730
+
 	DB 023h	; 23 (oct=43), from address h/d = 2db 731
 	DB 07Eh	; 7E (oct=176), from address h/d = 2dc 732
 	DB 0E6h	; E6 (oct=346), from address h/d = 2dd 733
