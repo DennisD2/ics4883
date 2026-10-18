@@ -595,35 +595,21 @@ L_0324:
         ANI   007h        ; E6 07    -> Maskiert die unteren 3 Bits (Bit 0-2) des Akkumulators
         MOV   C, A        ; 4F       -> Das maskierte Ergebnis nach Register C retten
         MOV   A, B        ; 78       -> Holt das originale Zeichen aus Register B zurück nach A
-    	DB 0E6h	; 0E6h, from address 338h
-    	DB 008h	; 008h, from address 339h
-    	DB 03Ah	; 03Ah, from address 33ah
-    	DB 007h	; 007h, from address 33bh
-    	DB 004h	; 004h, from address 33ch
-    	DB 0CAh	; 0CAh, from address 33dh
-    	DB 042h	; 042h, from address 33eh
-    	DB 003h	; 003h, from address 33fh
-    	DB 0EEh	; 0EEh, from address 340h
-    	DB 001h	; 001h, from address 341h
-    	DB 0E6h	; 0E6h, from address 342h
-    	DB 001h	; 001h, from address 343h
-    	DB 00Fh	; 00Fh, from address 344h
-    	DB 00Ch	; 00Ch, from address 345h
-    	DB 007h	; 007h, from address 346h
-    	DB 00Dh	; 00Dh, from address 347h
-    	DB 0C2h	; 0C2h, from address 348h
-    	DB 046h	; 046h, from address 349h
-    	DB 003h	; 003h, from address 34ah
-    	DB 032h	; 032h, from address 34bh
-    	DB 00Bh	; 00Bh, from address 34ch
-    	DB 004h	; 004h, from address 34dh
-    	DB 021h	; 021h, from address 34eh
-    	DB 007h	; 007h, from address 34fh
-    	DB 004h	; 004h, from address 350h
-    	DB 07Eh	; 07Eh, from address 351h
-    	DB 0F6h	; 0F6h, from address 352h
-    	DB 008h	; 008h, from address 353h
-    	DB 077h	; 077h, from address 354h
+        ANI   008h        ; E6 08    -> Bit 3 des Akkumulators isolieren
+        LDA   0407h       ; 3A 07 04 -> Systemstatus aus RAM 0407h laden
+        JZ    0342h       ; CA 42 03 -> Wenn Ergebnis von ANI Null war, Sprung nach 0342h
+        XRI   001h        ; EE 01    -> Akkumulator mit 01h XOR-verknüpfen
+        ANI   001h        ; E6 01    -> Bit 0 isolieren
+        RRC               ; 0F       -> Akkumulator nach rechts rotieren
+        INR   C           ; 0C       -> Register C um 1 erhöhen
+        RLC               ; 07       -> Akkumulator nach links rotieren
+        DCR   C           ; 0D       -> Register C um 1 verringern
+    	JNZ   0346h       ; C2 46 03 -> Wenn nicht Null, Sprung nach 0346h (Hinweis: C2 46 03 ist JNZ)
+        STA   040Bh       ; 32 0B 04 -> Akkumulator in RAM-Zelle 040Bh sichern
+        LXI   H, 0407h    ; 21 07 04 -> HL auf RAM-Adresse 0407h ausrichten
+        MOV   A, M        ; 7E       -> Wert laden
+        ORI   008h        ; F6 08    -> Bit 3 gezielt setzen
+        MOV   M, A        ; 77       -> Aktualisierten Wert zurückschreiben
 L_0355:
     	DB 021h	; 021h, from address 355h
     	DB 004h	; 004h, from address 356h
