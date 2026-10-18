@@ -482,51 +482,31 @@ L_0263:
         LDA     03C8h           ; 3A C8 03 -> Einen Konfigurations- oder Initialisierungswert aus dem ROM laden
         JMP     L_02F9          ; C3 F9 02 -> Sprung zur weiteren Registerverarbeitung an Adresse 02F9h
 
+; Daten-Empfang und Indizierung: Dieser Block verarbeitet ankommende Bus-Zeichen. Er nutzt die RAM-Zelle 041Fh als Index-Zähler (limitiert auf maximal 10 Zeichen, CPI 00Ah).
+; Dynamische Puffer-Adressierung: Durch ADI 020h und MOV L, A berechnet der Code zur Laufzeit eine Zieladresse im RAM (ein sogenanntes indiziertes Array), um die eingehenden Zeichen nacheinander geordnet abzuspeichern.
+; Protokoll-Validierung: Am Ende wird über das RAM-Register 040Fh ausgewertet, ob der Bus ein Übertragungsende signalisiert (CPI 040h).
 L_029D:
-    	DB 0AFh	; 0AFh, from address 29dh
-    	DB 032h	; 032h, from address 29eh
-    	DB 005h	; 005h, from address 29fh
-    	DB 004h	; 004h, from address 2a0h
-    	DB 032h	; 032h, from address 2a1h
-    	DB 002h	; 002h, from address 2a2h
-    	DB 007h	; 007h, from address 2a3h
-    	DB 0F3h	; 0F3h, from address 2a4h
-    	DB 0CDh	; 0CDh, from address 2a5h
-    	DB 063h	; 063h, from address 2a6h
-    	DB 001h	; 001h, from address 2a7h
-    	DB 078h	; 078h, from address 2a8h
-    	DB 0E6h	; 0E6h, from address 2a9h
-    	DB 070h	; 070h, from address 2aah
-    	DB 0FEh	; 0FEh, from address 2abh
-    	DB 030h	; 030h, from address 2ach
-    	DB 0C2h	; 0C2h, from address 2adh
-    	DB 005h	; 005h, from address 2aeh
-    	DB 003h	; 003h, from address 2afh
-    	DB 021h	; 021h, from address 2b0h
-    	DB 01Fh	; 01Fh, from address 2b1h
-    	DB 004h	; 004h, from address 2b2h
-    	DB 07Eh	; 07Eh, from address 2b3h
-    	DB 0FEh	; 0FEh, from address 2b4h
-    	DB 00Ah	; 00Ah, from address 2b5h
-    	DB 0D2h	; 0D2h, from address 2b6h
-    	DB 0BEh	; 0BEh, from address 2b7h
-    	DB 002h	; 002h, from address 2b8h
-    	DB 034h	; 034h, from address 2b9h
-    	DB 0C6h	; 0C6h, from address 2bah
-    	DB 020h	; 020h, from address 2bbh
-    	DB 06Fh	; 06Fh, from address 2bch
-    	DB 070h	; 070h, from address 2bdh
-    	DB 03Ah	; 03Ah, from address 2beh
-    	DB 00Fh	; 00Fh, from address 2bfh
-    	DB 004h	; 004h, from address 2c0h
-    	DB 0E6h	; 0E6h, from address 2c1h
-    	DB 0C0h	; 0C0h, from address 2c2h
-    	DB 0FEh	; 0FEh, from address 2c3h
-    	DB 040h	; 040h, from address 2c4h
-    	DB 0C2h	; 0C2h, from address 2c5h
-    	DB 0A5h	; 0A5h, from address 2c6h
-    	DB 002h	; 002h, from address 2c7h
-
+        XRA   A           ; AF       -> Akkumulator nullen
+        STA   0405h       ; 32 05 04 -> Systemregister 0405h im RAM zurücksetzen
+        STA   0702h       ; 32 02 07 -> Interface-Register 0702h löschen
+        DI                ; F3       -> Interrupts global sperren
+        CALL  L_0163      ; CD 63 01 -> Aufruf der Puffer-/Schnittstellenroutine L_0163
+        MOV   A, B        ; 78       -> Das in Register B befindliche Zeichen nach A holen
+        ANI   070h        ; E6 70    -> Die Bits 4, 5 und 6 maskieren
+        CPI   030h        ; FE 30    -> Prüfen, ob das obere Halbnibble dem ASCII-Bereich '3' entspricht
+        JNZ   0305h       ; C2 05 03 -> Wenn ungleich, Sprung nach vorne zur Fehler/Auswertung an 0305h
+        LXI   H, 041Fh    ; 21 1F 04 -> HL auf RAM-Adresse 041Fh (Zähler/Index) setzen
+        MOV   A, M        ; 7E       -> Aktuellen Index-Wert laden
+        CPI   00Ah        ; FE 0A    -> Prüfen, ob die Obergrenze von 10 Elementen erreicht ist
+        JNC   02BEh       ; D2 BE 02 -> Wenn der Index >= 10 ist, direkt vor zu 02BEh springen
+        INR   M           ; 34       -> Ansonsten den Index im RAM [HL] um 1 erhöhen
+        ADI   020h        ; C6 20    -> Offset 20h zum Akkumulator addieren
+        MOV   L, A        ; 6F       -> Berechneten Offset nach Register L übertragen
+        MOV   M, B        ; 70       -> Das originale Zeichen aus B an die berechnete RAM-Adresse schreiben
+        LDA   040Fh       ; 3A 0F 04 -> Empfangenes Datenbyte aus RAM 040Fh holen
+        ANI   0C0h        ; E6 C0    -> Die obersten zwei Bits maskieren
+        CPI   040h        ; FE 40    -> Prüfen auf das End-Of-Sequence / EOI Flag (40h)
+        JNZ   02A5h       ; C2 A5 02 -> Sprung wenn != 0
 L_02C8:
     	DB 021h	; 021h, from address 2c8h
     	DB 01Fh	; 01Fh, from address 2c9h
