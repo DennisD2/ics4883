@@ -315,19 +315,19 @@ L_019B:
         STAX    D               ; 12       -> An Hardware [DE] ausgeben
         STA     0403h           ; 32 03 04 -> Finalen Zustand in RAM-Zelle 0403h zurückschreiben
         RET                     ; C9       -> Unterprogramm sauber beenden (Rücksprung)
+
 L_01A9:
-    	POP     H               ;DB 0E1h	; 0E1h, from address 1a9h
-    	JMP     L_0017          ;DB 0C3h	; 0C3h, from address 1aah
+        ; ------------------------------------------------------------------------------
+        ; Stack aufräumen & Treiber-Rücksprung (Adresse 01A9h - 01ACh)
+        ; ------------------------------------------------------------------------------
+        POP     H               ; E1       -> Holt das Registerpaar HL vom Stack zurück
+        JMP     L_0017          ; C3 17 00 -> Unbedingter Sprung zur Systemadresse 00FBh
 
 L_01AD:
-    	DB 0FBh	; 0FBh, from address 1adh
-    	DB 03Ah	; 03Ah, from address 1aeh
-    	DB 00Dh	; 00Dh, from address 1afh
-    	DB 004h	; 004h, from address 1b0h
-    	DB 0B7h	; 0B7h, from address 1b1h
-    	DB 0C2h	; 0C2h, from address 1b2h
-    	DB 032h	; 032h, from address 1b3h
-    	DB 002h	; 002h, from address 1b4h
+    	EI                      ;DB 0FBh	; 0FBh, from address 1adh
+    	LDA     040Dh           ; 3A 0D 04 -> Lädt Kontroll-Flag aus RAM-Zell
+    	ORA     A               ; B7       -> Prüft, ob der Wert im Akkumulator Null ist
+    	JNZ     0232h           ; C2 32 02 -> Wenn ungleich Null, springe weit vor zu Adresse 0232h
     	DB 021h	; 021h, from address 1b5h
     	DB 005h	; 005h, from address 1b6h
     	DB 006h	; 006h, from address 1b7h
