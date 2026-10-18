@@ -328,26 +328,15 @@ L_01AD:
     	LDA     040Dh           ; 3A 0D 04 -> Lädt Kontroll-Flag aus RAM-Zell
     	ORA     A               ; B7       -> Prüft, ob der Wert im Akkumulator Null ist
     	JNZ     0232h           ; C2 32 02 -> Wenn ungleich Null, springe weit vor zu Adresse 0232h
-    	DB 021h	; 021h, from address 1b5h
-    	DB 005h	; 005h, from address 1b6h
-    	DB 006h	; 006h, from address 1b7h
-    	DB 07Eh	; 07Eh, from address 1b8h
-    	DB 00Fh	; 00Fh, from address 1b9h
-    	DB 0DAh	; 0DAh, from address 1bah
-    	DB 0B8h	; 0B8h, from address 1bbh
-    	DB 001h	; 001h, from address 1bch
-    	DB 0F3h	; 0F3h, from address 1bdh
-    	DB 011h	; 011h, from address 1beh
-    	DB 030h	; 030h, from address 1bfh
-    	DB 004h	; 004h, from address 1c0h
-    	DB 021h	; 021h, from address 1c1h
-    	DB 004h	; 004h, from address 1c2h
-    	DB 006h	; 006h, from address 1c3h
-    	DB 0CDh	; 0CDh, from address 1c4h
-    	DB 042h	; 042h, from address 1c5h
-    	DB 002h	; 002h, from address 1c6h
-    	DB 03Eh	; 03Eh, from address 1c7h
-    	DB 00Fh	; 00Fh, from address 1c8h
+        LXI     H, 0605h        ; 21 05 06 -> HL-Zeiger auf I/O-Datenregister 0605h ausrichten
+        MOV     A, M            ; 7E       -> Holt das aktuelle Datenbyte via HL
+    	RRC                     ; 0F from address 1b9h
+        JC      01B8h           ; DA B8 01 -> Wenn Carry=1, springe vor zu Adresse 01B8h
+        DI                      ; F3       -> Interrupts sperren (Disable Interrupts)
+        LXI     D, 0430h        ; 11 30 04 -> Registerpaar DE mit SRAM-Adresse 0430h laden
+        LXI     H, 0604h        ; 21 04 06 -> HL-Zeiger auf I/O-Schnittstellenregister 0604h ausrichten
+    	CALL    0242h           ; CD 42 02 -> Ruft Unterfunktion an Adresse 0242h auf
+    	MVI     A, 0Fh          ; 3E 0F    -> Lädt die Konstante 0Fh in den Akkumulator
     	DB 032h	; 032h, from address 1c9h
     	DB 000h	; 000h, from address 1cah
     	DB 004h	; 004h, from address 1cbh
