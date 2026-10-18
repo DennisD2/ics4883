@@ -9,7 +9,17 @@ ROM dump.
 
 ### File ics4883_baseline.asm
 This file is created from ROM dump. Per byte, it has a line 
-"DB \<bytevalue\> ; \<from offset\>".
+
+DB 0{bytevalue}h ; {bytevalue} (oct={bytevalue in octal}) from address {address} h/d = {hex address} {decimal address}".
+
+to enable analysis of that byte. 
+
+Examples:
+```shell
+DB 000h	; 00 (oct=0), from address h/d = 1 1
+
+DB 0F3h	; F3 (oct=363), from address h/d = 17 23
+```
 It can be assembled using tools "asl" and "p2bin". Result
 is a binary file.
 
