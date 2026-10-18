@@ -365,38 +365,38 @@ L_01AD:
         ANI     10h             ; E6 10    -> Bit 4 maskieren
         MOV     C, A            ; 4F       -> Vorheriges Ergebnis nach Register C retten
         LXI     D,0703h         ; 11 03 07 -> Lädt Byte von der Hardware-Adresse [DE] (0703h)
-        STAX  D                 ; 12           -> Schreibt den Akkumulator wieder zurück nach [DE]
-        LXI   H, 00702h         ; 21 02 07 -> HL auf Adresse 0702h ausrichten
-        MOV M,B                 ; 70
-        DCX   H           ; 2B       -> HL um 1 verringern (zeigt nun auf 0701h)
-        MOV   A, M        ; 7E       -> Status-Byte aus 0701h einlesen
-        RRC               ; 0F       -> Nach rechts rotieren
-        RRC               ; 0F       -> Nochmals nach rechts rotieren
-        JC    0200h      ; DA 00 02 -> Wenn Carry=1, Fehler/Abzweig zu L_0002
-        MVI   A, 01h      ; 3E 01    -> Konstante 01h laden
-        ORA   C           ; B1       -> Mit Maske in Register C verknüpfen
-        STAX  D           ; 12       -> An Hardware ausgeben
-        MOV   A, M        ; 7E       -> Erneut Status lesen
-        RRC               ; 0F
-        RRC               ; 0F
-        RRC               ; 0F
-        JC    020Ah       ; DA 0A 02 -> Wenn Carry=1, Sprung zu RAM/ROM-Adresse 020Ah
-        DI                ; F3       -> Interrupts sperren
-        XRA   A           ; AF       -> Akkumulator nullen
-        STAX  D           ; 12
-        STA   0403h       ; 32 03 04 -> Systemzustand in RAM 0403h löschen
-        LXI   H, 0400h    ; 21 00 04 -> HL auf RAM-Start 0400h setzen
-        MOV   A, M        ; 7E
-        MVI   M, 00h      ; 36 00    -> Speicherzelle mit 00h überschreiben
-        ORA   A           ; B7       -> Flags aktualisieren
-        JM    L_0017      ; FA 17 00 -> Wenn negativ (Bit 7=1), Sprung zu L_0017
-        JZ    022Bh       ; CA 2B 02 -> Wenn Null, Sprung zu RAM/ROM-Adresse 022Bh
-        XRA   A           ; AF
-        STA   0607h       ; 32 07 06
-        STA   040Eh       ; 32 0E 04
-        EI                ; FB       -> Interrupts wieder freigeben
-        LHLD  041Dh       ; 2A 1D 04
-        JMP   01D6h       ; C3 D6 01 -> Sprung zu RAM/ROM-Adresse 01D6h
+        STAX    D               ; 12           -> Schreibt den Akkumulator wieder zurück nach [DE]
+        LXI     H, 00702h       ; 21 02 07 -> HL auf Adresse 0702h ausrichten
+        MOV     M,B             ; 70
+        DCX     H               ; 2B       -> HL um 1 verringern (zeigt nun auf 0701h)
+        MOV     A, M            ; 7E       -> Status-Byte aus 0701h einlesen
+        RRC                     ; 0F       -> Nach rechts rotieren
+        RRC                     ; 0F       -> Nochmals nach rechts rotieren
+        JC      0200h           ; DA 00 02 -> Wenn Carry=1, Fehler/Abzweig zu L_0002
+        MVI     A, 01h          ; 3E 01    -> Konstante 01h laden
+        ORA     C               ; B1       -> Mit Maske in Register C verknüpfen
+        STAX    D               ; 12       -> An Hardware ausgeben
+        MOV     A, M            ; 7E       -> Erneut Status lesen
+        RRC                     ; 0F
+        RRC                     ; 0F
+        RRC                     ; 0F
+        JC      020Ah           ; DA 0A 02 -> Wenn Carry=1, Sprung zu RAM/ROM-Adresse 020Ah
+        DI                      ; F3       -> Interrupts sperren
+        XRA     A               ; AF       -> Akkumulator nullen
+        STAX    D               ; 12
+        STA     0403h           ; 32 03 04 -> Systemzustand in RAM 0403h löschen
+        LXI     H, 0400h        ; 21 00 04 -> HL auf RAM-Start 0400h setzen
+        MOV     A, M            ; 7E
+        MVI     M, 00h          ; 36 00    -> Speicherzelle mit 00h überschreiben
+        ORA     A               ; B7       -> Flags aktualisieren
+        JM      L_0017          ; FA 17 00 -> Wenn negativ (Bit 7=1), Sprung zu L_0017
+        JZ      022Bh           ; CA 2B 02 -> Wenn Null, Sprung zu RAM/ROM-Adresse 022Bh
+        XRA     A               ; AF
+        STA     0607h           ; 32 07 06
+        STA     040Eh           ; 32 0E 04
+        EI                      ; FB       -> Interrupts wieder freigeben
+        LHLD    041Dh           ; 2A 1D 04
+        JMP     01D6h           ; C3 D6 01 -> Sprung zu RAM/ROM-Adresse 01D6h
 
     	DB 03Eh	; 03Eh, from address 232h
     	DB 0FFh	; 0FFh, from address 233h
