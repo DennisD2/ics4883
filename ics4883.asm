@@ -405,27 +405,20 @@ L_01AD:
         ANI     0BFh            ; E6 BF    -> Bit 6 löschen (Maskierung)
         MOV     M, A            ; 77
         JMP     01F1h           ; C3 F1 01 -> Sprung zu RAM/ROM-Adresse 01F1h
-
-    	DB 006h	; 006h, from address 242h
-    	DB 005h	; 005h, from address 243h
-    	DB 07Eh	; 07Eh, from address 244h
-    	DB 00Fh	; 00Fh, from address 245h
-    	DB 00Fh	; 00Fh, from address 246h
-    	DB 00Fh	; 00Fh, from address 247h
-    	DB 00Fh	; 00Fh, from address 248h
-    	DB 0CDh	; 0CDh, from address 249h
-    	DB 056h	; 056h, from address 24ah
-    	DB 002h	; 002h, from address 24bh
-    	DB 07Eh	; 07Eh, from address 24ch
-    	DB 0CDh	; 0CDh, from address 24dh
-    	DB 056h	; 056h, from address 24eh
-    	DB 002h	; 002h, from address 24fh
-    	DB 02Bh	; 02Bh, from address 250h
-    	DB 005h	; 005h, from address 251h
-    	DB 0C2h	; 0C2h, from address 252h
-    	DB 044h	; 044h, from address 253h
-    	DB 002h	; 002h, from address 254h
-    	DB 0C9h	; 0C9h, from address 255h
+        MVI     B, 05h          ; 06 05    -> Schleifenzähler (5) in Register B laden
+L_0244:
+        MOV     A, M            ; 7E       -> Byte über HL-Zeiger (0604h) laden
+        RRC                     ; 0F       -> Bit-Verschiebungen / Rotation
+        RRC                     ; 0F
+        RRC                     ; 0F
+        RRC                     ; 0F
+        CALL    0256h           ; CD 56 02 -> Unterfunktion an ROM-Adresse 0256h aufrufen
+        MOV     A, M            ; 7E       -> Dasselbe Byte nochmals laden
+        CALL    0256h           ; CD 56 02 -> Unterfunktion an ROM-Adresse 0256h aufrufen
+        DCX     H               ; 2B       -> HL-Zeiger dekrementieren
+        DCR     B               ; 05       -> Schleifenzähler verringern
+        JNZ     L_0244          ; C2 44 02 -> Schleife wiederholen, wenn Register B ungleich Null
+        RET                     ; C9       -> Unterprogramm beenden
 
     	DB 04Fh	; 04Fh, from address 256h
     	DB 03Ah	; 03Ah, from address 257h
