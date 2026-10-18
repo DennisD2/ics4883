@@ -255,12 +255,14 @@ L_014E:
         ; ------------------------------------------------------------------------------
         PUSH    D               ; D5       -> Sichert das Registerpaar DE auf dem Stack
         LXI     D, 0003h        ; 11 03 00 -> Lädt Konstante 0003h in das Registerpaar DE
+L_0152:
         CMP     M               ; BE       -> Vergleiche Akkumulator mit dem Speicher [HL]
-        JZ      015Ch           ; CA 5C 01 -> Wenn gleich (Zero=1), springe vor zu Adresse 015Ch
+        JZ      L_015C          ; CA 5C 01 -> Wenn gleich (Zero=1), springe vor zu Adresse 015Ch
         DAD     D               ; 19       -> Addiere Registerpaar DE zu HL (HL = HL + DE)
         DCR     C               ; 0D       -> Schleifenzähler C um 1 verringern
-        JNZ     0152h           ; C2 52 01 -> Wenn C noch nicht Null ist, zurück zur Schleife springe
+        JNZ     L_0152          ; C2 52 01 -> Wenn C noch nicht Null ist, zurück zur Schleife springe
         DCX     H               ; 2B       -> Verringere Registerpaar HL um 1
+L_015C:
         INX     H               ; 23       -> Erhöhe Registerpaar HL um 1
         MOV     E, M            ; 5E       -> Lädt das untere Byte der Zieladresse nach E
         INX     H               ; 23       -> Erhöhe Registerpaar HL um 1
@@ -291,7 +293,7 @@ L_0163:
         JZ      0178h           ; CA 78 01 -> Wenn Null, springe zurück zu Adresse 0178h (Schleife!)
         LDA     0405h           ; 3A 05 04 -> Erneut RAM-Wert 0405h laden
     	XRA     M               ; AE from address 188h
-    	JM      01A9h           ; FA A9 01 -> Wenn negativ, springe vor zu Adresse 01A9h
+    	JM      L_01A9           ; FA A9 01 -> Wenn negativ, springe vor zu Adresse 01A9h
         MVI     A, 06h          ; 3E 06    -> Konstante 06h laden
         ORA     C               ; B1       -> Logisches ODER mit Register C
         STAX    D               ; 12       -> An Hardware [DE] ausgeben
@@ -311,11 +313,11 @@ L_0163:
         STAX    D               ; 12       -> An Hardware [DE] ausgeben
         STA     0403h           ; 32 03 04 -> Finalen Zustand in RAM-Zelle 0403h zurückschreiben
         RET                     ; C9       -> Unterprogramm sauber beenden (Rücksprung)
-
-    	DB 0E1h	; 0E1h, from address 1a9h
-    	DB 0C3h	; 0C3h, from address 1aah
-    	DB 017h	; 017h, from address 1abh
-    	DB 000h	; 000h, from address 1ach
+L_01A9:
+    	POP     H               ;DB 0E1h	; 0E1h, from address 1a9h
+    	JMP     L_0017          ;DB 0C3h	; 0C3h, from address 1aah
+    	    ;DB 017h	; 017h, from address 1abh
+    	    ;DB 000h	; 000h, from address 1ach
 L_01AD:
     	DB 0FBh	; 0FBh, from address 1adh
     	DB 03Ah	; 03Ah, from address 1aeh

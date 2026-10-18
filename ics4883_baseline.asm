@@ -354,6 +354,7 @@
 	DB 011h	; 011h, from address 14fh
 	DB 003h	; 003h, from address 150h
 	DB 000h	; 000h, from address 151h
+
 	DB 0BEh	; 0BEh, from address 152h
 	DB 0CAh	; 0CAh, from address 153h
 	DB 05Ch	; 05Ch, from address 154h
@@ -364,6 +365,7 @@
 	DB 052h	; 052h, from address 159h
 	DB 001h	; 001h, from address 15ah
 	DB 02Bh	; 02Bh, from address 15bh
+
 	DB 023h	; 023h, from address 15ch
 	DB 05Eh	; 05Eh, from address 15dh
 	DB 023h	; 023h, from address 15eh
