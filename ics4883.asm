@@ -397,23 +397,15 @@ L_01AD:
         EI                      ; FB       -> Interrupts wieder freigeben
         LHLD    041Dh           ; 2A 1D 04
         JMP     01D6h           ; C3 D6 01 -> Sprung zu RAM/ROM-Adresse 01D6h
+        MVI     A, 0FFh         ; 3E FF
+        STA     0400h           ; 32 00 04
+        LXI     H, 040Eh        ; 21 0E 04 -> HL auf Kontrollregister setzen
+        MOV     B, M            ; 46
+        MOV     A, M            ; 7E
+        ANI     0BFh            ; E6 BF    -> Bit 6 löschen (Maskierung)
+        MOV     M, A            ; 77
+        JMP     01F1h           ; C3 F1 01 -> Sprung zu RAM/ROM-Adresse 01F1h
 
-    	DB 03Eh	; 03Eh, from address 232h
-    	DB 0FFh	; 0FFh, from address 233h
-    	DB 032h	; 032h, from address 234h
-    	DB 000h	; 000h, from address 235h
-    	DB 004h	; 004h, from address 236h
-    	DB 021h	; 021h, from address 237h
-    	DB 00Eh	; 00Eh, from address 238h
-    	DB 004h	; 004h, from address 239h
-    	DB 046h	; 046h, from address 23ah
-    	DB 07Eh	; 07Eh, from address 23bh
-    	DB 0E6h	; 0E6h, from address 23ch
-    	DB 0BFh	; 0BFh, from address 23dh
-    	DB 077h	; 077h, from address 23eh
-    	DB 0C3h	; 0C3h, from address 23fh
-    	DB 0F1h	; 0F1h, from address 240h
-    	DB 001h	; 001h, from address 241h
     	DB 006h	; 006h, from address 242h
     	DB 005h	; 005h, from address 243h
     	DB 07Eh	; 07Eh, from address 244h
