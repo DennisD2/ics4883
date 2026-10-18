@@ -29,7 +29,9 @@ REG_BCD_DATA   EQU  0404h       ; Speicher für validierte BCD-Ziffern
 REG_GPIB_CTRL  EQU  0405h       ; GPIB Kontroll-Flag (z. B. 80h für Reset/Status)
 REG_SYS_STATUS EQU  0407h       ; Zentrales Statusregister (Remote/Local, Bit 3 LEDs)
 REG_INIT_FLAG  EQU  0408h       ; Initialisierungs- und Reset-Steuerflag
+REG_PENDING_CMD EQU  040Bh      ; Zwischenspeicher für anstehende Handshake-Befehle
 REG_CMD_LOCK   EQU  040Ch       ; Sperrregister für eingehende Bus-Befehle
+REG_CMD_STATE  EQU  040Dh       ; Befehls-Statusregister (Steuerflag für Modus/Fehler)
 REG_BUS_STATUS EQU  040Eh       ; Bus-Zustandsregister (z. B. Talker/Listener)
 REG_EOS_FLAG   EQU  040Fh       ; End-Of-Sequence / EOI Status-Register
 REG_BUFF_PTR   EQU  041Dh       ; Letzter Tabellenzeiger / Puffer-Pointer
@@ -301,7 +303,7 @@ L_013C:
     	JZ      L_0017          ; CA 17 00 from address 141h
     	JMP     L_0006          ; C3 06 00 from address 144h
     	XRA     A               ; AF from address 147h
-    	STA     040Dh           ; 32 from address 148h
+    	STA     REG_CMD_STATE           ; 32 from address 148h
     	JMP     L_0017          ; C3 17 00
 
 L_014E:
@@ -380,7 +382,7 @@ L_01A9:
 
 L_01AD:
     	EI                      ; FB from address 1adh
-    	LDA     040Dh           ; 3A 0D 04 -> Lädt Kontroll-Flag aus RAM-Zelle
+    	LDA     REG_CMD_STATE           ; 3A 0D 04 -> Lädt Kontroll-Flag aus RAM-Zelle
     	ORA     A               ; B7       -> Prüft, ob der Wert im Akkumulator Null ist
     	JNZ     L_0232          ; C2 32 02 -> Wenn ungleich Null, springe weit vor zu Adresse 0232h
         LXI     H, IO_DIP_SWITCH        ; 21 05 06 -> HL-Zeiger auf I/O-Datenregister 0605h ausrichten
@@ -660,7 +662,7 @@ L_0324:
         RLC               ; 07       -> Akkumulator nach links rotieren
         DCR   C           ; 0D       -> Register C um 1 verringern
     	JNZ   0346h       ; C2 46 03 -> Wenn nicht Null, Sprung nach 0346h (Hinweis: C2 46 03 ist JNZ)
-        STA   040Bh       ; 32 0B 04 -> Akkumulator in RAM-Zelle 040Bh sichern
+        STA   REG_PENDING_CMD       ; 32 0B 04 -> Akkumulator in RAM-Zelle 040Bh sichern
         LXI   H, REG_SYS_STATUS    ; 21 07 04 -> HL auf RAM-Adresse 0407h ausrichten
         MOV   A, M        ; 7E       -> Wert laden
         ORI   008h        ; F6 08    -> Bit 3 gezielt setzen
@@ -669,7 +671,7 @@ L_0355:
        LXI   H, IO_TALK_CTRL   ; 21 04 07 -> HL auf I/O-Schnittstelle / Adresse 0704h ausrichten
         MVI   M, 00h      ; 36 00    -> Speicherzelle [0704h] mit 00h löschen
         LXI   H, IO_TALK_REG02   ; 21 02 07 -> HL auf Adresse 0702h ausrichten
-        LDA   0040Bh      ; 3A 0B 04 -> Inhalt aus RAM-Zelle 040Bh in den Akkumulator laden
+        LDA   REG_PENDING_CMD      ; 3A 0B 04 -> Inhalt aus RAM-Zelle 040Bh in den Akkumulator laden
         MOV   M, A        ; 77       -> Wert aus 040Bh direkt nach [0702h] schreiben
         INX   H           ; 23       -> HL-Zeiger erhöhen (zeigt nun auf 0703h)
         MVI   M, 00h      ; 36 00    -> Speicherzelle [0703h] mit 00h überschreiben
