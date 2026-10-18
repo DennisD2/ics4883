@@ -507,56 +507,42 @@ L_029D:
         ANI   0C0h        ; E6 C0    -> Die obersten zwei Bits maskieren
         CPI   040h        ; FE 40    -> Prüfen auf das End-Of-Sequence / EOI Flag (40h)
         JNZ   02A5h       ; C2 A5 02 -> Sprung wenn != 0
+; ------------------------------------------------------------------------------
+; Hauptinitialisierung ab Label L_02C8 (Adresse 02C8h bis 02F8h)
+; Nibble-Packing Routine: Der Code ab Adresse 02DBh ist ein hocheffizienter Packer. Er nimmt zwei aufeinanderfolgende Bytes, isoliert jeweils deren untere 4 Bits (ANI 00Fh), schiebt das zweite Nibble per Rotation nach oben (RLC) und fügt sie mit ORA B zu einem einzigen, kompakten Daten-Byte zusammen.
+; SRAM-Transfer: Diese gepackten Daten werden sequenziell direkt in den System-SRAM ab Adresse 0500h übertragen (STAX D).
+; ------------------------------------------------------------------------------
 L_02C8:
-    	DB 021h	; 021h, from address 2c8h
-    	DB 01Fh	; 01Fh, from address 2c9h
-    	DB 004h	; 004h, from address 2cah
-    	DB 04Eh	; 04Eh, from address 2cbh
-    	DB 07Eh	; 07Eh, from address 2cch
-    	DB 0B7h	; 0B7h, from address 2cdh
-    	DB 0CAh	; 0CAh, from address 2ceh
-    	DB 017h	; 017h, from address 2cfh
-    	DB 000h	; 000h, from address 2d0h
-    	DB 036h	; 036h, from address 2d1h
-    	DB 000h	; 000h, from address 2d2h
-    	DB 0C5h	; 0C5h, from address 2d3h
-    	DB 0CDh	; 0CDh, from address 2d4h
-    	DB 011h	; 011h, from address 2d5h
-    	DB 003h	; 003h, from address 2d6h
-    	DB 0C1h	; 0C1h, from address 2d7h
-    	DB 011h	; 011h, from address 2d8h
-    	DB 000h	; 000h, from address 2d9h
-    	DB 005h	; 005h, from address 2dah
-    	DB 023h	; 023h, from address 2dbh
-    	DB 07Eh	; 07Eh, from address 2dch
-    	DB 0E6h	; 0E6h, from address 2ddh
-    	DB 00Fh	; 00Fh, from address 2deh
-    	DB 047h	; 047h, from address 2dfh
-    	DB 00Dh	; 00Dh, from address 2e0h
-    	DB 0FAh	; 0FAh, from address 2e1h
-    	DB 0F3h	; 0F3h, from address 2e2h
-    	DB 002h	; 002h, from address 2e3h
-    	DB 023h	; 023h, from address 2e4h
-    	DB 07Eh	; 07Eh, from address 2e5h
-    	DB 0E6h	; 0E6h, from address 2e6h
-    	DB 00Fh	; 00Fh, from address 2e7h
-    	DB 007h	; 007h, from address 2e8h
-    	DB 007h	; 007h, from address 2e9h
-    	DB 007h	; 007h, from address 2eah
-    	DB 007h	; 007h, from address 2ebh
-    	DB 0B0h	; 0B0h, from address 2ech
-    	DB 00Dh	; 00Dh, from address 2edh
-    	DB 012h	; 012h, from address 2eeh
-    	DB 013h	; 013h, from address 2efh
-    	DB 0C2h	; 0C2h, from address 2f0h
-    	DB 0DBh	; 0DBh, from address 2f1h
-    	DB 002h	; 002h, from address 2f2h
-    	DB 021h	; 021h, from address 2f3h
-    	DB 006h	; 006h, from address 2f4h
-    	DB 005h	; 005h, from address 2f5h
-    	DB 03Ah	; 03Ah, from address 2f6h
-    	DB 0C4h	; 0C4h, from address 2f7h
-    	DB 003h	; 003h, from address 2f8h
+        LXI   H, 041Fh    ; 21 1F 04 -> HL auf RAM-Adresse 041Fh (Index-Zähler) setzen
+        MOV   C, M        ; 4E       -> Aktuellen Zählerwert nach Register C laden
+        MOV   A, M        ; 7E       -> Wert zusätzlich in den Akkumulator laden
+        ORA   A           ; B7       -> Prüfen, ob der Zähler Null ist
+        JZ    L_0017      ; CA 17 00 -> Wenn Null, keine Daten da -> zurück zum Haupt-Polling
+        MVI   M, 00h      ; 36 00    -> Zähler im RAM wieder auf Null zurücksetzen
+        PUSH  B           ; C5       -> Registerpaar BC auf dem Stack sichern
+        CALL  0311h       ; CD 11 03 -> Unterprogramm an Adresse 0311h aufrufen (Puffer-Check)
+        POP   B           ; C1       -> Registerpaar BC wieder herstellen
+        LXI   D, 0500h    ; 11 00 05 -> DE auf Zieladresse im SRAM 0500h ausrichten
+        INX   H           ; 23       -> HL-Zeiger erhöhen
+        MOV   A, M        ; 7E       -> Byte aus dem Quellpuffer laden
+        ANI   00Fh        ; E6 0F    -> Die unteren 4 Bits (unteres Nibble) maskieren
+        MOV   B, A        ; 47       -> Nibble in Register B zwischenspeichern
+        DCR   C           ; 0D       -> Schleifenzähler C dekrementieren
+        JM    02F3h       ; FA F3 02 -> Wenn Zähler negativ wird, Schleife abbrechen nach 02F3h
+        INX   H           ; 23       -> HL-Zeiger für das nächste Byte erhöhen
+        MOV   A, M        ; 7E       -> Nächstes Byte laden
+        ANI   00Fh        ; E6 0F    -> Die unteren 4 Bits maskieren
+        RLC               ; 07       -> Viermal nach links rotieren, um das Nibble...
+        RLC               ; 07
+        RLC               ; 07
+        RLC               ; 07       ; ...in das obere Halbnibble zu verschieben
+        ORA   B           ; B0       -> Die beiden Nibbles zu einem vollen Byte zusammenführen
+        DCR   C           ; 0D       -> Schleifenzähler C erneut dekrementieren
+        STAX  D           ; 12       -> Das fertige Byte an die SRAM-Zieladresse [DE] schreiben
+        INX   D           ; 13       -> SRAM-Zielzeiger DE um 1 erhöhen
+        JNZ   02DBh       ; C2 DB 02 -> Wenn Schleifenzähler C noch nicht Null, nächstes Byte holen
+        LXI   H, 0506h    ; 21 06 05 -> HL auf SRAM-Adresse 0506h ausrichten
+        LDA   03C4h       ; 3A C4 03 -> Konfigurationswert aus dem ROM laden
 L_02F9:
     	DB 047h	; 047h, from address 2f9h
     	DB 0EEh	; 0EEh, from address 2fah
