@@ -285,15 +285,16 @@ L_0163:
         MVI     A, 80h          ; 3E 80    -> Status-Flag 80h in den Akkumulator laden
         STA     0704h           ; 32 04 07 -> Zustand direkt im I/O-Register 0704h sichern
         LXI     H, 0701h        ; 21 01 07 -> Richtet HL auf das I/O-Statusregister 0701h aus
+L_0178:
         LDA     0405h           ; 3A 05 04 -> Lädt Kontrollwert aus RAM 0405h
     	XRA     M               ; AE from address 17bh
-    	JM      01A9h           ; FA A9 01 -> Wenn negativ (Sign-Flag=1), springe vor zu 0191h
+    	JM      L_01A9          ; FA A9 01 -> Wenn negativ (Sign-Flag=1), springe vor zu 0191h
         MOV     A, M            ; 7E       -> Byte direkt aus der Hardware [HL] laden
         ANI     01h             ; E6 01    -> Bit 0 maskieren
-        JZ      0178h           ; CA 78 01 -> Wenn Null, springe zurück zu Adresse 0178h (Schleife!)
+        JZ      L_0178          ; CA 78 01 -> Wenn Null, springe zurück zu Adresse 0178h (Schleife!)
         LDA     0405h           ; 3A 05 04 -> Erneut RAM-Wert 0405h laden
     	XRA     M               ; AE from address 188h
-    	JM      L_01A9           ; FA A9 01 -> Wenn negativ, springe vor zu Adresse 01A9h
+    	JM      L_01A9          ; FA A9 01 -> Wenn negativ, springe vor zu Adresse 01A9h
         MVI     A, 06h          ; 3E 06    -> Konstante 06h laden
         ORA     C               ; B1       -> Logisches ODER mit Register C
         STAX    D               ; 12       -> An Hardware [DE] ausgeben
