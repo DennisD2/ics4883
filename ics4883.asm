@@ -445,40 +445,32 @@ L_0256:
         RET                     ; C9       -> Unterprogramm beenden
 
 ; Steuerzeichen Filter
-        LXI   H, 0390h    ; 21 90 03 -> HL auf alternative Tabelle/String im ROM ausrichten
-        MOV   A, B        ; 78       -> Register B (04h) nach A holen
-        ANI   01Fh        ; E6 1F    -> 5-Bit-Maskierung
-        CMP   M           ; BE       -> Mit Speicherwert [HL] vergleichen
-        JNZ   L_0017      ; C2 17 00 -> Bei Ungleichheit harter Sprung zurück zu L_0017
-        LXI   H, 0407h    ; 21 07 04 -> HL auf RAM-Adresse 0407h setzen
-        MOV   A, M        ; 7E       -> Wert aus 0407h lesen
-        ANI   030h        ; E6 30    -> Bits 4 und 5 maskieren
-        JZ    L_0017      ; CA 17 00 -> Wenn Null, ebenfalls zurück zu L_0017
-        RRC               ; 0F       -> Bits rotieren
-        RRC               ; 0F
-        RRC               ; 0F
-        MOV   M, A        ; 77       -> Modifizierten Wert zurück nach 0407h schreiben
-        JMP   L_0017      ; C3 17 00 -> Unbedingter Rücksprung zum Haupt-Polling
+        LXI     H, 0390h        ; 21 90 03 -> HL auf alternative Tabelle/String im ROM ausrichten
+        MOV     A, B            ; 78       -> Register B (04h) nach A holen
+        ANI     01Fh            ; E6 1F    -> 5-Bit-Maskierung
+        CMP     M               ; BE       -> Mit Speicherwert [HL] vergleichen
+        JNZ     L_0017          ; C2 17 00 -> Bei Ungleichheit harter Sprung zurück zu L_0017
+        LXI     H, 0407h        ; 21 07 04 -> HL auf RAM-Adresse 0407h setzen
+        MOV     A, M            ; 7E       -> Wert aus 0407h lesen
+        ANI     030h            ; E6 30    -> Bits 4 und 5 maskieren
+        JZ      L_0017          ; CA 17 00 -> Wenn Null, ebenfalls zurück zu L_0017
+        RRC                     ; 0F       -> Bits rotieren
+        RRC                     ; 0F
+        RRC                     ; 0F
+        MOV     M, A            ; 77       -> Modifizierten Wert zurück nach 0407h schreiben
+        JMP     L_0017          ; C3 17 00 -> Unbedingter Rücksprung zum Haupt-Polling
 
-    	DB 03Ah	; 03Ah, from address 28ah
-    	DB 007h	; 007h, from address 28bh
-    	DB 004h	; 004h, from address 28ch
-    	DB 0E6h	; 0E6h, from address 28dh
-    	DB 002h	; 002h, from address 28eh
-    	DB 0CAh	; 0CAh, from address 28fh
-    	DB 017h	; 017h, from address 290h
-    	DB 000h	; 000h, from address 291h
-    	DB 021h	; 021h, from address 292h
-    	DB 007h	; 007h, from address 293h
-    	DB 006h	; 006h, from address 294h
-    	DB 077h	; 077h, from address 295h
-    	DB 02Bh	; 02Bh, from address 296h
-    	DB 03Ah	; 03Ah, from address 297h
-    	DB 0C8h	; 0C8h, from address 298h
-    	DB 003h	; 003h, from address 299h
-    	DB 0C3h	; 0C3h, from address 29ah
-    	DB 0F9h	; 0F9h, from address 29bh
-    	DB 002h	; 002h, from address 29ch
+; ------------------------------------------------------------------------------
+; Fortsetzung ab Adresse 028Ah bis 029Ch
+; ------------------------------------------------------------------------------
+        LDA     0407h           ; 3A 07 04 -> Lädt den Gerätestatus aus dem RAM
+        ANI     02h             ; E6 02    -> Bit 1 maskieren (z. B. Remote/Local oder ein Bus-Flag)
+        JZ      L_0017          ; CA 17 00 -> Wenn Bit 0 ist, Schleife abbrechen und zurück zu L_0017
+        LXI     H, 0607h        ; 21 07 06 -> HL auf Ausgangs-Datenregister ausrichten
+        MOV     M, A            ; 77       -> Den maskierten Statuswert direkt dorthin schreiben
+        DCX     H               ; 2B       -> HL dekrementieren auf 0606h
+        LDA     03C8h           ; 3A C8 03 -> Einen Konfigurations- oder Initialisierungswert aus dem ROM laden
+        JMP     02F9h           ; C3 F9 02 -> Sprung zur weiteren Registerverarbeitung an Adresse 02F9h
 
 L_029D:
     	DB 0AFh	; 0AFh, from address 29dh
