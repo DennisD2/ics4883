@@ -236,8 +236,10 @@
 0x01A1: 32 03 04 ; STA 0x0403
 0x01A4: C9       ; RET
 
+
 0x01A5: E1       ; POP H
 0x01A6: C3 17 00 ; JMP 0x0017
+
 0x01A9: FB       ; EI
 0x01AA: 3A 0D 04 ; LDA 0x040D
 0x01AD: B7       ; ORA A
@@ -328,6 +330,7 @@
 0x024B: 05       ; DCR B
 0x024C: C2 44 02 ; JNZ 0x0244
 0x024F: C9       ; RET
+
 0x0250: 4F       ; MOV C,A
 0x0251: 3A 05 06 ; LDA 0x0605
 0x0254: E6 04    ; ANI 0x04
@@ -345,6 +348,7 @@
 0x0267: 13       ; INX D
 0x0268: E1       ; POP H
 0x0269: C9       ; RET
+
 0x026A: 21 90 03 ; LXI H,0x0390
 0x026D: 78       ; MOV A,B
 0x026E: E6 1F    ; ANI 0x1F
@@ -449,6 +453,7 @@
 0x0317: C2 1A 03 ; JNZ 0x031A
 0x031A: E1       ; POP H
 0x031B: C9       ; RET
+
 0x031C: 3A 0C 04 ; LDA 0x040C
 0x031F: B7       ; ORA A
 0x0320: CA 17 00 ; JZ 0x0017
