@@ -544,50 +544,47 @@ L_02C8:
         LXI   H, 0506h    ; 21 06 05 -> HL auf SRAM-Adresse 0506h ausrichten
         LDA   03C4h       ; 3A C4 03 -> Konfigurationswert aus dem ROM laden
 L_02F9:
-    	DB 047h	; 047h, from address 2f9h
-    	DB 0EEh	; 0EEh, from address 2fah
-    	DB 003h	; 003h, from address 2fbh
-    	DB 077h	; 077h, from address 2fch
-    	DB 0E5h	; 0E5h, from address 2fdh
-    	DB 0E5h	; 0E5h, from address 2feh
-    	DB 0E1h	; 0E1h, from address 2ffh
-    	DB 0E1h	; 0E1h, from address 300h
-    	DB 070h	; 070h, from address 301h
-    	DB 0C3h	; 0C3h, from address 302h
-    	DB 017h	; 017h, from address 303h
-    	DB 000h	; 000h, from address 304h
-    	DB 078h	; 078h, from address 305h
-    	DB 0E6h	; 0E6h, from address 306h
-    	DB 07Fh	; 07Fh, from address 307h
-    	DB 00Eh	; 00Eh, from address 308h
-    	DB 003h	; 003h, from address 309h
-    	DB 021h	; 021h, from address 30ah
-    	DB 0F5h	; 0F5h, from address 30bh
-    	DB 003h	; 003h, from address 30ch
-    	DB 0CDh	; 0CDh, from address 30dh
-    	DB 04Eh	; 04Eh, from address 30eh
-    	DB 001h	; 001h, from address 30fh
-    	DB 0E9h	; 0E9h, from address 310h
-    	DB 03Ah	; 03Ah, from address 311h
-    	DB 005h	; 005h, from address 312h
-    	DB 005h	; 005h, from address 313h
-    	DB 0E6h	; 0E6h, from address 314h
-    	DB 008h	; 008h, from address 315h
-    	DB 0FEh	; 0FEh, from address 316h
-    	DB 008h	; 008h, from address 317h
-    	DB 0C0h	; 0C0h, from address 318h
-    	DB 0E5h	; 0E5h, from address 319h
-    	DB 023h	; 023h, from address 31ah
-    	DB 07Eh	; 07Eh, from address 31bh
-    	DB 02Fh	; 02Fh, from address 31ch
-    	DB 077h	; 077h, from address 31dh
-    	DB 00Dh	; 00Dh, from address 31eh
-    	DB 0C2h	; 0C2h, from address 31fh
-    	DB 01Ah	; 01Ah, from address 320h
-    	DB 003h	; 003h, from address 321h
-    	DB 0E1h	; 0E1h, from address 322h
-    	DB 0C9h	; 0C9h, from address 323h
+; ------------------------------------------------------------------------------
+; Fortsetzung ab Adresse 02F9h bis 0323h
+; Dynamische Fehlerbehandlung (0305h): Wenn die Daten zuvor nicht den Erwartungen entsprechen, wird hier das fehlerhafte Zeichen isoliert (ANI 07Fh) und über eine separate Befehlstabelle ab ROM-Adresse 03F5h mittels deiner Suchroutine L_014E ausgewertet. Der Befehl PCHL springt dann dynamisch in die passende Behandlung.
+; Puffer-Invertierung (0311h): Dieses Unterprogramm prüft ein Hardware-Statusflag an Adresse 0505h. Ist dieses aktiv (CPI 08h), durchläuft der Code eine Schleife (L_031A), die den gesamten Datenstrom im RAM bitweise invertiert (CMA). Dies deutet stark auf eine Pegel-Anpassung für die angeschlossene Hardware hin.
+; ------------------------------------------------------------------------------
+        MOV   B, A        ; 47       -> Gekoppelt mit LDA 03C4h aus dem Vorblock
+        XRI   03h         ; EE 03    -> Maskierung mit 03h
+        MOV   M, A        ; 77       -> Zurückschreiben nach RAM [0506h]
+        PUSH  H           ; E5       -> Registerpaare sichern/manipulieren
+        PUSH  H           ; E5
+        POP   H           ; E1
+        POP   H           ; E1
+        MOV   M, B        ; 70
+        JMP   L_0017      ; C3 17 00 -> Unbedingter Rücksprung zum Haupt-Polling
 
+L_0305:
+        MOV   A, B        ; 78       -> Hierher wird gesprungen, wenn ASCII-Prüfung bei 02A2h fehlschlägt
+        ANI   07Fh        ; E6 7F    -> Auf 7-Bit-ASCII maskieren
+        MVI   C, 03h      ; 0E 03    -> Schleifenzähler (3) für die Tabelle setzen
+        LXI   H, 03F5h    ; 21 F5 03 -> HL auf Sprungtabelle im ROM ausrichten
+        CALL  L_014E      ; CD 4E 01 -> Tabellen-Suchroutine aufrufen
+        PCHL              ; E9       -> Indirekter Sprung zur gefundenen Routine
+
+; Unterprogramm ab Adresse 0311h (Puffer-Prüfung, aufgerufen bei 02D4h)
+L_0311:
+        LDA   0505h       ; 3A 05 05 -> Byte aus dem I/O-SRAM-Status laden
+        ANI   08h         ; E6 08    -> Bit 3 isolieren
+        CPI   08h         ; FE 08    -> Prüfen, ob Bit gesetzt ist
+        RNZ               ; C0       -> Wenn nicht gesetzt, vorzeitig zurückkehren
+        PUSH  H           ; E5       -> HL-Zeiger sichern
+L_031A:
+        INX   H           ; 23       -> Zeiger im Puffer erhöhen
+        MOV   A, M        ; 7E       -> Byte laden
+        CMA               ; 2F       -> Bitweise invertieren
+        MOV   M, A        ; 77       -> Invertiertes Byte zurückschreiben
+        DCR   C           ; 0D       -> Schleifenzähler verringern
+        JNZ   L_031A      ; C2 1A 03 -> Schleife wiederholen, bis C=0
+        POP   H           ; E1       -> HL-Zeiger wiederherstellen
+        RET               ; C9       -> Unterprogramm sauber beenden
+
+L_0324:
     	DB 03Ah	; 03Ah, from address 324h
     	DB 00Ch	; 00Ch, from address 325h
     	DB 004h	; 004h, from address 326h
