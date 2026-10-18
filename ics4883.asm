@@ -657,7 +657,7 @@ L_0324:
         JZ    L_0017      ; CA 17 00 -> Wenn der Wert Null ist, Sprung zurück zum Haupt-Polling L_0017
         MOV   A, B        ; 78       -> Holt den Wert aus Register B zurück nach A
         CPI   070h        ; FE 70    -> Prüfen, ob das Zeichen im Akkumulator 70h entspricht
-    	JZ    036Dh       ; CA 6D 03 -> Wenn ja, Sprung nach vorne zu Adresse 036Dh
+    	JZ    L_036D       ; CA 6D 03 -> Wenn ja, Sprung nach vorne zu Adresse 036Dh
         STA   REG_IO_STATE       ; 32 01 04 -> Speichert den Akkumulator in RAM-Adresse REG_IO_STATE
         ANI   007h        ; E6 07    -> Maskiert die unteren 3 Bits (Bit 0-2) des Akkumulators
         MOV   C, A        ; 4F       -> Das maskierte Ergebnis nach Register C retten
@@ -697,6 +697,8 @@ L_0355:
 ; ------------------------------------------------------------------------------
 ; Behandlungsroutinen für Kommandos (Adresse 036Dh bis 0389h)
 ; ------------------------------------------------------------------------------
+L_CMD_P_HANDLER:
+L_036D:
         XRA   A           ; AF       -> Akkumulator nullen (A = 00h)
         STA   REG_IO_STATE       ; 32 01 04 -> Schreibt die Null in die RAM-Zelle REG_IO_STATE
         LXI   H, REG_SYS_STATUS    ; 21 07 04 -> HL auf Kontrollregister 0407h ausrichten
@@ -724,7 +726,7 @@ L_037B:
 
 ; 0390h: Einzelne Kontroll-Konstanten für Vergleiche
     	DB 000h	; 000h, from address 390h
-    	DB 002h	; 002h, from address 391h
+    	DB 002h	; 002h, from address 391h ROM_BUS_SIG_MASK
     	DB 005h	; 005h, from address 392h
 
 ; 0393h - 03B2h: Sprung- und Befehlstabelle für den Data Dispatcher
