@@ -856,10 +856,12 @@
 	DB 003h	; 03 (oct=3), from address h/d = 33f 831
 	DB 0EEh	; EE (oct=356), from address h/d = 340 832
 	DB 001h	; 01 (oct=1), from address h/d = 341 833
+
 	DB 0E6h	; E6 (oct=346), from address h/d = 342 834
 	DB 001h	; 01 (oct=1), from address h/d = 343 835
 	DB 00Fh	; 0F (oct=17), from address h/d = 344 836
 	DB 00Ch	; 0C (oct=14), from address h/d = 345 837
+
 	DB 007h	; 07 (oct=7), from address h/d = 346 838
 	DB 00Dh	; 0D (oct=15), from address h/d = 347 839
 	DB 0C2h	; C2 (oct=302), from address h/d = 348 840

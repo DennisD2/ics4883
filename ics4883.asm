@@ -624,6 +624,7 @@ L_02F9:
         MOV   M, B        ; 70
         JMP   L_0017      ; C3 17 00 -> Unbedingter Rücksprung zum Haupt-Polling
 
+L_CMD_PARSE_ERR:
 L_0305:
         MOV   A, B        ; 78       -> Hierher wird gesprungen, wenn ASCII-Prüfung bei 02A2h fehlschlägt
         ANI   07Fh        ; E6 7F    -> Auf 7-Bit-ASCII maskieren
@@ -633,6 +634,7 @@ L_0305:
         PCHL              ; E9       -> Indirekter Sprung zur gefundenen Routine
 
 ; Unterprogramm ab Adresse 0311h (Puffer-Prüfung, aufgerufen bei 02D4h)
+L_CHECK_INVERT:
 L_0311:
         LDA   RAM_HW_CONFIG1       ; 3A 05 05 -> Byte aus dem I/O-SRAM-Status laden
         ANI   08h         ; E6 08    -> Bit 3 isolieren
@@ -662,14 +664,18 @@ L_0324:
         MOV   A, B        ; 78       -> Holt das originale Zeichen aus Register B zurück nach A
         ANI   008h        ; E6 08    -> Bit 3 des Akkumulators isolieren
         LDA   REG_SYS_STATUS       ; 3A 07 04 -> Systemstatus aus RAM 0407h laden
-        JZ    0342h       ; CA 42 03 -> Wenn Ergebnis von ANI Null war, Sprung nach 0342h
+        JZ    L_0342       ; CA 42 03 -> Wenn Ergebnis von ANI Null war, Sprung nach 0342h
         XRI   001h        ; EE 01    -> Akkumulator mit 01h XOR-verknüpfen
+L_BIT3_ZERO:
+L_0342:
         ANI   001h        ; E6 01    -> Bit 0 isolieren
         RRC               ; 0F       -> Akkumulator nach rechts rotieren
         INR   C           ; 0C       -> Register C um 1 erhöhen
+L_BIT3_SET:
+L_0346:
         RLC               ; 07       -> Akkumulator nach links rotieren
         DCR   C           ; 0D       -> Register C um 1 verringern
-    	JNZ   0346h       ; C2 46 03 -> Wenn nicht Null, Sprung nach 0346h (Hinweis: C2 46 03 ist JNZ)
+    	JNZ   L_0346       ; C2 46 03 -> Wenn nicht Null, Sprung nach 0346h (Hinweis: C2 46 03 ist JNZ)
         STA   REG_PENDING_CMD       ; 32 0B 04 -> Akkumulator in RAM-Zelle 040Bh sichern
         LXI   H, REG_SYS_STATUS    ; 21 07 04 -> HL auf RAM-Adresse 0407h ausrichten
         MOV   A, M        ; 7E       -> Wert laden
