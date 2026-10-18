@@ -623,6 +623,7 @@
 	DB 063h	; 63 (oct=143), from address h/o/d = 260 608
 	DB 002h	; 02 (oct=2), from address h/o/d = 261 609
 	DB 02Fh	; 2F (oct=57), from address h/o/d = 262 610
+
 	DB 0E6h	; E6 (oct=346), from address h/o/d = 263 611
 	DB 00Fh	; 0F (oct=17), from address h/o/d = 264 612
 	DB 0E5h	; E5 (oct=345), from address h/o/d = 265 613

@@ -440,8 +440,9 @@ L_0256:
         ANI     04h             ; E6 04    -> Bit 2 isolieren
         CPI     04h             ; FE 04    -> Mit 04h vergleichen
         MOV     A, C            ; 79       -> Gesichertes Byte zurück nach A holen
-        JZ      0263h           ; CA 63 02 -> Wenn Vergleich gleich (Zero=1), Sprung zu 0263h
+        JZ      L_0263          ; CA 63 02 -> Wenn Vergleich gleich (Zero=1), Sprung zu 0263h
         CMA                     ; 2F       -> Akkumulator invertieren
+L_0263:
         ANI     0Fh             ; E6 0F    -> Die unteren 4 Bits maskieren
         PUSH    H               ; E5       -> HL-Registerpaar auf dem Stack sichern
         LXI     H, 03D4h        ; 21 D4 03 -> HL auf Übersetzungstabelle im ROM ausrichten
@@ -479,7 +480,7 @@ L_0256:
         MOV     M, A            ; 77       -> Den maskierten Statuswert direkt dorthin schreiben
         DCX     H               ; 2B       -> HL dekrementieren auf 0606h
         LDA     03C8h           ; 3A C8 03 -> Einen Konfigurations- oder Initialisierungswert aus dem ROM laden
-        JMP     02F9h           ; C3 F9 02 -> Sprung zur weiteren Registerverarbeitung an Adresse 02F9h
+        JMP     L_02F9          ; C3 F9 02 -> Sprung zur weiteren Registerverarbeitung an Adresse 02F9h
 
 L_029D:
     	DB 0AFh	; 0AFh, from address 29dh
@@ -576,6 +577,7 @@ L_02C8:
     	DB 03Ah	; 03Ah, from address 2f6h
     	DB 0C4h	; 0C4h, from address 2f7h
     	DB 003h	; 003h, from address 2f8h
+L_02F9:
     	DB 047h	; 047h, from address 2f9h
     	DB 0EEh	; 0EEh, from address 2fah
     	DB 003h	; 003h, from address 2fbh
