@@ -65,12 +65,12 @@ IO_HW_OUTPUT   EQU  0707h       ; Zentrales Hardware-Ausgangsregister (z. B. LED
 ; 0000h - 0016h: boot vector and initialization
 ; ---------------------------------------------------------------------
 L_0000:
-        LXI     SP, STACK_BASE       ; 31 00 05 -> Stack-Pointer setzen
+        LXI     SP, STACK_BASE  ; 31 00 05 -> Stack-Pointer setzen
         CALL    L_008F          ; CD 8F 00 -> memory init for variables
 L_0006:
-        LDA     ROM_CFG_FLAGS           ; 3A C4 03 -> Konfigurationswert aus dem ROM laden
+        LDA     ROM_CFG_FLAGS   ; 3A C4 03 -> Konfigurationswert aus dem ROM laden
         XRI     0Ch             ; EE 0C    -> Maskierung (XOR) für Initialisierung
-        STA     RAM_HW_CONFIG2           ; 32 06 05 -> Im System-SRAM wegsichern
+        STA     RAM_HW_CONFIG2  ; 32 06 05 -> Im System-SRAM wegsichern
         LXI     H, ROM_TAB_SRAM_INI        ; 21 B3 03 -> Zeiger auf eine Tabelle laden
         CALL    L_007B          ; CD 7B 00 -> Speicher-Kopierroutine aufrufen
         JMP     L_02C8          ; C3 C8 02 -> Sprung in die Hauptinitialisierung
@@ -80,12 +80,12 @@ L_0006:
 ; ------------------------------------------------------------------------------
 L_0017:
         DI
-        LDA     REG_IO_STATE           ; Status von GPIB / I/O Interface-Chip laden
+        LDA     REG_IO_STATE    ; Status von GPIB / I/O Interface-Chip laden
         ORA     A               ; Prüfen, ob der Status 0 ist
         JNZ     L_0355          ; Wenn ungleich Null -> Zur Service-Routine abzweigen
 
 L_001F:
-        LDA     IO_TALK_STATUS           ; Status des Talker-Interfaces einlesen
+        LDA     IO_TALK_STATUS  ; Status des Talker-Interfaces einlesen
         ANI     0C0h            ; Die obersten zwei Bits maskieren
         CPI     80h             ; Prüfen auf Status-Flag 80h
         JZ      L_00CE          ; Bei Treffer -> Abzweigen zur Routine L_00CE
@@ -93,7 +93,7 @@ L_001F:
         CALL    L_00AD          ; CD AD 00 -> Ruft Subroutine an Adresse 00ADh auf
         MVI     C, 0FEh         ; 0E FE    -> Lädt Konstante 0FEh in Register C
         CALL    L_00A1          ; CD A1 00 -> Ruft Subroutine an Adresse 00A1h auf
-        LDA     IO_TALK_REG06           ; 3A 06 07 -> Lädt den Status aus dem Talker-Register 0706h
+        LDA     IO_TALK_REG06   ; 3A 06 07 -> Lädt den Status aus dem Talker-Register 0706h
         RLC                     ; 07       -> Akkumulatorinhalt nach links rotieren
         JMP     L_003C          ; C3 3C 00 -> Unbedingter Sprung zur Routine 003Ch
         POP     H               ; E1       -> Registerpaar HL vom Stack holen (Stack aufräumen)
@@ -109,20 +109,20 @@ L_003C:
         RRC                     ; 0F       -> Akkumulator nach rechts rotieren
         JC      L_01AD          ; DA AD 01 -> Wenn Carry=1, springe zu Adresse 01ADh
         LXI     B,01000h        ; 01 00 10 -> lade 01000h in B
-        LDA     IO_DIP_SWITCH           ; 3A 05 06 -> Holt das Daten-Byte vom I/O-Schnittstellenregister
+        LDA     IO_DIP_SWITCH   ; 3A 05 06 -> Holt das Daten-Byte vom I/O-Schnittstellenregister
     	CMA                     ; 2F       -> Akkumulator invertieren (Low-Aktive Signale)
     	RRC                     ; 0F       -> Bit nach rechts rotieren
     	JNC     L_0060          ; D2 60 00 -> Wenn kein Carry, springe vor zu Adresse 0060h
     	CALL    L_00C7          ; CD C7 00 -> Unterfunktion an Adresse 00C7h ausf
         JC      L_006D          ; DA 6D 00 -> Wenn Carry=1, springe zu Adresse 006Dh
-        STA     IO_SRAM_FLAG1           ; 32 07 06 -> Berechneten Zustand im RAM 0607h sichern
+        STA     IO_SRAM_FLAG1   ; 32 07 06 -> Berechneten Zustand im RAM 0607h sichern
 L_0060:
-    	LXI     H, REG_SYS_STATE        ; 21 03 04 -> HL-Zeiger auf I/O-Schnittstelle 0403h ausrichten
+    	LXI     H, REG_SYS_STATE  ; 21 03 04 -> HL-Zeiger auf I/O-Schnittstelle 0403h ausrichten
     	MOV     A,M             ; 7E from address 63h
     	ANA     B               ; A0 from address 64h
     	ORA     C               ; B1 from address 65h
     	MOV     M,A             ; 77 from address 66h
-    	STA     IO_TALK_REG03          ; Zwischenspeichern des aktuellen I/O-Status
+    	STA     IO_TALK_REG03   ; Zwischenspeichern des aktuellen I/O-Status
     	JMP     L_0017          ; C3 17 00  back to loop start
 
 ; ------------------------------------------------------------------------------
@@ -170,7 +170,7 @@ L_0084:
 ; ------------------------------------------------------------------------------
 L_008F:
         MVI     C, 040h         ; 0E 40    -> Lädt Schleifenzähler (64) in Register C
-        LXI     H, SRAM_START        ; 21 00 04 -> HL auf Startadresse SRAM_START ausrichten
+        LXI     H, SRAM_START   ; 21 00 04 -> HL auf Startadresse SRAM_START ausrichten
 L_0094:
         MVI     M, 00h          ; 36 00    -> Speicherstelle [HL] mit Null loeschen
         INX     H               ; 23       -> HL-Zeiger auf die naechste Adresse erhoehen
@@ -200,13 +200,13 @@ L_00A1:
 
 L_00AD:
         LXI     H, 0391h        ; 21 91 03 -> HL-Zeiger auf ROM-Tabelle/String 0391h ausrichten
-    	LDA     IO_DIP_SWITCH           ; 3A 05 06 -> Holt das aktuelle I/O-Datenbyte vom Talker
+    	LDA     IO_DIP_SWITCH   ; 3A 05 06 -> Holt das aktuelle I/O-Datenbyte vom Talker
         CMA                     ; 2F       -> Akkumulator invertieren (Low-Aktiv Pegel)
         ANI     02h             ; E6 02    -> Bit 1 maskieren (Prüfung eines bestimmten Bus-Signals)
         CMP     M               ; BE       -> Vergleiche das Ergebnis mit dem Wert im ROM [HL]
         JNZ     L_00C5          ; C2 C5 00 -> Wenn ungleich, springe vor zu Adresse 00C5h
         INX     H               ; 23       -> HL-Zeiger auf das nächste Tabellenbyte erhöhen
-        LDA     RAM_HW_CONFIG1           ; 3A 05 05 -> weiteres I/O-Datenbyte einlesen
+        LDA     RAM_HW_CONFIG1  ; 3A 05 05 -> weiteres I/O-Datenbyte einlesen
         CMA                     ; 2F       -> Invertieren
         ANI     07h             ; E6 07    -> Die untersten 3 Bits maskieren
         CMP     M               ; BE       -> Mit dem nächsten Tabellenwert im ROM vergleichen
@@ -228,11 +228,11 @@ L_00C7:
 ; ------------------------------------------------------------------------------
 L_00CE:
         MVI     A, 80h          ; 3E 80    -> Lade Status-Flag 80h in den Akkumulator
-        STA     REG_GPIB_CTRL           ; 32 05 04 -> Schreibe das Flag in das GPIB-Schnittstellenregister
+        STA     REG_GPIB_CTRL   ; 32 05 04 -> Schreibe das Flag in das GPIB-Schnittstellenregister
         XRA     A               ; AF       -> Akkumulator löschen (A = 0)
-        STA     IO_TALK_REG02           ; 32 02 07 -> Lösche das Statusregister 0702h im Talker-Interface
+        STA     IO_TALK_REG02   ; 32 02 07 -> Lösche das Statusregister 0702h im Talker-Interface
         CALL    L_0163          ; CD 63 01 -> Ruft Unterfunktion an Adresse 0163h auf
-        LDA     IO_TALK_REG06           ; 3A 06 07 -> Lädt aktuellen Status aus dem Talker-Register
+        LDA     IO_TALK_REG06   ; 3A 06 07 -> Lädt aktuellen Status aus dem Talker-Register
         RLC                     ; 07       -> Akkumulator nach links rotieren (Bit-Prüfung)
         JC      L_0017          ; DA 17 00 -> Wenn Carry=1, springe hart zurück zum Schleifenstart L_0017
         ; ------------------------------------------------------------------------------
@@ -245,7 +245,7 @@ L_00CE:
         CPI     060h            ; FE 60    -> Vergleiche mit dem Kontrollwert 60h
         JZ      L_00F7          ; CA F7 00 -> Wenn gleich, springe vor zur Service-Routine 00F7h
         XRA     A               ; AF       -> Akkumulator löschen (A = 0)
-        STA     REG_CMD_LOCK           ; 32 0C 04 -> Schreibt die Null in das Kontrollregister 040Ch
+        STA     REG_CMD_LOCK    ; 32 0C 04 -> Schreibt die Null in das Kontrollregister 040Ch
         MOV     A, B            ; 78       -> Holt das originale Zeichen erneut aus Register B
         ANI     060h            ; E6 60    -> Erneute Bitmaskierung
         JNZ     L_00F7          ; C2 F7 00 -> Wenn ungleich Null, springe vor zur Service-Routine 00F7h
@@ -274,7 +274,7 @@ L_010E:
         CPI     03Fh            ; FE 3F    -> Vergleiche mit ASCII '?' (GPIB Talker Query)
         JNZ     L_0017          ; C2 17 00 -> Wenn kein '?', zurück zum Schleifenstart L_0017
     	XRA     A               ; AF from address 114h
-    	STA     REG_BUFF_IDX          ; 32 1F 04 from address 115h
+    	STA     REG_BUFF_IDX    ; 32 1F 04 from address 115h
     	MVI     C, 0FDh         ; 0E FD    -> Lädt die Ausgabemaske 0FDh in Register C
     	CALL    L_00A1          ; CD A1 00 -> Ruft die I/O-Ausgabestufe auf (Zeichen auf den Bus senden)
         JMP     L_0017          ; C3 17 00 -> Unbedingter Rücksprung zu L_0017
@@ -287,7 +287,7 @@ L_010E:
     	JMP     L_0017          ; C3 17 00  from address 12eh
 
 L_0131:
-    	LDA     IO_TALK_REG06           ; 3A 06 07 -> Lädt den Status aus dem Talker-Register 0706h
+    	LDA     IO_TALK_REG06   ; 3A 06 07 -> Lädt den Status aus dem Talker-Register 0706h
     	ANI     01Fh            ; E6 1F Bits maskieren
         MOV     C, A            ; 4F       -> Zwischenspeichern in Register C
     	MOV     A,B             ; 78 from address 137h
@@ -299,12 +299,12 @@ L_0131:
         ; Talker-Statusprüfung & Bitmaskierungs-Unterprogramm (Adresse 013Ch - 014Fh)
         ; ------------------------------------------------------------------------------
 L_013C:
-    	LDA     REG_SYS_STATUS           ; 3A 07 04 from address 13ch
+    	LDA     REG_SYS_STATUS  ; 3A 07 04 from address 13ch
     	ANI     02h             ; E6 02 from address 13fh
     	JZ      L_0017          ; CA 17 00 from address 141h
     	JMP     L_0006          ; C3 06 00 from address 144h
     	XRA     A               ; AF from address 147h
-    	STA     REG_CMD_STATE           ; 32 from address 148h
+    	STA     REG_CMD_STATE   ; 32 from address 148h
     	JMP     L_0017          ; C3 17 00
 
 L_014E:
@@ -333,7 +333,7 @@ L_015C:
         ; Schnittstellen- & Pufferverwaltungsroutine (Adresse 0163h - 01A8h)
         ; ------------------------------------------------------------------------------
 L_0163:
-        LDA     REG_SYS_STATE           ; 3A 03 04 -> Lädt Zustand aus RAM-Zelle 0403h
+        LDA     REG_SYS_STATE   ; 3A 03 04 -> Lädt Zustand aus RAM-Zelle 0403h
         ANI     10h             ; E6 10    -> Bit 4 maskieren
         MOV     C, A            ; 4F       -> In Register C zwischenspeichern
         LXI     D, IO_TALK_REG03        ; 11 03 07 -> Richtet DE auf physische Hardwareadresse 0703h aus
@@ -341,23 +341,23 @@ L_0163:
         ORA     C               ; B1       -> Logisches ODER mit Register C verknüpfen
         STAX    D               ; 12       -> Akkumulator an Hardwareadresse [DE] ausgeben
         MVI     A, 80h          ; 3E 80    -> Status-Flag 80h in den Akkumulator laden
-        STA     IO_TALK_CTRL           ; 32 04 07 -> Zustand direkt im I/O-Register 0704h sichern
+        STA     IO_TALK_CTRL    ; 32 04 07 -> Zustand direkt im I/O-Register 0704h sichern
         LXI     H, IO_TALK_STATUS        ; 21 01 07 -> Richtet HL auf das I/O-Statusregister 0701h aus
 L_0178:
-        LDA     REG_GPIB_CTRL           ; 3A 05 04 -> Lädt Kontrollwert aus RAM 0405h
+        LDA     REG_GPIB_CTRL   ; 3A 05 04 -> Lädt Kontrollwert aus RAM 0405h
     	XRA     M               ; AE from address 17bh
     	JM      L_01A9          ; FA A9 01 -> Wenn negativ (Sign-Flag=1), springe vor zu 0191h
         MOV     A, M            ; 7E       -> Byte direkt aus der Hardware [HL] laden
         ANI     01h             ; E6 01    -> Bit 0 maskieren
         JZ      L_0178          ; CA 78 01 -> Wenn Null, springe zurück zu Adresse 0178h (Schleife!)
-        LDA     REG_GPIB_CTRL           ; 3A 05 04 -> Erneut RAM-Wert 0405h laden
+        LDA     REG_GPIB_CTRL   ; 3A 05 04 -> Erneut RAM-Wert 0405h laden
     	XRA     M               ; AE from address 188h
     	JM      L_01A9          ; FA A9 01 -> Wenn negativ, springe vor zu Adresse 01A9h
         MVI     A, 06h          ; 3E 06    -> Konstante 06h laden
         ORA     C               ; B1       -> Logisches ODER mit Register C
         STAX    D               ; 12       -> An Hardware [DE] ausgeben
         MOV     A, M            ; 7E       -> Byte aus Hardware [HL] holen
-        STA     REG_EOS_FLAG           ; 32 0F 04 -> Empfangenes Datenbyte im RAM 040Fh sichern
+        STA     REG_EOS_FLAG    ; 32 0F 04 -> Empfangenes Datenbyte im RAM 040Fh sichern
         DCX     H               ; 2B       -> Adresszeiger HL um 1 verringern (zeigt nun auf 0700h)
         MOV     B, M            ; 46       -> Byte aus Hardware [HL] (0700h) nach Register B laden
         INX     H               ; 23       -> Adresszeiger HL wieder um 1 erhöhen (zurück auf 0701h)
@@ -371,7 +371,7 @@ L_019B:
         MVI     A, 06h          ; 3E 06    -> Konstante 06h laden
         ORA     C               ; B1       -> Logisches ODER mit Register C
         STAX    D               ; 12       -> An Hardware [DE] ausgeben
-        STA     REG_SYS_STATE           ; 32 03 04 -> Finalen Zustand in RAM-Zelle 0403h zurückschreiben
+        STA     REG_SYS_STATE   ; 32 03 04 -> Finalen Zustand in RAM-Zelle 0403h zurückschreiben
         RET                     ; C9       -> Unterprogramm sauber beenden (Rücksprung)
 
 L_01A9:
@@ -383,7 +383,7 @@ L_01A9:
 
 L_01AD:
     	EI                      ; FB from address 1adh
-    	LDA     REG_CMD_STATE           ; 3A 0D 04 -> Lädt Kontroll-Flag aus RAM-Zelle
+    	LDA     REG_CMD_STATE   ; 3A 0D 04 -> Lädt Kontroll-Flag aus RAM-Zelle
     	ORA     A               ; B7       -> Prüft, ob der Wert im Akkumulator Null ist
     	JNZ     L_0232          ; C2 32 02 -> Wenn ungleich Null, springe weit vor zu Adresse 0232h
         LXI     H, IO_DIP_SWITCH        ; 21 05 06 -> HL-Zeiger auf I/O-Datenregister 0605h ausrichten
@@ -393,21 +393,21 @@ L_01B8:
         JC      L_01B8          ; DA B8 01 -> Wenn Carry=1, springe zu Adresse 01B8h
         DI                      ; F3       -> Interrupts sperren (Disable Interrupts)
         LXI     D, RAM_ASCII_BUFF        ; 11 30 04 -> Registerpaar DE mit SRAM-Adresse 0430h laden
-        LXI     H, IO_HW_INPUT        ; 21 04 06 -> HL-Zeiger auf I/O-Schnittstellenregister 0604h ausrichten
+        LXI     H, IO_HW_INPUT  ; 21 04 06 -> HL-Zeiger auf I/O-Schnittstellenregister 0604h ausrichten
     	CALL    L_0242          ; CD 42 02 -> Ruft Unterfunktion an Adresse 0242h auf
     	MVI     A, 0Fh          ; 3E 0F    -> Lädt die Konstante 0Fh in den Akkumulator
         ; ------------------------------------------------------------------------------
         ; SRAM-Puffer-Verwaltung & Bitmaskierung (Adresse 01C9h - 01F5h)
         ; ------------------------------------------------------------------------------
-        STA     SRAM_START           ; 32 00 04 -> Akkumulator-Inhalt direkt in RAM SRAM_START sichern
+        STA     SRAM_START      ; 32 00 04 -> Akkumulator-Inhalt direkt in RAM SRAM_START sichern
         EI                      ; FB       -> Interrupts wieder freigeben (Enable Interrupts)
         LXI     H, RAM_ASCII_BUFF        ; 21 30 04 -> HL-Zeiger auf SRAM-Adresse 0430h laden
-        SHLD    REG_ARRAY_PTR           ; 22 2E 04 -> Speicherinhalt von HL nach SRAM 042Eh sichern
+        SHLD    REG_ARRAY_PTR   ; 22 2E 04 -> Speicherinhalt von HL nach SRAM 042Eh sichern
         LXI     H, ROM_PROT_LIMITS        ; 21 E4 03 -> HL-Zeiger auf Übersetzungstabelle im ROM ausrichten
 L_01D6:
         MOV     A, M            ; 7E       -> Byte via HL laden
         INX     H               ; 23       -> HL-Zeiger um 1 erhöhen
-        SHLD    REG_BUFF_PTR           ; 22 1D 04 -> Aktuellen HL-Zeiger im RAM 041Dh sichern
+        SHLD    REG_BUFF_PTR    ; 22 1D 04 -> Aktuellen HL-Zeiger im RAM 041Dh sichern
         CPI     19h             ; FE 19    -> Akkumulator mit Konstante 19h vergleichen
 
         JZ      L_0017          ; CA 17 00 -> Wenn gleich, springe weit zurück zu Adresse 0017h
@@ -416,14 +416,14 @@ L_01D6:
         ANI     040h            ; E6 40    -> Bit 6 maskieren
         ORA     C               ; B1       -> Logisches ODER mit Register C verknüpfen
         MOV     C, A            ; 4F       -> In Register C sichern (AS-Syntax für MOV C,A)
-        LHLD    REG_ARRAY_PTR           ; 2A 2E 04 -> HL-Registerinhalt im SRAM 042Ah sichern
+        LHLD    REG_ARRAY_PTR   ; 2A 2E 04 -> HL-Registerinhalt im SRAM 042Ah sichern
         MOV     A, M            ; 7E       -> Byte erneut via HL laden
         INX     H               ; 23       -> HL-Zeiger um 1 erhöhen
-        SHLD    REG_ARRAY_PTR           ; 22 2E 04 -> HL-Registerinhalt im SRAM 042Eh sichern
+        SHLD    REG_ARRAY_PTR   ; 22 2E 04 -> HL-Registerinhalt im SRAM 042Eh sichern
 L_01F0:
         MOV     B, A            ; 47       -> Byte in Register B sichern
 L_01F1:
-        LDA     REG_SYS_STATE           ; 3A 03 04 -> Zustand aus RAM-Zelle 0403h holen
+        LDA     REG_SYS_STATE   ; 3A 03 04 -> Zustand aus RAM-Zelle 0403h holen
         ANI     10h             ; E6 10    -> Bit 4 maskieren
         MOV     C, A            ; 4F       -> Vorheriges Ergebnis nach Register C retten
         LXI     D,IO_TALK_REG03         ; 11 03 07 -> Lädt Byte von der Hardware-Adresse [DE] (0703h)
@@ -448,23 +448,23 @@ L_020A:
         DI                      ; F3       -> Interrupts sperren
         XRA     A               ; AF       -> Akkumulator nullen
         STAX    D               ; 12
-        STA     REG_SYS_STATE           ; 32 03 04 -> Systemzustand in RAM 0403h löschen
-        LXI     H, SRAM_START        ; 21 00 04 -> HL auf RAM-Start SRAM_START setzen
+        STA     REG_SYS_STATE   ; 32 03 04 -> Systemzustand in RAM 0403h löschen
+        LXI     H, SRAM_START   ; 21 00 04 -> HL auf RAM-Start SRAM_START setzen
         MOV     A, M            ; 7E
         MVI     M, 00h          ; 36 00    -> Speicherzelle mit 00h überschreiben
         ORA     A               ; B7       -> Flags aktualisieren
         JM      L_0017          ; FA 17 00 -> Wenn negativ (Bit 7=1), Sprung zu L_0017
         JZ      L_022B          ; CA 2B 02 -> Wenn Null, Sprung zu RAM/ROM-Adresse 022Bh
         XRA     A               ; AF
-        STA     IO_SRAM_FLAG1           ; 32 07 06
-        STA     REG_BUS_STATUS           ; 32 0E 04
+        STA     IO_SRAM_FLAG1   ; 32 07 06
+        STA     REG_BUS_STATUS  ; 32 0E 04
 L_022B:
         EI                      ; FB       -> Interrupts wieder freigeben
-        LHLD    REG_BUFF_PTR           ; 2A 1D 04
+        LHLD    REG_BUFF_PTR    ; 2A 1D 04
         JMP     L_01D6          ; C3 D6 01 -> Sprung zu RAM/ROM-Adresse 01D6h
 L_0232:
         MVI     A, 0FFh         ; 3E FF
-        STA     SRAM_START           ; 32 00 04
+        STA     SRAM_START      ; 32 00 04
         LXI     H, REG_BUS_STATUS        ; 21 0E 04 -> HL auf Kontrollregister setzen
         MOV     B, M            ; 46
         MOV     A, M            ; 7E
@@ -494,7 +494,7 @@ L_0244:
 ; Steuersignal handelt, das das System beeinflusst.
 L_0256:
         MOV     C, A            ; 4F       -> Akkumulator in Register C sichern
-        LDA     IO_DIP_SWITCH           ; 3A 05 06 -> Status/Datenbyte aus I/O-SRAM laden
+        LDA     IO_DIP_SWITCH   ; 3A 05 06 -> Status/Datenbyte aus I/O-SRAM laden
         ANI     04h             ; E6 04    -> Bit 2 isolieren
         CPI     04h             ; FE 04    -> Mit 04h vergleichen
         MOV     A, C            ; 79       -> Gesichertes Byte zurück nach A holen
@@ -531,7 +531,7 @@ L_0263:
 ; ------------------------------------------------------------------------------
 ; Fortsetzung ab Adresse 028Ah bis 029Ch
 ; ------------------------------------------------------------------------------
-        LDA     REG_SYS_STATUS           ; 3A 07 04 -> Lädt den Gerätestatus aus dem RAM
+        LDA     REG_SYS_STATUS  ; 3A 07 04 -> Lädt den Gerätestatus aus dem RAM
         ANI     02h             ; E6 02    -> Bit 1 maskieren (z. B. Remote/Local oder ein Bus-Flag)
         JZ      L_0017          ; CA 17 00 -> Wenn Bit 0 ist, Schleife abbrechen und zurück zu L_0017
         LXI     H, IO_SRAM_FLAG1        ; 21 07 06 -> HL auf Ausgangs-Datenregister ausrichten
@@ -544,47 +544,47 @@ L_0263:
 ; Dynamische Puffer-Adressierung: Durch ADI 020h und MOV L, A berechnet der Code zur Laufzeit eine Zieladresse im RAM (ein sogenanntes indiziertes Array), um die eingehenden Zeichen nacheinander geordnet abzuspeichern.
 ; Protokoll-Validierung: Am Ende wird über das RAM-Register 040Fh ausgewertet, ob der Bus ein Übertragungsende signalisiert (CPI 040h).
 L_029D:
-        XRA   A           ; AF       -> Akkumulator nullen
-        STA   REG_GPIB_CTRL       ; 32 05 04 -> Systemregister 0405h im RAM zurücksetzen
-        STA   IO_TALK_REG02       ; 32 02 07 -> Interface-Register 0702h löschen
-        DI                ; F3       -> Interrupts global sperren
+        XRA     A               ; AF       -> Akkumulator nullen
+        STA     REG_GPIB_CTRL   ; 32 05 04 -> Systemregister 0405h im RAM zurücksetzen
+        STA     IO_TALK_REG02   ; 32 02 07 -> Interface-Register 0702h löschen
+        DI                      ; F3       -> Interrupts global sperren
 L_BUFF_LOOP:
 L_02A5:
-        CALL  L_0163      ; CD 63 01 -> Aufruf der Puffer-/Schnittstellenroutine L_0163
-        MOV   A, B        ; 78       -> Das in Register B befindliche Zeichen nach A holen
-        ANI   070h        ; E6 70    -> Die Bits 4, 5 und 6 maskieren
-        CPI   030h        ; FE 30    -> Prüfen, ob das obere Halbnibble dem ASCII-Bereich '3' entspricht
-        JNZ   0305h       ; C2 05 03 -> Wenn ungleich, Sprung nach vorne zur Fehler/Auswertung an 0305h
-        LXI   H, REG_BUFF_IDX    ; 21 1F 04 -> HL auf RAM-Adresse 041Fh (Zähler/Index) setzen
-        MOV   A, M        ; 7E       -> Aktuellen Index-Wert laden
-        CPI   00Ah        ; FE 0A    -> Prüfen, ob die Obergrenze von 10 Elementen erreicht ist
-        JNC   L_02BE       ; D2 BE 02 -> Wenn der Index >= 10 ist, direkt vor zu 02BEh springen
-        INR   M           ; 34       -> Ansonsten den Index im RAM [HL] um 1 erhöhen
-        ADI   020h        ; C6 20    -> Offset 20h zum Akkumulator addieren
-        MOV   L, A        ; 6F       -> Berechneten Offset nach Register L übertragen
-        MOV   M, B        ; 70       -> Das originale Zeichen aus B an die berechnete RAM-Adresse schreiben
+        CALL    L_0163          ; CD 63 01 -> Aufruf der Puffer-/Schnittstellenroutine L_0163
+        MOV     A, B            ; 78       -> Das in Register B befindliche Zeichen nach A holen
+        ANI     070h            ; E6 70    -> Die Bits 4, 5 und 6 maskieren
+        CPI     030h            ; FE 30    -> Prüfen, ob das obere Halbnibble dem ASCII-Bereich '3' entspricht
+        JNZ     0305h           ; C2 05 03 -> Wenn ungleich, Sprung nach vorne zur Fehler/Auswertung an 0305h
+        LXI     H, REG_BUFF_IDX ; 21 1F 04 -> HL auf RAM-Adresse 041Fh (Zähler/Index) setzen
+        MOV     A, M            ; 7E       -> Aktuellen Index-Wert laden
+        CPI     00Ah            ; FE 0A    -> Prüfen, ob die Obergrenze von 10 Elementen erreicht ist
+        JNC     L_02BE          ; D2 BE 02 -> Wenn der Index >= 10 ist, direkt vor zu 02BEh springen
+        INR     M               ; 34       -> Ansonsten den Index im RAM [HL] um 1 erhöhen
+        ADI     020h            ; C6 20    -> Offset 20h zum Akkumulator addieren
+        MOV     L, A            ; 6F       -> Berechneten Offset nach Register L übertragen
+        MOV     M, B            ; 70       -> Das originale Zeichen aus B an die berechnete RAM-Adresse schreiben
 L_BUFF_OVERFLOW:
 L_02BE:
-        LDA   REG_EOS_FLAG       ; 3A 0F 04 -> Empfangenes Datenbyte aus RAM 040Fh holen
-        ANI   0C0h        ; E6 C0    -> Die obersten zwei Bits maskieren
-        CPI   040h        ; FE 40    -> Prüfen auf das End-Of-Sequence / EOI Flag (40h)
-        JNZ   L_02A5      ; C2 A5 02 -> Sprung wenn != 0
+        LDA     REG_EOS_FLAG    ; 3A 0F 04 -> Empfangenes Datenbyte aus RAM 040Fh holen
+        ANI     0C0h            ; E6 C0    -> Die obersten zwei Bits maskieren
+        CPI     040h            ; FE 40    -> Prüfen auf das End-Of-Sequence / EOI Flag (40h)
+        JNZ     L_02A5          ; C2 A5 02 -> Sprung wenn != 0
 ; ------------------------------------------------------------------------------
 ; Hauptinitialisierung ab Label L_02C8 (Adresse 02C8h bis 02F8h)
 ; Nibble-Packing Routine: Der Code ab Adresse 02DBh ist ein hocheffizienter Packer. Er nimmt zwei aufeinanderfolgende Bytes, isoliert jeweils deren untere 4 Bits (ANI 00Fh), schiebt das zweite Nibble per Rotation nach oben (RLC) und fügt sie mit ORA B zu einem einzigen, kompakten Daten-Byte zusammen.
 ; SRAM-Transfer: Diese gepackten Daten werden sequenziell direkt in den System-SRAM ab Adresse STACK_BASE übertragen (STAX D).
 ; ------------------------------------------------------------------------------
 L_02C8:
-        LXI   H, REG_BUFF_IDX    ; 21 1F 04 -> HL auf RAM-Adresse 041Fh (Index-Zähler) setzen
-        MOV   C, M        ; 4E       -> Aktuellen Zählerwert nach Register C laden
-        MOV   A, M        ; 7E       -> Wert zusätzlich in den Akkumulator laden
-        ORA   A           ; B7       -> Prüfen, ob der Zähler Null ist
-        JZ    L_0017      ; CA 17 00 -> Wenn Null, keine Daten da -> zurück zum Haupt-Polling
-        MVI   M, 00h      ; 36 00    -> Zähler im RAM wieder auf Null zurücksetzen
-        PUSH  B           ; C5       -> Registerpaar BC auf dem Stack sichern
-        CALL  0311h       ; CD 11 03 -> Unterprogramm an Adresse 0311h aufrufen (Puffer-Check)
-        POP   B           ; C1       -> Registerpaar BC wieder herstellen
-        LXI   D, STACK_BASE    ; 11 00 05 -> DE auf Zieladresse im SRAM STACK_BASE ausrichten
+        LXI     H, REG_BUFF_IDX    ; 21 1F 04 -> HL auf RAM-Adresse 041Fh (Index-Zähler) setzen
+        MOV     C, M        ; 4E       -> Aktuellen Zählerwert nach Register C laden
+        MOV     A, M        ; 7E       -> Wert zusätzlich in den Akkumulator laden
+        ORA     A           ; B7       -> Prüfen, ob der Zähler Null ist
+        JZ      L_0017      ; CA 17 00 -> Wenn Null, keine Daten da -> zurück zum Haupt-Polling
+        MVI     M, 00h      ; 36 00    -> Zähler im RAM wieder auf Null zurücksetzen
+        PUSH    B           ; C5       -> Registerpaar BC auf dem Stack sichern
+        CALL    0311h       ; CD 11 03 -> Unterprogramm an Adresse 0311h aufrufen (Puffer-Check)
+        POP     B           ; C1       -> Registerpaar BC wieder herstellen
+        LXI     D, STACK_BASE    ; 11 00 05 -> DE auf Zieladresse im SRAM STACK_BASE ausrichten
 L_PACK_LOOP:
 L_02DB:
         INX   H           ; 23       -> HL-Zeiger erhöhen
