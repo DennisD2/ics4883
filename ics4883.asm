@@ -412,67 +412,54 @@ L_0244:
         RRC                     ; 0F
         RRC                     ; 0F
         RRC                     ; 0F
-        CALL    0256h           ; CD 56 02 -> Unterfunktion an ROM-Adresse 0256h aufrufen
+        CALL    L_0256          ; CD 56 02 -> Unterfunktion an ROM-Adresse 0256h aufrufen
         MOV     A, M            ; 7E       -> Dasselbe Byte nochmals laden
-        CALL    0256h           ; CD 56 02 -> Unterfunktion an ROM-Adresse 0256h aufrufen
+        CALL    L_0256          ; CD 56 02 -> Unterfunktion an ROM-Adresse 0256h aufrufen
         DCX     H               ; 2B       -> HL-Zeiger dekrementieren
         DCR     B               ; 05       -> Schleifenzähler verringern
         JNZ     L_0244          ; C2 44 02 -> Schleife wiederholen, wenn Register B ungleich Null
         RET                     ; C9       -> Unterprogramm beenden
 
-    	DB 04Fh	; 04Fh, from address 256h
-    	DB 03Ah	; 03Ah, from address 257h
-    	DB 005h	; 005h, from address 258h
-    	DB 006h	; 006h, from address 259h
-    	DB 0E6h	; 0E6h, from address 25ah
-    	DB 004h	; 004h, from address 25bh
-    	DB 0FEh	; 0FEh, from address 25ch
-    	DB 004h	; 004h, from address 25dh
-    	DB 079h	; 079h, from address 25eh
-    	DB 0CAh	; 0CAh, from address 25fh
-    	DB 063h	; 063h, from address 260h
-    	DB 002h	; 002h, from address 261h
-    	DB 02Fh	; 02Fh, from address 262h
-    	DB 0E6h	; 0E6h, from address 263h
-    	DB 00Fh	; 00Fh, from address 264h
-    	DB 0E5h	; 0E5h, from address 265h
-    	DB 021h	; 021h, from address 266h
-    	DB 0D4h	; 0D4h, from address 267h
-    	DB 003h	; 003h, from address 268h
-    	DB 085h	; 085h, from address 269h
-    	DB 06Fh	; 06Fh, from address 26ah
-    	DB 07Eh	; 07Eh, from address 26bh
-    	DB 012h	; 012h, from address 26ch
-    	DB 013h	; 013h, from address 26dh
-    	DB 0E1h	; 0E1h, from address 26eh
-    	DB 0C9h	; 0C9h, from address 26fh
+; Diese Funktion ist eine Konvertierungs- und Filter-Routine für Datenzeichen
+; (ASCII/Hex), die von den I/O-Schnittstellen des Geräts eingelesen wurden.
+; Sie entscheidet anhand eines Hardware-Statusbits, ob ein Datenwert invertiert
+; und über eine Zeichentabelle im ROM übersetzt wird, oder ob es sich um ein
+; Steuersignal handelt, das das System beeinflusst.
+L_0256:
+        MOV     C, A            ; 4F       -> Akkumulator in Register C sichern
+        LDA     0605h           ; 3A 05 06 -> Status/Datenbyte aus I/O-SRAM laden
+        ANI     04h             ; E6 04    -> Bit 2 isolieren
+        CPI     04h             ; FE 04    -> Mit 04h vergleichen
+        MOV     A, C            ; 79       -> Gesichertes Byte zurück nach A holen
+        JZ      0263h           ; CA 63 02 -> Wenn Vergleich gleich (Zero=1), Sprung zu 0263h
+        CMA                     ; 2F       -> Akkumulator invertieren
+        ANI     0Fh             ; E6 0F    -> Die unteren 4 Bits maskieren
+        PUSH    H               ; E5       -> HL-Registerpaar auf dem Stack sichern
+        LXI     H, 03D4h        ; 21 D4 03 -> HL auf Übersetzungstabelle im ROM ausrichten
+        ADD     L               ; 85       -> Offset zu L addieren
+        MOV     L, A            ; 6F       -> Ergebnis zurück in L (indirekte Adressierung)
+        MOV     A, M            ; 7E       -> Übersetztes Zeichen aus der ROM-Tabelle holen
+        STAX    D               ; 12       -> Zeichen an Zieladresse [DE] (0430hff) wegsichern
+        INX     D               ; 13       -> Zielzeiger erhöhen
+        POP     H               ; E1       -> HL vom Stack wiederherstellen
+        RET                     ; C9       -> Unterprogramm beenden
 
-    	DB 021h	; 021h, from address 270h
-    	DB 090h	; 090h, from address 271h
-    	DB 003h	; 003h, from address 272h
-    	DB 078h	; 078h, from address 273h
-    	DB 0E6h	; 0E6h, from address 274h
-    	DB 01Fh	; 01Fh, from address 275h
-    	DB 0BEh	; 0BEh, from address 276h
-    	DB 0C2h	; 0C2h, from address 277h
-    	DB 017h	; 017h, from address 278h
-    	DB 000h	; 000h, from address 279h
-    	DB 021h	; 021h, from address 27ah
-    	DB 007h	; 007h, from address 27bh
-    	DB 004h	; 004h, from address 27ch
-    	DB 07Eh	; 07Eh, from address 27dh
-    	DB 0E6h	; 0E6h, from address 27eh
-    	DB 030h	; 030h, from address 27fh
-    	DB 0CAh	; 0CAh, from address 280h
-    	DB 017h	; 017h, from address 281h
-    	DB 000h	; 000h, from address 282h
-    	DB 00Fh	; 00Fh, from address 283h
-    	DB 00Fh	; 00Fh, from address 284h
-    	DB 00Fh	; 00Fh, from address 285h
-    	DB 077h	; 077h, from address 286h
-    	DB 0C3h	; 0C3h, from address 287h
-    	DB 017h	; 017h, from address 288h
-    	DB 000h	; 000h, from address 289h
+; Steuerzeichen Filter
+        LXI   H, 0390h    ; 21 90 03 -> HL auf alternative Tabelle/String im ROM ausrichten
+        MOV   A, B        ; 78       -> Register B (04h) nach A holen
+        ANI   01Fh        ; E6 1F    -> 5-Bit-Maskierung
+        CMP   M           ; BE       -> Mit Speicherwert [HL] vergleichen
+        JNZ   L_0017      ; C2 17 00 -> Bei Ungleichheit harter Sprung zurück zu L_0017
+        LXI   H, 0407h    ; 21 07 04 -> HL auf RAM-Adresse 0407h setzen
+        MOV   A, M        ; 7E       -> Wert aus 0407h lesen
+        ANI   030h        ; E6 30    -> Bits 4 und 5 maskieren
+        JZ    L_0017      ; CA 17 00 -> Wenn Null, ebenfalls zurück zu L_0017
+        RRC               ; 0F       -> Bits rotieren
+        RRC               ; 0F
+        RRC               ; 0F
+        MOV   M, A        ; 77       -> Modifizierten Wert zurück nach 0407h schreiben
+        JMP   L_0017      ; C3 17 00 -> Unbedingter Rücksprung zum Haupt-Polling
+
     	DB 03Ah	; 03Ah, from address 28ah
     	DB 007h	; 007h, from address 28bh
     	DB 004h	; 004h, from address 28ch

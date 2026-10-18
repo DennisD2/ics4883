@@ -600,6 +600,7 @@
 	DB 044h	; 44 (oct=104), from address h/o/d = 253 595
 	DB 002h	; 02 (oct=2), from address h/o/d = 254 596
 	DB 0C9h	; C9 (oct=311), from address h/o/d = 255 597
+
 	DB 04Fh	; 4F (oct=117), from address h/o/d = 256 598
 	DB 03Ah	; 3A (oct=72), from address h/o/d = 257 599
 	DB 005h	; 05 (oct=5), from address h/o/d = 258 600
@@ -626,6 +627,7 @@
 	DB 013h	; 13 (oct=23), from address h/o/d = 26d 621
 	DB 0E1h	; E1 (oct=341), from address h/o/d = 26e 622
 	DB 0C9h	; C9 (oct=311), from address h/o/d = 26f 623
+
 	DB 021h	; 21 (oct=41), from address h/o/d = 270 624
 	DB 090h	; 90 (oct=220), from address h/o/d = 271 625
 	DB 003h	; 03 (oct=3), from address h/o/d = 272 626
@@ -652,6 +654,7 @@
 	DB 0C3h	; C3 (oct=303), from address h/o/d = 287 647
 	DB 017h	; 17 (oct=27), from address h/o/d = 288 648
 	DB 000h	; 00 (oct=0), from address h/o/d = 289 649
+
 	DB 03Ah	; 3A (oct=72), from address h/o/d = 28a 650
 	DB 007h	; 07 (oct=7), from address h/o/d = 28b 651
 	DB 004h	; 04 (oct=4), from address h/o/d = 28c 652
