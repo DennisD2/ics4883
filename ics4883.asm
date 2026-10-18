@@ -324,7 +324,7 @@ L_01A9:
         JMP     L_0017          ; C3 17 00 -> Unbedingter Sprung zur Systemadresse 00FBh
 
 L_01AD:
-    	EI                      ;DB 0FBh	; 0FBh, from address 1adh
+    	EI                      ; FB from address 1adh
     	LDA     040Dh           ; 3A 0D 04 -> Lädt Kontroll-Flag aus RAM-Zell
     	ORA     A               ; B7       -> Prüft, ob der Wert im Akkumulator Null ist
     	JNZ     0232h           ; C2 32 02 -> Wenn ungleich Null, springe weit vor zu Adresse 0232h
