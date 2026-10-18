@@ -841,6 +841,7 @@
 	DB 007h	; 07 (oct=7), from address h/d = 335 821
 	DB 04Fh	; 4F (oct=117), from address h/d = 336 822
 	DB 078h	; 78 (oct=170), from address h/d = 337 823
+
 	DB 0E6h	; E6 (oct=346), from address h/d = 338 824
 	DB 008h	; 08 (oct=10), from address h/d = 339 825
 	DB 03Ah	; 3A (oct=72), from address h/d = 33a 826
@@ -870,6 +871,7 @@
 	DB 0F6h	; F6 (oct=366), from address h/d = 352 850
 	DB 008h	; 08 (oct=10), from address h/d = 353 851
 	DB 077h	; 77 (oct=167), from address h/d = 354 852
+
 	DB 021h	; 21 (oct=41), from address h/d = 355 853
 	DB 004h	; 04 (oct=4), from address h/d = 356 854
 	DB 007h	; 07 (oct=7), from address h/d = 357 855

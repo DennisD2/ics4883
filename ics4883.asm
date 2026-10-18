@@ -591,13 +591,10 @@ L_0324:
         MOV   A, B        ; 78       -> Holt den Wert aus Register B zurück nach A
         CPI   070h        ; FE 70    -> Prüfen, ob das Zeichen im Akkumulator 70h entspricht
     	JZ    036Dh       ; CA 6D 03 -> Wenn ja, Sprung nach vorne zu Adresse 036Dh
-    	DB 032h	; 032h, from address 331h
-    	DB 001h	; 001h, from address 332h
-    	DB 004h	; 004h, from address 333h
-    	DB 0E6h	; 0E6h, from address 334h
-    	DB 007h	; 007h, from address 335h
-    	DB 04Fh	; 04Fh, from address 336h
-    	DB 078h	; 078h, from address 337h
+        STA   0401h       ; 32 01 04 -> Speichert den Akkumulator in RAM-Adresse 0401h
+        ANI   007h        ; E6 07    -> Maskiert die unteren 3 Bits (Bit 0-2) des Akkumulators
+        MOV   C, A        ; 4F       -> Das maskierte Ergebnis nach Register C retten
+        MOV   A, B        ; 78       -> Holt das originale Zeichen aus Register B zurück nach A
     	DB 0E6h	; 0E6h, from address 338h
     	DB 008h	; 008h, from address 339h
     	DB 03Ah	; 03Ah, from address 33ah
