@@ -585,14 +585,10 @@ L_031A:
         RET               ; C9       -> Unterprogramm sauber beenden
 
 L_0324:
-    	DB 03Ah	; 03Ah, from address 324h
-    	DB 00Ch	; 00Ch, from address 325h
-    	DB 004h	; 004h, from address 326h
-    	DB 0B7h	; 0B7h, from address 327h
-    	DB 0CAh	; 0CAh, from address 328h
-    	DB 017h	; 017h, from address 329h
-    	DB 000h	; 000h, from address 32ah
-    	DB 078h	; 078h, from address 32bh
+        LDA   040Ch       ; 3A 0C 04 -> Lädt den Inhalt der RAM-Adresse 040Ch in den Akkumulator
+        ORA   A           ; B7       -> Setzt die Flags (Zero/Sign) basierend auf dem Akkumulator
+        JZ    L_0017      ; CA 17 00 -> Wenn der Wert Null ist, Sprung zurück zum Haupt-Polling L_0017
+        MOV   A, B        ; 78       -> Holt den Wert aus Register B zurück nach A
     	DB 0FEh	; 0FEh, from address 32ch
     	DB 070h	; 070h, from address 32dh
     	DB 0CAh	; 0CAh, from address 32eh
