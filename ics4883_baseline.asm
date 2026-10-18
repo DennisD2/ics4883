@@ -896,6 +896,7 @@
 	DB 0C3h	; C3 (oct=303), from address h/d = 36a 874
 	DB 01Fh	; 1F (oct=37), from address h/d = 36b 875
 	DB 000h	; 00 (oct=0), from address h/d = 36c 876
+
 	DB 0AFh	; AF (oct=257), from address h/d = 36d 877
 	DB 032h	; 32 (oct=62), from address h/d = 36e 878
 	DB 001h	; 01 (oct=1), from address h/d = 36f 879
@@ -925,6 +926,7 @@
 	DB 0C3h	; C3 (oct=303), from address h/d = 387 903
 	DB 017h	; 17 (oct=27), from address h/d = 388 904
 	DB 000h	; 00 (oct=0), from address h/d = 389 905
+
 	DB 0FFh	; FF (oct=377), from address h/d = 38a 906
 	DB 0FFh	; FF (oct=377), from address h/d = 38b 907
 	DB 0FFh	; FF (oct=377), from address h/d = 38c 908

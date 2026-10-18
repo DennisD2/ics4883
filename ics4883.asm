@@ -611,59 +611,38 @@ L_0324:
         ORI   008h        ; F6 08    -> Bit 3 gezielt setzen
         MOV   M, A        ; 77       -> Aktualisierten Wert zurückschreiben
 L_0355:
-    	DB 021h	; 021h, from address 355h
-    	DB 004h	; 004h, from address 356h
-    	DB 007h	; 007h, from address 357h
-    	DB 036h	; 036h, from address 358h
-    	DB 000h	; 000h, from address 359h
-    	DB 021h	; 021h, from address 35ah
-    	DB 002h	; 002h, from address 35bh
-    	DB 007h	; 007h, from address 35ch
-    	DB 03Ah	; 03Ah, from address 35dh
-    	DB 00Bh	; 00Bh, from address 35eh
-    	DB 004h	; 004h, from address 35fh
-    	DB 077h	; 077h, from address 360h
-    	DB 023h	; 023h, from address 361h
-    	DB 036h	; 036h, from address 362h
-    	DB 000h	; 000h, from address 363h
-    	DB 02Eh	; 02Eh, from address 364h
-    	DB 007h	; 007h, from address 365h
-    	DB 03Ah	; 03Ah, from address 366h
-    	DB 007h	; 007h, from address 367h
-    	DB 004h	; 004h, from address 368h
-    	DB 077h	; 077h, from address 369h
-    	DB 0C3h	; 0C3h, from address 36ah
-    	DB 01Fh	; 01Fh, from address 36bh
-    	DB 000h	; 000h, from address 36ch
-    	DB 0AFh	; 0AFh, from address 36dh
-    	DB 032h	; 032h, from address 36eh
-    	DB 001h	; 001h, from address 36fh
-    	DB 004h	; 004h, from address 370h
-    	DB 021h	; 021h, from address 371h
-    	DB 007h	; 007h, from address 372h
-    	DB 004h	; 004h, from address 373h
-    	DB 07Eh	; 07Eh, from address 374h
-    	DB 0E6h	; 0E6h, from address 375h
-    	DB 0F7h	; 0F7h, from address 376h
-    	DB 077h	; 077h, from address 377h
-    	DB 0C3h	; 0C3h, from address 378h
-    	DB 017h	; 017h, from address 379h
-    	DB 000h	; 000h, from address 37ah
-    	DB 03Ah	; 03Ah, from address 37bh
-    	DB 007h	; 007h, from address 37ch
-    	DB 004h	; 004h, from address 37dh
-    	DB 0E6h	; 0E6h, from address 37eh
-    	DB 002h	; 002h, from address 37fh
-    	DB 0CAh	; 0CAh, from address 380h
-    	DB 017h	; 017h, from address 381h
-    	DB 000h	; 000h, from address 382h
-    	DB 078h	; 078h, from address 383h
-    	DB 032h	; 032h, from address 384h
-    	DB 00Ch	; 00Ch, from address 385h
-    	DB 004h	; 004h, from address 386h
-    	DB 0C3h	; 0C3h, from address 387h
-    	DB 017h	; 017h, from address 388h
-    	DB 000h	; 000h, from address 389h
+       LXI   H, 00704h   ; 21 04 07 -> HL auf I/O-Schnittstelle / Adresse 0704h ausrichten
+        MVI   M, 00h      ; 36 00    -> Speicherzelle [0704h] mit 00h löschen
+        LXI   H, 00702h   ; 21 02 07 -> HL auf Adresse 0702h ausrichten
+        LDA   0040Bh      ; 3A 0B 04 -> Inhalt aus RAM-Zelle 040Bh in den Akkumulator laden
+        MOV   M, A        ; 77       -> Wert aus 040Bh direkt nach [0702h] schreiben
+        INX   H           ; 23       -> HL-Zeiger erhöhen (zeigt nun auf 0703h)
+        MVI   M, 00h      ; 36 00    -> Speicherzelle [0703h] mit 00h überschreiben
+        MVI   L, 07h      ; 2E 07    -> Nur das untere Byte (L) von HL auf 07h ändern (HL zeigt auf 0707h)
+        LDA   00407h      ; 3A 07 04 -> Systemstatus aus RAM 0407h laden
+        MOV   M, A        ; 77       -> Wert direkt an I/O-Register [0707h] ausgeben
+        JMP   L_001F      ; C3 1F 00 -> Unbedingter Sprung zurück zu Label L_001F (Adresse 001Fh)
+
+; ------------------------------------------------------------------------------
+; Behandlungsroutinen für Kommandos (Adresse 036Dh bis 0389h)
+; ------------------------------------------------------------------------------
+        XRA   A           ; AF       -> Akkumulator nullen (A = 00h)
+        STA   0401h       ; 32 01 04 -> Schreibt die Null in die RAM-Zelle 0401h
+        LXI   H, 0407h    ; 21 07 04 -> HL auf Kontrollregister 0407h ausrichten
+        MOV   A, M        ; 7E       -> Aktuellen Statuswert laden
+        ANI   0F7h        ; E6 F7    -> Bit 3 gezielt löschen (Maske 1111 0111)
+        MOV   M, A        ; 77       -> Modifizierten Status zurückschreiben
+        JMP   L_0017      ; C3 17 00 -> Unbedingter Rücksprung zum Haupt-Polling L_0017
+
+; Dieser Zweig (ab 037Bh) verarbeitet das alternative Szenario ('q')
+L_037B:
+        LDA   0407h       ; 3A 07 04 -> Lädt den Systemstatus aus RAM 0407h
+        ANI   002h        ; E6 02    -> Isolierte Betrachtung von Bit 1
+        JZ    L_0017      ; CA 17 00 -> Wenn Bit 1 Null ist, zurück zum Polling L_0017
+        MOV   A, B        ; 78       -> Originales Zeichen aus Register B holen
+        STA   040Ch       ; 32 0C 04 -> Zeichen in Kontrollregister 040Ch wegsichern
+        JMP   L_0017      ; C3 17 00 -> Unbedingter Rücksprung zum Haupt-Polling L_0017
+
     	DB 0FFh	; 0FFh, from address 38ah
     	DB 0FFh	; 0FFh, from address 38bh
     	DB 0FFh	; 0FFh, from address 38ch
