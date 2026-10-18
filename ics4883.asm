@@ -1,5 +1,6 @@
 ; =====================================================================
 ; ICS Electronics Model 4883 Instrument Coupler
+; disassembly heavily supported by Gemini AI
 ; =====================================================================
         CPU	8080
         ORG	0000h
