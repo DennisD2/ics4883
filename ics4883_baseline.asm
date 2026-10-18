@@ -512,6 +512,7 @@
 	DB 002h	; 02 (oct=2), from address h/o/d = 1fc 508
 	DB 007h	; 07 (oct=7), from address h/o/d = 1fd 509
 	DB 070h	; 70 (oct=160), from address h/o/d = 1fe 510
+
 	DB 02Bh	; 2B (oct=53), from address h/o/d = 1ff 511
 	DB 07Eh	; 7E (oct=176), from address h/o/d = 200 512
 	DB 00Fh	; 0F (oct=17), from address h/o/d = 201 513

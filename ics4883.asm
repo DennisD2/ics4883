@@ -363,67 +363,41 @@ L_01AD:
         MOV     B, A            ; 47       -> Byte in Register B sichern
         LDA     0403h           ; 3A 03 04 -> Zustand aus RAM-Zelle 0403h holen
         ANI     10h             ; E6 10    -> Bit 4 maskieren
+        MOV     C, A            ; 4F       -> Vorheriges Ergebnis nach Register C retten
+        LXI     D,0703h         ; 11 03 07 -> Lädt Byte von der Hardware-Adresse [DE] (0703h)
+        STAX  D                 ; 12           -> Schreibt den Akkumulator wieder zurück nach [DE]
+        LXI   H, 00702h         ; 21 02 07 -> HL auf Adresse 0702h ausrichten
+        MOV M,B                 ; 70
+        DCX   H           ; 2B       -> HL um 1 verringern (zeigt nun auf 0701h)
+        MOV   A, M        ; 7E       -> Status-Byte aus 0701h einlesen
+        RRC               ; 0F       -> Nach rechts rotieren
+        RRC               ; 0F       -> Nochmals nach rechts rotieren
+        JC    0200h      ; DA 00 02 -> Wenn Carry=1, Fehler/Abzweig zu L_0002
+        MVI   A, 01h      ; 3E 01    -> Konstante 01h laden
+        ORA   C           ; B1       -> Mit Maske in Register C verknüpfen
+        STAX  D           ; 12       -> An Hardware ausgeben
+        MOV   A, M        ; 7E       -> Erneut Status lesen
+        RRC               ; 0F
+        RRC               ; 0F
+        RRC               ; 0F
+        JC    020Ah       ; DA 0A 02 -> Wenn Carry=1, Sprung zu RAM/ROM-Adresse 020Ah
+        DI                ; F3       -> Interrupts sperren
+        XRA   A           ; AF       -> Akkumulator nullen
+        STAX  D           ; 12
+        STA   0403h       ; 32 03 04 -> Systemzustand in RAM 0403h löschen
+        LXI   H, 0400h    ; 21 00 04 -> HL auf RAM-Start 0400h setzen
+        MOV   A, M        ; 7E
+        MVI   M, 00h      ; 36 00    -> Speicherzelle mit 00h überschreiben
+        ORA   A           ; B7       -> Flags aktualisieren
+        JM    L_0017      ; FA 17 00 -> Wenn negativ (Bit 7=1), Sprung zu L_0017
+        JZ    022Bh       ; CA 2B 02 -> Wenn Null, Sprung zu RAM/ROM-Adresse 022Bh
+        XRA   A           ; AF
+        STA   0607h       ; 32 07 06
+        STA   040Eh       ; 32 0E 04
+        EI                ; FB       -> Interrupts wieder freigeben
+        LHLD  041Dh       ; 2A 1D 04
+        JMP   01D6h       ; C3 D6 01 -> Sprung zu RAM/ROM-Adresse 01D6h
 
-    	DB 04Fh	; 04Fh, from address 1f6h
-    	DB 011h	; 011h, from address 1f7h
-    	DB 003h	; 003h, from address 1f8h
-    	DB 007h	; 007h, from address 1f9h
-    	DB 012h	; 012h, from address 1fah
-    	DB 021h	; 021h, from address 1fbh
-    	DB 002h	; 002h, from address 1fch
-    	DB 007h	; 007h, from address 1fdh
-    	DB 070h	; 070h, from address 1feh
-    	DB 02Bh	; 02Bh, from address 1ffh
-    	DB 07Eh	; 07Eh, from address 200h
-    	DB 00Fh	; 00Fh, from address 201h
-    	DB 00Fh	; 00Fh, from address 202h
-    	DB 0DAh	; 0DAh, from address 203h
-    	DB 000h	; 000h, from address 204h
-    	DB 002h	; 002h, from address 205h
-    	DB 03Eh	; 03Eh, from address 206h
-    	DB 001h	; 001h, from address 207h
-    	DB 0B1h	; 0B1h, from address 208h
-    	DB 012h	; 012h, from address 209h
-    	DB 07Eh	; 07Eh, from address 20ah
-    	DB 00Fh	; 00Fh, from address 20bh
-    	DB 00Fh	; 00Fh, from address 20ch
-    	DB 00Fh	; 00Fh, from address 20dh
-    	DB 0DAh	; 0DAh, from address 20eh
-    	DB 00Ah	; 00Ah, from address 20fh
-    	DB 002h	; 002h, from address 210h
-    	DB 0F3h	; 0F3h, from address 211h
-    	DB 0AFh	; 0AFh, from address 212h
-    	DB 012h	; 012h, from address 213h
-    	DB 032h	; 032h, from address 214h
-    	DB 003h	; 003h, from address 215h
-    	DB 004h	; 004h, from address 216h
-    	DB 021h	; 021h, from address 217h
-    	DB 000h	; 000h, from address 218h
-    	DB 004h	; 004h, from address 219h
-    	DB 07Eh	; 07Eh, from address 21ah
-    	DB 036h	; 036h, from address 21bh
-    	DB 000h	; 000h, from address 21ch
-    	DB 0B7h	; 0B7h, from address 21dh
-    	DB 0FAh	; 0FAh, from address 21eh
-    	DB 017h	; 017h, from address 21fh
-    	DB 000h	; 000h, from address 220h
-    	DB 0CAh	; 0CAh, from address 221h
-    	DB 02Bh	; 02Bh, from address 222h
-    	DB 002h	; 002h, from address 223h
-    	DB 0AFh	; 0AFh, from address 224h
-    	DB 032h	; 032h, from address 225h
-    	DB 007h	; 007h, from address 226h
-    	DB 006h	; 006h, from address 227h
-    	DB 032h	; 032h, from address 228h
-    	DB 00Eh	; 00Eh, from address 229h
-    	DB 004h	; 004h, from address 22ah
-    	DB 0FBh	; 0FBh, from address 22bh
-    	DB 02Ah	; 02Ah, from address 22ch
-    	DB 01Dh	; 01Dh, from address 22dh
-    	DB 004h	; 004h, from address 22eh
-    	DB 0C3h	; 0C3h, from address 22fh
-    	DB 0D6h	; 0D6h, from address 230h
-    	DB 001h	; 001h, from address 231h
     	DB 03Eh	; 03Eh, from address 232h
     	DB 0FFh	; 0FFh, from address 233h
     	DB 032h	; 032h, from address 234h

@@ -281,6 +281,7 @@
 0x01F6: 12       ; STAX D
 0x01F7: 21 02 07 ; LXI H,0x0702
 0x01FA: 70       ; MOV M,B
+
 0x01FB: 2B       ; DCX H
 0x01FC: 7E       ; MOV A,M
 0x01FD: 0F       ; RRC
