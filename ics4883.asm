@@ -14,7 +14,7 @@ L_0006:
         LDA     03C4h           ; 3A C4 03 -> Konfigurationswert aus dem ROM laden
         XRI     0Ch             ; EE 0C    -> Maskierung (XOR) für Initialisierung
         STA     0506h           ; 32 06 05 -> Im System-SRAM wegsichern
-        LXI     H, 03B3h        ; 21 B3 03 -> Zeiger auf ID-String "ICS 4883" laden
+        LXI     H, 03B3h        ; 21 B3 03 -> Zeiger auf eine Tabelle laden
         CALL    L_007B          ; CD 7B 00 -> Speicher-Kopierroutine aufrufen
         JMP     L_02C8          ; C3 C8 02 -> Sprung in die Hauptinitialisierung
 
@@ -649,9 +649,15 @@ L_037B:
     	DB 0FFh	; 0FFh, from address 38dh
     	DB 0FFh	; 0FFh, from address 38eh
     	DB 0FFh	; 0FFh, from address 38fh
+
     	DB 000h	; 000h, from address 390h
     	DB 002h	; 002h, from address 391h
     	DB 005h	; 005h, from address 392h
+
+; 0393h - 03B2h: Sprung- und Befehlstabelle für den Data Dispatcher
+; Format des universalen Kopierers (Routine L_014E / L_007B):
+; [Block-Länge] [Ziel-Adresse DE (Low/High)] [Daten...]
+; Eine Länge von 00h bricht den Suchprozess ab.
     	DB 004h	; 004h, from address 393h
     	DB 03Ch	; 03Ch, from address 394h
     	DB 001h	; 001h, from address 395h
@@ -684,65 +690,43 @@ L_037B:
     	DB 003h	; 003h, from address 3b0h
     	DB 017h	; 017h, from address 3b1h
     	DB 000h	; 000h, from address 3b2h
-    	DB 00Bh	; 00Bh, from address 3b3h
-    	DB 01Fh	; 01Fh, from address 3b4h
-    	DB 004h	; 004h, from address 3b5h
-    	DB 00Ah	; 00Ah, from address 3b6h
-    	DB 000h	; 000h, from address 3b7h
-    	DB 000h	; 000h, from address 3b8h
-    	DB 000h	; 000h, from address 3b9h
-    	DB 000h	; 000h, from address 3bah
-    	DB 000h	; 000h, from address 3bbh
-    	DB 000h	; 000h, from address 3bch
-    	DB 000h	; 000h, from address 3bdh
-    	DB 000h	; 000h, from address 3beh
-    	DB 000h	; 000h, from address 3bfh
-    	DB 000h	; 000h, from address 3c0h
-    	DB 001h	; 001h, from address 3c1h
-    	DB 006h	; 006h, from address 3c2h
-    	DB 005h	; 005h, from address 3c3h
-    	DB 006h	; 006h, from address 3c4h
-    	DB 002h	; 002h, from address 3c5h
-    	DB 006h	; 006h, from address 3c6h
-    	DB 006h	; 006h, from address 3c7h
-    	DB 002h	; 002h, from address 3c8h
-    	DB 000h	; 000h, from address 3c9h
-    	DB 006h	; 006h, from address 3cah
-    	DB 002h	; 002h, from address 3cbh
-    	DB 007h	; 007h, from address 3cch
-    	DB 000h	; 000h, from address 3cdh
-    	DB 000h	; 000h, from address 3ceh
-    	DB 080h	; 080h, from address 3cfh
-    	DB 000h	; 000h, from address 3d0h
-    	DB 000h	; 000h, from address 3d1h
-    	DB 000h	; 000h, from address 3d2h
-    	DB 000h	; 000h, from address 3d3h
-    	DB 030h	; 030h, from address 3d4h
-    	DB 031h	; 031h, from address 3d5h
-    	DB 032h	; 032h, from address 3d6h
-    	DB 033h	; 033h, from address 3d7h
-    	DB 034h	; 034h, from address 3d8h
-    	DB 035h	; 035h, from address 3d9h
-    	DB 036h	; 036h, from address 3dah
-    	DB 037h	; 037h, from address 3dbh
-    	DB 038h	; 038h, from address 3dch
-    	DB 039h	; 039h, from address 3ddh
-    	DB 02Bh	; 02Bh, from address 3deh
-    	DB 02Dh	; 02Dh, from address 3dfh
-    	DB 02Eh	; 02Eh, from address 3e0h
-    	DB 02Ch	; 02Ch, from address 3e1h
-    	DB 045h	; 045h, from address 3e2h
-    	DB 020h	; 020h, from address 3e3h
-    	DB 080h	; 080h, from address 3e4h
-    	DB 080h	; 080h, from address 3e5h
-    	DB 080h	; 080h, from address 3e6h
-    	DB 080h	; 080h, from address 3e7h
-    	DB 080h	; 080h, from address 3e8h
-    	DB 080h	; 080h, from address 3e9h
-    	DB 080h	; 080h, from address 3eah
-    	DB 080h	; 080h, from address 3ebh
-    	DB 080h	; 080h, from address 3ech
-    	DB 080h	; 080h, from address 3edh
+
+; 03B3h - 03C3h: Initialisierungs-Tabelle für den RAM-Puffer
+; Wird beim Booten von Routine L_007B gelesen, um den Puffer ab 041Fh vorzubereiten.
+; [Länge 0Bh] [Ziel 041Fh] [Max-Limit 0Ah] [10x Puffer-Nullen]
+        DB 00Bh, 01Fh, 004h, 00Ah
+        DB 000h, 000h, 000h, 000h, 000h, 000h, 000h, 000h, 000h, 000h
+        DB 001h, 006h, 005h
+
+; 03C4h - 03CDh: System-Konfigurations-Flags
+    	DB 006h, 002h, 006h, 006h, 002h, 000h, 006h, 002h, 007h, 000h
+
+; 03CEh - 03D3h: Maskierungs- und Fehler-Grenzwerte
+    	DB 000h, 080h, 000h, 000h, 000h, 000h
+
+; 03D4h - 03E3h: IEEE-488 Bus ASCII-Übersetzungstabelle
+        DB '0123456789+-.,E '
+                    ;DB 030h	; 030h, from address 3d4h
+                    ;DB 031h	; 031h, from address 3d5h
+                    ;DB 032h	; 032h, from address 3d6h
+                    ;DB 033h	; 033h, from address 3d7h
+                    ;DB 034h	; 034h, from address 3d8h
+                    ;DB 035h	; 035h, from address 3d9h
+                    ;DB 036h	; 036h, from address 3dah
+                    ;DB 037h	; 037h, from address 3dbh
+                    ;DB 038h	; 038h, from address 3dch
+                    ;DB 039h	; 039h, from address 3ddh
+                    ;DB 02Bh	; 02Bh, from address 3deh
+                    ;DB 02Dh	; 02Dh, from address 3dfh
+                    ;DB 02Eh	; 02Eh, from address 3e0h
+                    ;DB 02Ch	; 02Ch, from address 3e1h
+                    ;DB 045h	; 045h, from address 3e2h
+                    ;DB 020h	; 020h, from address 3e3h
+
+; 03E4h - 03EDh: Status- und Protokoll-Grenzwerte
+    	DB 080h, 080h, 080h, 080h, 080h, 080h, 080h, 080h, 080h, 080h
+
+; 03EEh - 03F4h: String-Terminatoren und Kontroll-Codes (CR/LF)
     	DB 00Dh	; 00Dh, from address 3eeh
     	DB 00Ah	; 00Ah, from address 3efh
     	DB 019h	; 019h, from address 3f0h
@@ -750,14 +734,10 @@ L_037B:
     	DB 000h	; 000h, from address 3f2h
     	DB 000h	; 000h, from address 3f3h
     	DB 019h	; 019h, from address 3f4h
-    	DB 00Dh	; 00Dh, from address 3f5h
-    	DB 0C8h	; 0C8h, from address 3f6h
-    	DB 002h	; 002h, from address 3f7h
-    	DB 00Ah	; 00Ah, from address 3f8h
-    	DB 0C8h	; 0C8h, from address 3f9h
-    	DB 002h	; 002h, from address 3fah
-    	DB 02Ch	; 02Ch, from address 3fbh
-    	DB 0C8h	; 0C8h, from address 3fch
-    	DB 002h	; 002h, from address 3fdh
-    	DB 0A5h	; 0A5h, from address 3feh
-    	DB 002h	; 002h, from address 3ffh
+
+; 03F5h - 03FFh: Primäre Befehls-Sprungtabelle (wird von L_014E gescannt)
+; Format: [ASCII-Kommando] [Sprungadresse (Low/High)]
+        DB 00Dh, 0C8h, 002h    ; 0Dh (CR)     -> Springe zu 02C8h (Haupt-Init)
+        DB 00Ah, 0C8h, 002h    ; 0Ah (LF)     -> Springe zu 02C8h (Haupt-Init)
+        DB 02Ch, 0C8h, 002h    ; 2Ch (Komma)  -> Springe zu 02C8h (Haupt-Init)
+        DB 0A5h, 002h          ; Letzter Vektor / Endadresse im ROM-Sektor (02A5h)
