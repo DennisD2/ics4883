@@ -28,6 +28,19 @@ func normalizeHex(val string) string {
 	return val
 }
 
+type UnprocValue struct {
+	b   bool
+	num int
+}
+
+func UnprocContains(theMap map[string](UnprocValue), s string) bool {
+	u := theMap[s]
+	if u.b {
+		return true
+	}
+	return false
+}
+
 func main() {
 	filename := "ics4883.asm"
 	file, err := os.Open(filename)
@@ -37,8 +50,8 @@ func main() {
 	}
 	defer file.Close()
 
-	equMap := make(map[string]string)    // Key: normalisierter Wert (z.B. "407h"), Value: Name
-	unprocessed := make(map[string]bool) // Set für nicht verarbeitete Adressen
+	equMap := make(map[string]string)           // Key: normalisierter Wert (z.B. "407h"), Value: Name
+	unprocessed := make(map[string]UnprocValue) // Set für nicht verarbeitete Adressen
 	var codeLines []string
 
 	// Verbesserter Regex für EQU-Zeilen: Erlaubt flexible Leerzeichen und optionale führende Nullen
@@ -94,7 +107,14 @@ func main() {
 				codePart = strings.ReplaceAll(codePart, addr, equName)
 				replaced = true
 			} else {
-				unprocessed[normAddr] = true
+				if UnprocContains(unprocessed, normAddr) {
+					v := unprocessed[normAddr]
+					v.num++
+					unprocessed[normAddr] = v
+				} else {
+					new := UnprocValue{true, 1}
+					unprocessed[normAddr] = new
+				}
 			}
 		}
 
@@ -117,6 +137,6 @@ func main() {
 	sort.Strings(sortedUnprocessed)
 
 	for _, addr := range sortedUnprocessed {
-		fmt.Printf("; - %s\n", addr)
+		fmt.Printf("; - %s - %d\n", addr, unprocessed[addr].num)
 	}
 }
