@@ -269,77 +269,48 @@ L_014E:
         POP     D               ; D1       -> Holt das gesicherte Registerpaar DE vom Stack zurück
         RET                     ; C9       -> Unterprogramm beenden (Rücksprung zum Aufrufer)
 
+        ; ------------------------------------------------------------------------------
+        ; Schnittstellen- & Pufferverwaltungsroutine (Adresse 0163h - 01A8h)
+        ; ------------------------------------------------------------------------------
 L_0163:
-    	DB 03Ah	; 03Ah, from address 163h
-    	DB 003h	; 003h, from address 164h
-    	DB 004h	; 004h, from address 165h
-    	DB 0E6h	; 0E6h, from address 166h
-    	DB 010h	; 010h, from address 167h
-    	DB 04Fh	; 04Fh, from address 168h
-    	DB 011h	; 011h, from address 169h
-    	DB 003h	; 003h, from address 16ah
-    	DB 007h	; 007h, from address 16bh
-    	DB 03Eh	; 03Eh, from address 16ch
-    	DB 004h	; 004h, from address 16dh
-    	DB 0B1h	; 0B1h, from address 16eh
-    	DB 012h	; 012h, from address 16fh
-    	DB 03Eh	; 03Eh, from address 170h
-    	DB 080h	; 080h, from address 171h
-    	DB 032h	; 032h, from address 172h
-    	DB 004h	; 004h, from address 173h
-    	DB 007h	; 007h, from address 174h
-    	DB 021h	; 021h, from address 175h
-    	DB 001h	; 001h, from address 176h
-    	DB 007h	; 007h, from address 177h
-    	DB 03Ah	; 03Ah, from address 178h
-    	DB 005h	; 005h, from address 179h
-    	DB 004h	; 004h, from address 17ah
-    	DB 0AEh	; 0AEh, from address 17bh
-    	DB 0FAh	; 0FAh, from address 17ch
-    	DB 0A9h	; 0A9h, from address 17dh
-    	DB 001h	; 001h, from address 17eh
-    	DB 07Eh	; 07Eh, from address 17fh
-    	DB 0E6h	; 0E6h, from address 180h
-    	DB 001h	; 001h, from address 181h
-    	DB 0CAh	; 0CAh, from address 182h
-    	DB 078h	; 078h, from address 183h
-    	DB 001h	; 001h, from address 184h
-    	DB 03Ah	; 03Ah, from address 185h
-    	DB 005h	; 005h, from address 186h
-    	DB 004h	; 004h, from address 187h
-    	DB 0AEh	; 0AEh, from address 188h
-    	DB 0FAh	; 0FAh, from address 189h
-    	DB 0A9h	; 0A9h, from address 18ah
-    	DB 001h	; 001h, from address 18bh
-    	DB 03Eh	; 03Eh, from address 18ch
-    	DB 006h	; 006h, from address 18dh
-    	DB 0B1h	; 0B1h, from address 18eh
-    	DB 012h	; 012h, from address 18fh
-    	DB 07Eh	; 07Eh, from address 190h
-    	DB 032h	; 032h, from address 191h
-    	DB 00Fh	; 00Fh, from address 192h
-    	DB 004h	; 004h, from address 193h
-    	DB 02Bh	; 02Bh, from address 194h
-    	DB 046h	; 046h, from address 195h
-    	DB 023h	; 023h, from address 196h
-    	DB 03Eh	; 03Eh, from address 197h
-    	DB 002h	; 002h, from address 198h
-    	DB 0B1h	; 0B1h, from address 199h
-    	DB 012h	; 012h, from address 19ah
-    	DB 07Eh	; 07Eh, from address 19bh
-    	DB 0E6h	; 0E6h, from address 19ch
-    	DB 001h	; 001h, from address 19dh
-    	DB 0C2h	; 0C2h, from address 19eh
-    	DB 09Bh	; 09Bh, from address 19fh
-    	DB 001h	; 001h, from address 1a0h
-    	DB 03Eh	; 03Eh, from address 1a1h
-    	DB 006h	; 006h, from address 1a2h
-    	DB 0B1h	; 0B1h, from address 1a3h
-    	DB 012h	; 012h, from address 1a4h
-    	DB 032h	; 032h, from address 1a5h
-    	DB 003h	; 003h, from address 1a6h
-    	DB 004h	; 004h, from address 1a7h
-    	DB 0C9h	; 0C9h, from address 1a8h
+        LDA     0403h           ; 3A 03 04 -> Lädt Zustand aus RAM-Zelle 0403h
+        ANI     10h             ; E6 10    -> Bit 4 maskieren
+        MOV     C, A            ; 4F       -> In Register C zwischenspeichern
+        LXI     D, 0703h        ; 11 03 07 -> Richtet DE auf physische Hardwareadresse 0703h aus
+        MVI     A, 04h          ; 3E 04    -> Lädt Konstante 04h in den Akkumulator
+        ORA     C               ; B1       -> Logisches ODER mit Register C verknüpfen
+        STAX    D               ; 12       -> Akkumulator an Hardwareadresse [DE] ausgeben
+        MVI     A, 80h          ; 3E 80    -> Status-Flag 80h in den Akkumulator laden
+        STA     0704h           ; 32 04 07 -> Zustand direkt im I/O-Register 0704h sichern
+        LXI     H, 0701h        ; 21 01 07 -> Richtet HL auf das I/O-Statusregister 0701h aus
+        LDA     0405h           ; 3A 05 04 -> Lädt Kontrollwert aus RAM 0405h
+    	XRA     M               ; AE from address 17bh
+    	JM      01A9h           ; FA A9 01 -> Wenn negativ (Sign-Flag=1), springe vor zu 0191h
+        MOV     A, M            ; 7E       -> Byte direkt aus der Hardware [HL] laden
+        ANI     01h             ; E6 01    -> Bit 0 maskieren
+        JZ      0178h           ; CA 78 01 -> Wenn Null, springe zurück zu Adresse 0178h (Schleife!)
+        LDA     0405h           ; 3A 05 04 -> Erneut RAM-Wert 0405h laden
+    	XRA     M               ; AE from address 188h
+    	JM      01A9h           ; FA A9 01 -> Wenn negativ, springe vor zu Adresse 01A9h
+        MVI     A, 06h          ; 3E 06    -> Konstante 06h laden
+        ORA     C               ; B1       -> Logisches ODER mit Register C
+        STAX    D               ; 12       -> An Hardware [DE] ausgeben
+        MOV     A, M            ; 7E       -> Byte aus Hardware [HL] holen
+        STA     040Fh           ; 32 0F 04 -> Empfangenes Datenbyte im RAM 040Fh sichern
+        DCX     H               ; 2B       -> Adresszeiger HL um 1 verringern (zeigt nun auf 0700h)
+        MOV     B, M            ; 46       -> Byte aus Hardware [HL] (0700h) nach Register B laden
+        INX     H               ; 23       -> Adresszeiger HL wieder um 1 erhöhen (zurück auf 0701h)
+        MVI     A, 02h          ; 3E 02    -> Konstante 02h laden
+        ORA     C               ; B1       -> Logisches ODER mit Register C
+        STAX    D               ; 12       -> An Hardware [DE] ausgeben
+        MOV     A, M            ; 7E       -> Status erneut aus Hardware [HL] lesen
+        ANI     01h             ; E6 01    -> Bit 0 maskieren
+        JNZ     019Bh           ; C2 9B 01 -> Wenn ungleich Null, springe vor zu Adresse 019Bh
+        MVI     A, 06h          ; 3E 06    -> Konstante 06h laden
+        ORA     C               ; B1       -> Logisches ODER mit Register C
+        STAX    D               ; 12       -> An Hardware [DE] ausgeben
+        STA     0403h           ; 32 03 04 -> Finalen Zustand in RAM-Zelle 0403h zurückschreiben
+        RET                     ; C9       -> Unterprogramm sauber beenden (Rücksprung)
 
     	DB 0E1h	; 0E1h, from address 1a9h
     	DB 0C3h	; 0C3h, from address 1aah
