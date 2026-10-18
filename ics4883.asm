@@ -337,51 +337,33 @@ L_01AD:
         LXI     H, 0604h        ; 21 04 06 -> HL-Zeiger auf I/O-Schnittstellenregister 0604h ausrichten
     	CALL    0242h           ; CD 42 02 -> Ruft Unterfunktion an Adresse 0242h auf
     	MVI     A, 0Fh          ; 3E 0F    -> Lädt die Konstante 0Fh in den Akkumulator
-    	DB 032h	; 032h, from address 1c9h
-    	DB 000h	; 000h, from address 1cah
-    	DB 004h	; 004h, from address 1cbh
-    	DB 0FBh	; 0FBh, from address 1cch
-    	DB 021h	; 021h, from address 1cdh
-    	DB 030h	; 030h, from address 1ceh
-    	DB 004h	; 004h, from address 1cfh
-    	DB 022h	; 022h, from address 1d0h
-    	DB 02Eh	; 02Eh, from address 1d1h
-    	DB 004h	; 004h, from address 1d2h
-    	DB 021h	; 021h, from address 1d3h
-    	DB 0E4h	; 0E4h, from address 1d4h
-    	DB 003h	; 003h, from address 1d5h
-    	DB 07Eh	; 07Eh, from address 1d6h
-    	DB 023h	; 023h, from address 1d7h
-    	DB 022h	; 022h, from address 1d8h
-    	DB 01Dh	; 01Dh, from address 1d9h
-    	DB 004h	; 004h, from address 1dah
-    	DB 0FEh	; 0FEh, from address 1dbh
-    	DB 019h	; 019h, from address 1dch
-    	DB 0CAh	; 0CAh, from address 1ddh
-    	DB 017h	; 017h, from address 1deh
-    	DB 000h	; 000h, from address 1dfh
-    	DB 0B7h	; 0B7h, from address 1e0h
-    	DB 0F2h	; 0F2h, from address 1e1h
-    	DB 0F0h	; 0F0h, from address 1e2h
-    	DB 001h	; 001h, from address 1e3h
-    	DB 0E6h	; 0E6h, from address 1e4h
-    	DB 040h	; 040h, from address 1e5h
-    	DB 0B1h	; 0B1h, from address 1e6h
-    	DB 04Fh	; 04Fh, from address 1e7h
-    	DB 02Ah	; 02Ah, from address 1e8h
-    	DB 02Eh	; 02Eh, from address 1e9h
-    	DB 004h	; 004h, from address 1eah
-    	DB 07Eh	; 07Eh, from address 1ebh
-    	DB 023h	; 023h, from address 1ech
-    	DB 022h	; 022h, from address 1edh
-    	DB 02Eh	; 02Eh, from address 1eeh
-    	DB 004h	; 004h, from address 1efh
-    	DB 047h	; 047h, from address 1f0h
-    	DB 03Ah	; 03Ah, from address 1f1h
-    	DB 003h	; 003h, from address 1f2h
-    	DB 004h	; 004h, from address 1f3h
-    	DB 0E6h	; 0E6h, from address 1f4h
-    	DB 010h	; 010h, from address 1f5h
+        ; ------------------------------------------------------------------------------
+        ; SRAM-Puffer-Verwaltung & Bitmaskierung (Adresse 01C9h - 01F5h)
+        ; ------------------------------------------------------------------------------
+        STA     0400h           ; 32 00 04 -> Akkumulator-Inhalt direkt in RAM 0400h sichern
+        EI                      ; FB       -> Interrupts wieder freigeben (Enable Interrupts)
+        LXI     H, 0430h        ; 21 30 04 -> HL-Zeiger auf SRAM-Adresse 0430h laden
+        SHLD    042Eh           ; 22 2E 04 -> Speicherinhalt von HL nach SRAM 042Eh sichern
+        LXI     H, 03E4h        ; 21 E4 03 -> HL-Zeiger auf Übersetzungstabelle im ROM ausrichten
+        MOV     A, M            ; 7E       -> Byte via HL laden
+        INX     H               ; 23       -> HL-Zeiger um 1 erhöhen
+        SHLD    041Dh           ; 22 1D 04 -> Aktuellen HL-Zeiger im RAM 041Dh sichern
+        CPI     19h             ; FE 19    -> Akkumulator mit Konstante 19h vergleichen
+
+        JZ      0017h           ; CA 17 00 -> Wenn gleich, springe weit zurück zu Adresse 0017h
+        ORA     A               ; B7       -> Flags aktualisieren (Prüfen auf Null/Vorzeichen)
+        JP      01F0h           ; F2 F0 01 -> Wenn positiv (Bit 7 = 0), springe vor zu Adresse 01F0h
+        ANI     040h            ; E6 40    -> Bit 6 maskieren
+        ORA     C               ; B1       -> Logisches ODER mit Register C verknüpfen
+        MOV     C, A            ; 4F       -> In Register C sichern (AS-Syntax für MOV C,A)
+        LHLD    042Eh           ; 2A 2E 04 -> HL-Registerinhalt im SRAM 042Ah sichern
+        MOV     A, M            ; 7E       -> Byte erneut via HL laden
+        INX     H               ; 23       -> HL-Zeiger um 1 erhöhen
+        SHLD    042Eh           ; 22 2E 04 -> HL-Registerinhalt im SRAM 042Eh sichern
+        MOV     B, A            ; 47       -> Byte in Register B sichern
+        LDA     0403h           ; 3A 03 04 -> Zustand aus RAM-Zelle 0403h holen
+        ANI     10h             ; E6 10    -> Bit 4 maskieren
+
     	DB 04Fh	; 04Fh, from address 1f6h
     	DB 011h	; 011h, from address 1f7h
     	DB 003h	; 003h, from address 1f8h

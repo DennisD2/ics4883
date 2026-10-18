@@ -524,6 +524,7 @@
 	DB 004h	; 004h, from address 1f3h
 	DB 0E6h	; 0E6h, from address 1f4h
 	DB 010h	; 010h, from address 1f5h
+
 	DB 04Fh	; 04Fh, from address 1f6h
 	DB 011h	; 011h, from address 1f7h
 	DB 003h	; 003h, from address 1f8h
