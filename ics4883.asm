@@ -306,9 +306,10 @@ L_0178:
         MVI     A, 02h          ; 3E 02    -> Konstante 02h laden
         ORA     C               ; B1       -> Logisches ODER mit Register C
         STAX    D               ; 12       -> An Hardware [DE] ausgeben
+L_019B:
         MOV     A, M            ; 7E       -> Status erneut aus Hardware [HL] lesen
         ANI     01h             ; E6 01    -> Bit 0 maskieren
-        JNZ     019Bh           ; C2 9B 01 -> Wenn ungleich Null, springe vor zu Adresse 019Bh
+        JNZ     L_019B          ; C2 9B 01 -> Wenn ungleich Null, springe vor zu Adresse 019Bh
         MVI     A, 06h          ; 3E 06    -> Konstante 06h laden
         ORA     C               ; B1       -> Logisches ODER mit Register C
         STAX    D               ; 12       -> An Hardware [DE] ausgeben
@@ -317,8 +318,7 @@ L_0178:
 L_01A9:
     	POP     H               ;DB 0E1h	; 0E1h, from address 1a9h
     	JMP     L_0017          ;DB 0C3h	; 0C3h, from address 1aah
-    	    ;DB 017h	; 017h, from address 1abh
-    	    ;DB 000h	; 000h, from address 1ach
+
 L_01AD:
     	DB 0FBh	; 0FBh, from address 1adh
     	DB 03Ah	; 03Ah, from address 1aeh
