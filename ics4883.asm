@@ -325,17 +325,18 @@ L_01A9:
 
 L_01AD:
     	EI                      ; FB from address 1adh
-    	LDA     040Dh           ; 3A 0D 04 -> Lädt Kontroll-Flag aus RAM-Zell
+    	LDA     040Dh           ; 3A 0D 04 -> Lädt Kontroll-Flag aus RAM-Zelle
     	ORA     A               ; B7       -> Prüft, ob der Wert im Akkumulator Null ist
-    	JNZ     0232h           ; C2 32 02 -> Wenn ungleich Null, springe weit vor zu Adresse 0232h
+    	JNZ     L_0232          ; C2 32 02 -> Wenn ungleich Null, springe weit vor zu Adresse 0232h
         LXI     H, 0605h        ; 21 05 06 -> HL-Zeiger auf I/O-Datenregister 0605h ausrichten
+L_01B8:
         MOV     A, M            ; 7E       -> Holt das aktuelle Datenbyte via HL
     	RRC                     ; 0F from address 1b9h
-        JC      01B8h           ; DA B8 01 -> Wenn Carry=1, springe vor zu Adresse 01B8h
+        JC      L_01B8          ; DA B8 01 -> Wenn Carry=1, springe zu Adresse 01B8h
         DI                      ; F3       -> Interrupts sperren (Disable Interrupts)
         LXI     D, 0430h        ; 11 30 04 -> Registerpaar DE mit SRAM-Adresse 0430h laden
         LXI     H, 0604h        ; 21 04 06 -> HL-Zeiger auf I/O-Schnittstellenregister 0604h ausrichten
-    	CALL    0242h           ; CD 42 02 -> Ruft Unterfunktion an Adresse 0242h auf
+    	CALL    L_0242          ; CD 42 02 -> Ruft Unterfunktion an Adresse 0242h auf
     	MVI     A, 0Fh          ; 3E 0F    -> Lädt die Konstante 0Fh in den Akkumulator
         ; ------------------------------------------------------------------------------
         ; SRAM-Puffer-Verwaltung & Bitmaskierung (Adresse 01C9h - 01F5h)
@@ -345,14 +346,15 @@ L_01AD:
         LXI     H, 0430h        ; 21 30 04 -> HL-Zeiger auf SRAM-Adresse 0430h laden
         SHLD    042Eh           ; 22 2E 04 -> Speicherinhalt von HL nach SRAM 042Eh sichern
         LXI     H, 03E4h        ; 21 E4 03 -> HL-Zeiger auf Übersetzungstabelle im ROM ausrichten
+L_01D6:
         MOV     A, M            ; 7E       -> Byte via HL laden
         INX     H               ; 23       -> HL-Zeiger um 1 erhöhen
         SHLD    041Dh           ; 22 1D 04 -> Aktuellen HL-Zeiger im RAM 041Dh sichern
         CPI     19h             ; FE 19    -> Akkumulator mit Konstante 19h vergleichen
 
-        JZ      0017h           ; CA 17 00 -> Wenn gleich, springe weit zurück zu Adresse 0017h
+        JZ      L_0017          ; CA 17 00 -> Wenn gleich, springe weit zurück zu Adresse 0017h
         ORA     A               ; B7       -> Flags aktualisieren (Prüfen auf Null/Vorzeichen)
-        JP      01F0h           ; F2 F0 01 -> Wenn positiv (Bit 7 = 0), springe vor zu Adresse 01F0h
+        JP      L_01F0          ; F2 F0 01 -> Wenn positiv (Bit 7 = 0), springe vor zu Adresse 01F0h
         ANI     040h            ; E6 40    -> Bit 6 maskieren
         ORA     C               ; B1       -> Logisches ODER mit Register C verknüpfen
         MOV     C, A            ; 4F       -> In Register C sichern (AS-Syntax für MOV C,A)
@@ -360,7 +362,9 @@ L_01AD:
         MOV     A, M            ; 7E       -> Byte erneut via HL laden
         INX     H               ; 23       -> HL-Zeiger um 1 erhöhen
         SHLD    042Eh           ; 22 2E 04 -> HL-Registerinhalt im SRAM 042Eh sichern
+L_01F0:
         MOV     B, A            ; 47       -> Byte in Register B sichern
+L_01F1:
         LDA     0403h           ; 3A 03 04 -> Zustand aus RAM-Zelle 0403h holen
         ANI     10h             ; E6 10    -> Bit 4 maskieren
         MOV     C, A            ; 4F       -> Vorheriges Ergebnis nach Register C retten
@@ -369,18 +373,20 @@ L_01AD:
         LXI     H, 00702h       ; 21 02 07 -> HL auf Adresse 0702h ausrichten
         MOV     M,B             ; 70
         DCX     H               ; 2B       -> HL um 1 verringern (zeigt nun auf 0701h)
+L_0200:
         MOV     A, M            ; 7E       -> Status-Byte aus 0701h einlesen
         RRC                     ; 0F       -> Nach rechts rotieren
         RRC                     ; 0F       -> Nochmals nach rechts rotieren
-        JC      0200h           ; DA 00 02 -> Wenn Carry=1, Fehler/Abzweig zu L_0002
+        JC      L_0200          ; DA 00 02 -> Wenn Carry=1, Fehler/Abzweig zu L_0002
         MVI     A, 01h          ; 3E 01    -> Konstante 01h laden
         ORA     C               ; B1       -> Mit Maske in Register C verknüpfen
         STAX    D               ; 12       -> An Hardware ausgeben
+L_020A:
         MOV     A, M            ; 7E       -> Erneut Status lesen
         RRC                     ; 0F
         RRC                     ; 0F
         RRC                     ; 0F
-        JC      020Ah           ; DA 0A 02 -> Wenn Carry=1, Sprung zu RAM/ROM-Adresse 020Ah
+        JC      L_020A          ; DA 0A 02 -> Wenn Carry=1, Sprung zu RAM/ROM-Adresse 020Ah
         DI                      ; F3       -> Interrupts sperren
         XRA     A               ; AF       -> Akkumulator nullen
         STAX    D               ; 12
@@ -390,13 +396,15 @@ L_01AD:
         MVI     M, 00h          ; 36 00    -> Speicherzelle mit 00h überschreiben
         ORA     A               ; B7       -> Flags aktualisieren
         JM      L_0017          ; FA 17 00 -> Wenn negativ (Bit 7=1), Sprung zu L_0017
-        JZ      022Bh           ; CA 2B 02 -> Wenn Null, Sprung zu RAM/ROM-Adresse 022Bh
+        JZ      L_022B          ; CA 2B 02 -> Wenn Null, Sprung zu RAM/ROM-Adresse 022Bh
         XRA     A               ; AF
         STA     0607h           ; 32 07 06
         STA     040Eh           ; 32 0E 04
+L_022B:
         EI                      ; FB       -> Interrupts wieder freigeben
         LHLD    041Dh           ; 2A 1D 04
-        JMP     01D6h           ; C3 D6 01 -> Sprung zu RAM/ROM-Adresse 01D6h
+        JMP     L_01D6          ; C3 D6 01 -> Sprung zu RAM/ROM-Adresse 01D6h
+L_0232:
         MVI     A, 0FFh         ; 3E FF
         STA     0400h           ; 32 00 04
         LXI     H, 040Eh        ; 21 0E 04 -> HL auf Kontrollregister setzen
@@ -404,7 +412,8 @@ L_01AD:
         MOV     A, M            ; 7E
         ANI     0BFh            ; E6 BF    -> Bit 6 löschen (Maskierung)
         MOV     M, A            ; 77
-        JMP     01F1h           ; C3 F1 01 -> Sprung zu RAM/ROM-Adresse 01F1h
+        JMP     L_01F1          ; C3 F1 01 -> Sprung zu RAM/ROM-Adresse 01F1h
+L_0242:
         MVI     B, 05h          ; 06 05    -> Schleifenzähler (5) in Register B laden
 L_0244:
         MOV     A, M            ; 7E       -> Byte über HL-Zeiger (0604h) laden

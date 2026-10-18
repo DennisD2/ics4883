@@ -440,6 +440,7 @@
 	DB 021h	; 21 (oct=41), from address h/o/d = 1b5 437
 	DB 005h	; 05 (oct=5), from address h/o/d = 1b6 438
 	DB 006h	; 06 (oct=6), from address h/o/d = 1b7 439
+
 	DB 07Eh	; 7E (oct=176), from address h/o/d = 1b8 440
 	DB 00Fh	; 0F (oct=17), from address h/o/d = 1b9 441
 	DB 0DAh	; DA (oct=332), from address h/o/d = 1ba 442
@@ -470,6 +471,7 @@
 	DB 021h	; 21 (oct=41), from address h/o/d = 1d3 467
 	DB 0E4h	; E4 (oct=344), from address h/o/d = 1d4 468
 	DB 003h	; 03 (oct=3), from address h/o/d = 1d5 469
+
 	DB 07Eh	; 7E (oct=176), from address h/o/d = 1d6 470
 	DB 023h	; 23 (oct=43), from address h/o/d = 1d7 471
 	DB 022h	; 22 (oct=42), from address h/o/d = 1d8 472
@@ -496,7 +498,9 @@
 	DB 022h	; 22 (oct=42), from address h/o/d = 1ed 493
 	DB 02Eh	; 2E (oct=56), from address h/o/d = 1ee 494
 	DB 004h	; 04 (oct=4), from address h/o/d = 1ef 495
+
 	DB 047h	; 47 (oct=107), from address h/o/d = 1f0 496
+
 	DB 03Ah	; 3A (oct=72), from address h/o/d = 1f1 497
 	DB 003h	; 03 (oct=3), from address h/o/d = 1f2 498
 	DB 004h	; 04 (oct=4), from address h/o/d = 1f3 499
@@ -514,6 +518,7 @@
 	DB 070h	; 70 (oct=160), from address h/o/d = 1fe 510
 
 	DB 02Bh	; 2B (oct=53), from address h/o/d = 1ff 511
+
 	DB 07Eh	; 7E (oct=176), from address h/o/d = 200 512
 	DB 00Fh	; 0F (oct=17), from address h/o/d = 201 513
 	DB 00Fh	; 0F (oct=17), from address h/o/d = 202 514
@@ -524,6 +529,7 @@
 	DB 001h	; 01 (oct=1), from address h/o/d = 207 519
 	DB 0B1h	; B1 (oct=261), from address h/o/d = 208 520
 	DB 012h	; 12 (oct=22), from address h/o/d = 209 521
+
 	DB 07Eh	; 7E (oct=176), from address h/o/d = 20a 522
 	DB 00Fh	; 0F (oct=17), from address h/o/d = 20b 523
 	DB 00Fh	; 0F (oct=17), from address h/o/d = 20c 524
@@ -557,6 +563,7 @@
 	DB 032h	; 32 (oct=62), from address h/o/d = 228 552
 	DB 00Eh	; 0E (oct=16), from address h/o/d = 229 553
 	DB 004h	; 04 (oct=4), from address h/o/d = 22a 554
+
 	DB 0FBh	; FB (oct=373), from address h/o/d = 22b 555
 	DB 02Ah	; 2A (oct=52), from address h/o/d = 22c 556
 	DB 01Dh	; 1D (oct=35), from address h/o/d = 22d 557
@@ -564,6 +571,7 @@
 	DB 0C3h	; C3 (oct=303), from address h/o/d = 22f 559
 	DB 0D6h	; D6 (oct=326), from address h/o/d = 230 560
 	DB 001h	; 01 (oct=1), from address h/o/d = 231 561
+
 	DB 03Eh	; 3E (oct=76), from address h/o/d = 232 562
 	DB 0FFh	; FF (oct=377), from address h/o/d = 233 563
 	DB 032h	; 32 (oct=62), from address h/o/d = 234 564
@@ -580,6 +588,7 @@
 	DB 0C3h	; C3 (oct=303), from address h/o/d = 23f 575
 	DB 0F1h	; F1 (oct=361), from address h/o/d = 240 576
 	DB 001h	; 01 (oct=1), from address h/o/d = 241 577
+
 	DB 006h	; 06 (oct=6), from address h/o/d = 242 578
 	DB 005h	; 05 (oct=5), from address h/o/d = 243 579
 	DB 07Eh	; 7E (oct=176), from address h/o/d = 244 580
