@@ -502,6 +502,7 @@
 	DB 004h	; 04 (oct=4), from address h/o/d = 1f3 499
 	DB 0E6h	; E6 (oct=346), from address h/o/d = 1f4 500
 	DB 010h	; 10 (oct=20), from address h/o/d = 1f5 501
+
 	DB 04Fh	; 4F (oct=117), from address h/o/d = 1f6 502
 	DB 011h	; 11 (oct=21), from address h/o/d = 1f7 503
 	DB 003h	; 03 (oct=3), from address h/o/d = 1f8 504
