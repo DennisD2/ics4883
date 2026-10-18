@@ -589,8 +589,7 @@ L_0324:
         ORA   A           ; B7       -> Setzt die Flags (Zero/Sign) basierend auf dem Akkumulator
         JZ    L_0017      ; CA 17 00 -> Wenn der Wert Null ist, Sprung zurück zum Haupt-Polling L_0017
         MOV   A, B        ; 78       -> Holt den Wert aus Register B zurück nach A
-    	DB 0FEh	; 0FEh, from address 32ch
-    	DB 070h	; 070h, from address 32dh
+        CPI   070h        ; FE 70    -> Prüfen, ob das Zeichen im Akkumulator 70h entspricht
     	DB 0CAh	; 0CAh, from address 32eh
     	DB 06Dh	; 06Dh, from address 32fh
     	DB 003h	; 003h, from address 330h
