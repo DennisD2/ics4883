@@ -498,6 +498,7 @@
 0x035E: 3A 07 04   LDA 0x0407    ; Status von I/O-Adresse 0x0407 einlesen
 0x0361: 77         MOV M, A      ; Diesen Zustand ebenfalls im RAM sichern
 0x0362: C3 1F 00   JMP 0x001F    ; Kurzzeitiger Rücksprung zur Validierung im Boot-Bereich
+
 0x0365: AF         XRA A         ; Akkumulator leeren / auf Null setzen (XOR A mit A)
 0x0366: 32 01 04   STA 0x0401    ; Null nach 0x0401 schreiben (löscht das auslösende Status-Flag)
 0x0369: 21 07 04   LXI H, 0x0407 ; Registerpaar HL direkt auf I/O-Adresse 0x0407 ausrichten

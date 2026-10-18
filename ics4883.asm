@@ -657,7 +657,7 @@ L_0324:
         ORA     A               ; B7       -> Setzt die Flags (Zero/Sign) basierend auf dem Akkumulator
         JZ      L_0017          ; CA 17 00 -> Wenn der Wert Null ist, Sprung zurück zum Haupt-Polling L_0017
         MOV     A, B            ; 78       -> Holt den Wert aus Register B zurück nach A
-        CPI     070h            ; FE 70    -> Prüfen, ob das Zeichen im Akkumulator 70h entspricht
+        CPI     070h            ; FE 70    -> Prüfen, ob das Zeichen im Akkumulator 70h entspricht (70h = 'p')
     	JZ      L_036D          ; CA 6D 03 -> Wenn ja, Sprung nach vorne zu Adresse 036Dh
         STA     REG_IO_STATE    ; 32 01 04 -> Speichert den Akkumulator in RAM-Adresse REG_IO_STATE
         ANI     007h            ; E6 07    -> Maskiert die unteren 3 Bits (Bit 0-2) des Akkumulators
@@ -710,6 +710,7 @@ L_036D:
 
 ; Dieser Zweig (ab 037Bh) verarbeitet das alternative Szenario ('q')
 L_037B:
+;;; "Bit-Prüfung und Bedingter Abbruch"
         LDA     REG_SYS_STATUS  ; 3A 07 04 -> Lädt den Systemstatus aus RAM 0407h
         ANI     002h            ; E6 02    -> Isolierte Betrachtung von Bit 1
         JZ      L_0017          ; CA 17 00 -> Wenn Bit 1 Null ist, zurück zum Polling L_0017
@@ -803,8 +804,8 @@ L_037B:
     	DB 080h, 080h, 080h, 080h, 080h, 080h, 080h, 080h, 080h, 080h
 
 ; 03EEh - 03F4h: String-Terminatoren und Kontroll-Codes (CR/LF)
-    	DB 00Dh	; 00Dh, from address 3eeh
-    	DB 00Ah	; 00Ah, from address 3efh
+    	DB 00Dh	; 00Dh, from address 3eeh (CR)
+    	DB 00Ah	; 00Ah, from address 3efh (LF)
     	DB 019h	; 019h, from address 3f0h
     	DB 000h	; 000h, from address 3f1h
     	DB 000h	; 000h, from address 3f2h
