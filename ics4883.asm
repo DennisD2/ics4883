@@ -54,8 +54,8 @@ IO_SRAM_FLAG1  EQU  0607h       ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung
 
 ; Hardware Output Range (0700h - 07FFh)
 IO_TALK_STATUS EQU  0701h       ; Status des Talker-Interfaces (Eingang/Ausgang)
-IO_TALK_REG02  EQU  0702h       ; Synchronisationsregister 02h für Talker-Schnittstelle
-IO_TALK_REG03  EQU  0703h       ; Synchronisationsregister 03h für Talker-Schnittstelle
+IO_TALK_CTRLBUS  EQU  0702h       ; Synchronisationsregister 02h für Talker-Schnittstelle
+IO_TALK_DATABUS  EQU  0703h       ; Synchronisationsregister 03h für Talker-Schnittstelle
 IO_TALK_CTRL   EQU  0704h       ; Kontrollregister für IEEE-488 Buschip
 IO_TALK_DATA   EQU  0705h       ; Datenpuffer-Register des Talker-Interfaces
 IO_TALK_REG06  EQU  0706h       ; Talker-Schnittstellenregister 06h (Adresse/Status)
@@ -122,7 +122,7 @@ L_0060:
     	ANA     B               ; A0 from address 64h
     	ORA     C               ; B1 from address 65h
     	MOV     M,A             ; 77 from address 66h
-    	STA     IO_TALK_REG03   ; Zwischenspeichern des aktuellen I/O-Status
+    	STA     IO_TALK_DATABUS   ; Zwischenspeichern des aktuellen I/O-Status
     	JMP     L_0017          ; C3 17 00  back to loop start
 
 ; ------------------------------------------------------------------------------
@@ -230,7 +230,7 @@ L_00CE:
         MVI     A, 80h          ; 3E 80    -> Lade Status-Flag 80h in den Akkumulator
         STA     REG_GPIB_CTRL   ; 32 05 04 -> Schreibe das Flag in das GPIB-Schnittstellenregister
         XRA     A               ; AF       -> Akkumulator löschen (A = 0)
-        STA     IO_TALK_REG02   ; 32 02 07 -> Lösche das Statusregister 0702h im Talker-Interface
+        STA     IO_TALK_CTRLBUS   ; 32 02 07 -> Lösche das Statusregister 0702h im Talker-Interface
         CALL    L_0163          ; CD 63 01 -> Ruft Unterfunktion an Adresse 0163h auf
         LDA     IO_TALK_REG06   ; 3A 06 07 -> Lädt aktuellen Status aus dem Talker-Register
         RLC                     ; 07       -> Akkumulator nach links rotieren (Bit-Prüfung)
@@ -336,7 +336,7 @@ L_0163:
         LDA     REG_SYS_STATE   ; 3A 03 04 -> Lädt Zustand aus RAM-Zelle 0403h
         ANI     10h             ; E6 10    -> Bit 4 maskieren
         MOV     C, A            ; 4F       -> In Register C zwischenspeichern
-        LXI     D, IO_TALK_REG03        ; 11 03 07 -> Richtet DE auf physische Hardwareadresse 0703h aus
+        LXI     D, IO_TALK_DATABUS        ; 11 03 07 -> Richtet DE auf physische Hardwareadresse 0703h aus
         MVI     A, 04h          ; 3E 04    -> Lädt Konstante 04h in den Akkumulator
         ORA     C               ; B1       -> Logisches ODER mit Register C verknüpfen
         STAX    D               ; 12       -> Akkumulator an Hardwareadresse [DE] ausgeben
@@ -426,9 +426,9 @@ L_01F1:
         LDA     REG_SYS_STATE   ; 3A 03 04 -> Zustand aus RAM-Zelle 0403h holen
         ANI     10h             ; E6 10    -> Bit 4 maskieren
         MOV     C, A            ; 4F       -> Vorheriges Ergebnis nach Register C retten
-        LXI     D,IO_TALK_REG03         ; 11 03 07 -> Lädt Byte von der Hardware-Adresse [DE] (0703h)
+        LXI     D,IO_TALK_DATABUS         ; 11 03 07 -> Lädt Byte von der Hardware-Adresse [DE] (0703h)
         STAX    D               ; 12           -> Schreibt den Akkumulator wieder zurück nach [DE]
-        LXI     H, IO_TALK_REG02       ; 21 02 07 -> HL auf Adresse 0702h ausrichten
+        LXI     H, IO_TALK_CTRLBUS       ; 21 02 07 -> HL auf Adresse 0702h ausrichten
         MOV     M,B             ; 70
         DCX     H               ; 2B       -> HL um 1 verringern (zeigt nun auf 0701h)
 L_0200:
@@ -558,7 +558,7 @@ L_0263:
 L_029D:
         XRA     A               ; AF       -> Akkumulator nullen
         STA     REG_GPIB_CTRL   ; 32 05 04 -> Systemregister 0405h im RAM zurücksetzen
-        STA     IO_TALK_REG02   ; 32 02 07 -> Interface-Register 0702h löschen
+        STA     IO_TALK_CTRLBUS   ; 32 02 07 -> Interface-Register 0702h löschen
         DI                      ; F3       -> Interrupts global sperren
 L_BUFF_LOOP:
 L_02A5:
@@ -697,7 +697,7 @@ L_0346:
 L_0355:
         LXI     H, IO_TALK_CTRL ; 21 04 07 -> HL auf I/O-Schnittstelle / Adresse 0704h ausrichten
         MVI     M, 00h          ; 36 00    -> Speicherzelle [0704h] mit 00h löschen
-        LXI     H, IO_TALK_REG02   ; 21 02 07 -> HL auf Adresse 0702h ausrichten
+        LXI     H, IO_TALK_CTRLBUS   ; 21 02 07 -> HL auf Adresse 0702h ausrichten
         LDA     REG_PENDING_CMD      ; 3A 0B 04 -> Inhalt aus RAM-Zelle 040Bh in den Akkumulator laden
         MOV     M, A            ; 77       -> Wert aus 040Bh direkt nach [0702h] schreiben
         INX     H               ; 23       -> HL-Zeiger erhöhen (zeigt nun auf 0703h)
