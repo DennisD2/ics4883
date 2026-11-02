@@ -52,14 +52,15 @@ REG_ARRAY_PTR  EQU  042Eh       ; Zeiger auf das aktuelle Zeichen im indizierten
 RAM_ASCII_BUFF EQU  0430h       ; Startadresse für den übersetzten ASCII-Datenpuffer
 
 ; ==============================================================================
-; 0500 - 05FF : Configuration RAM
+; 0500 - 05FF : HARDWARE-MAPPED I/O REGISTERS (Eingabe & Ausgabe) and Configuration RAM
+; Hardware Input Section and Hardware Output Section
 ; ==============================================================================
 RAM_HW_CONFIG1 EQU  0505h       ; Hardware-Konfigurationsbyte 1 (z. B. Pegelsteuerung)
 RAM_HW_CONFIG2 EQU  0506h       ; Hardware-Konfigurationsbyte 2 (beim Booten geladen)
 
 ; ==============================================================================
 ; 0600 - 06FF : HARDWARE-MAPPED I/O REGISTERS (Eingabe & Ausgabe)
-; Hardware Input Section
+; Hardware Input Section and Hardware Output Section
 ; ==============================================================================
 IO_HW_INPUT    EQU  0604h       ; Primäres Hardware-Eingangsregister (Datenstrom)
 IO_DIP_SWITCH  EQU  0605h       ; DIP-Schalter für Bus-Adresse & Modus (Hardware-Eingabe)
@@ -67,7 +68,7 @@ IO_SRAM_FLAG1  EQU  0607h       ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung
 
 ; ==============================================================================
 ; 0700 - 07FF : HARDWARE-MAPPED I/O REGISTERS (Eingabe & Ausgabe)
-; Hardware Output Section
+; GPIB connector control (no special chip used, just 74xx chips)
 ; ==============================================================================
 IO_TALK_STATUS EQU  0701h       ; Status des Talker-Interfaces (Eingang/Ausgang)
 IO_TALK_CTRLBUS  EQU  0702h       ; Synchronisationsregister 02h für Talker-Schnittstelle
