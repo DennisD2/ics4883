@@ -303,7 +303,7 @@ L_010E:
         CALL    L_00A1          ; CD A1 00 -> Ruft die I/O-Ausgabestufe auf
     	JMP     L_0017          ; C3 17 00  from address 12eh
 
-; Comparison if GPIB adress just received with address set at dip switch
+; Comparison if GPIB address just received with address set at dip switch
 L_GPIB_ADRESS_CMP:
 L_0131:
     	LDA     IO_DIP_SWITCH   ; 3A 06 07 -> loads 0706h into A
