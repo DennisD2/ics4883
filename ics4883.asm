@@ -5,11 +5,19 @@
         CPU	8080
         ORG	0000h
 
+; Memory map:
+; 0000 - 03FF ROM
+; 0400 - 04FF RAM and STACK
+; 0500 - 05FF
+; 0600 - 06FF
+; 0700 - 078FF
+; 0800 and above - unused
+
 SRAM_START     EQU  0400h       ; Start des internen Arbeitsspeichers
 STACK_BASE     EQU  0500h       ; Initialisierungsadresse für den Stack-Pointer
 
 ; ==============================================================================
-; ROM-KONSTANTEN UND TABELLEN-ADRESSEN (038Ah - 03FFh)
+; 0000 - 03FF : ROM constants and table addresses
 ; ==============================================================================
 ROM_DATA_START   EQU  038Ah     ; Startbereich der Datentabellen im ROM
 ROM_CONST_CMP    EQU  0390h     ; Kontroll-Konstanten für den Zeichenvergleich
@@ -22,6 +30,9 @@ ROM_PROT_LIMITS  EQU  03E4h     ; Status- und Protokoll-Grenzwerte
 ROM_STR_TERMS    EQU  03EEh     ; String-Terminatoren und Kontroll-Codes (CR/LF)
 ROM_TAB_CMD_VEC  EQU  03F5h     ; Primäre Befehls-Sprungtabelle (für CR, LF, Komma)
 
+; ==============================================================================
+; 0400 -04FF : RAM variables
+; ==============================================================================
 REG_BUFFER_STS EQU  0400h       ; Puffer-Status / Aktivitäts-Flag
 REG_IO_STATE   EQU  0401h       ; Letztes empfangenes oder gesendetes E/A-Zeichen
 REG_MODE_SEL   EQU  0402h       ; Modus-Selektor (wird durch 'p'/'q' geschaltet)
@@ -40,19 +51,24 @@ REG_BUFF_IDX   EQU  041Fh       ; Index-Zähler für den Zeichenpuffer (Max 10)
 REG_ARRAY_PTR  EQU  042Eh       ; Zeiger auf das aktuelle Zeichen im indizierten Array
 RAM_ASCII_BUFF EQU  0430h       ; Startadresse für den übersetzten ASCII-Datenpuffer
 
-; Configuration RAM (0500h - 05FFh)
+; ==============================================================================
+; 0500 - 05FF : Configuration RAM
+; ==============================================================================
 RAM_HW_CONFIG1 EQU  0505h       ; Hardware-Konfigurationsbyte 1 (z. B. Pegelsteuerung)
 RAM_HW_CONFIG2 EQU  0506h       ; Hardware-Konfigurationsbyte 2 (beim Booten geladen)
 
 ; ==============================================================================
-; HARDWARE-MAPPED I/O REGISTERS (Eingabe & Ausgabe)
+; 0600 - 06FF : HARDWARE-MAPPED I/O REGISTERS (Eingabe & Ausgabe)
+; Hardware Input Section
 ; ==============================================================================
-; Hardware Input Range (0600h - 06FFh)
 IO_HW_INPUT    EQU  0604h       ; Primäres Hardware-Eingangsregister (Datenstrom)
 IO_DIP_SWITCH  EQU  0605h       ; DIP-Schalter für Bus-Adresse & Modus (Hardware-Eingabe)
 IO_SRAM_FLAG1  EQU  0607h       ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung)
 
-; Hardware Output Range (0700h - 07FFh)
+; ==============================================================================
+; 0700 - 07FF : HARDWARE-MAPPED I/O REGISTERS (Eingabe & Ausgabe)
+; Hardware Output Section
+; ==============================================================================
 IO_TALK_STATUS EQU  0701h       ; Status des Talker-Interfaces (Eingang/Ausgang)
 IO_TALK_CTRLBUS  EQU  0702h       ; Synchronisationsregister 02h für Talker-Schnittstelle
 IO_TALK_DATABUS  EQU  0703h       ; Synchronisationsregister 03h für Talker-Schnittstelle
