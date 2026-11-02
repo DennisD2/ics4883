@@ -89,7 +89,7 @@ L_0006:
         XRI     0Ch             ; EE 0C    -> XOR with C=1100 (result: 1010)
         STA     RAM_HW_CONFIG2  ; 32 06 05 -> put result to RAM 0506
         LXI     H, ROM_TAB_SRAM_INI ; 21 B3 03 -> put pointer to ROM table to H
-        CALL    L_007B          ; CD 7B 00 -> Speicher-Kopierroutine aufrufen
+        CALL    L_007B          ; CD 7B 00 -> copy ROM tables to RAM/memory mapped regs
         JMP     L_02C8          ; C3 C8 02 -> Sprung in die Hauptinitialisierung
 
 ; ------------------------------------------------------------------------------
@@ -600,60 +600,69 @@ L_02BE:
         JNZ     L_02A5          ; C2 A5 02 -> Sprung wenn != 0
 ; ------------------------------------------------------------------------------
 ; Hauptinitialisierung ab Label L_02C8 (Adresse 02C8h bis 02F8h)
-; Nibble-Packing Routine: Der Code ab Adresse 02DBh ist ein hocheffizienter Packer. Er nimmt zwei aufeinanderfolgende Bytes, isoliert jeweils deren untere 4 Bits (ANI 00Fh), schiebt das zweite Nibble per Rotation nach oben (RLC) und fügt sie mit ORA B zu einem einzigen, kompakten Daten-Byte zusammen.
-; SRAM-Transfer: Diese gepackten Daten werden sequenziell direkt in den System-SRAM ab Adresse STACK_BASE übertragen (STAX D).
+; Nibble-Packing Routine: Der Code ab Adresse 02DBh ist ein hocheffizienter Packer. Er nimmt
+; zwei aufeinanderfolgende Bytes, isoliert jeweils deren untere 4 Bits (ANI 00Fh), schiebt das zweite Nibble
+; per Rotation nach oben (RLC) und fügt sie mit ORA B zu einem einzigen, kompakten Daten-Byte zusammen.
+; SRAM-Transfer: Diese gepackten Daten werden sequenziell direkt in den System-SRAM ab Adresse STACK_BASE
+; übertragen (STAX D).
 ; ------------------------------------------------------------------------------
 L_02C8:
-        LXI     H, REG_BUFF_IDX ; 21 1F 04 -> HL auf RAM-Adresse 041Fh (Index-Zähler) setzen
-        MOV     C, M            ; 4E       -> Aktuellen Zählerwert nach Register C laden
-        MOV     A, M            ; 7E       -> Wert zusätzlich in den Akkumulator laden
-        ORA     A               ; B7       -> Prüfen, ob der Zähler Null ist
-        JZ      L_0017          ; CA 17 00 -> Wenn Null, keine Daten da -> zurück zum Haupt-Polling
-        MVI     M, 00h          ; 36 00    -> Zähler im RAM wieder auf Null zurücksetzen
-        PUSH    B               ; C5       -> Registerpaar BC auf dem Stack sichern
-        CALL    0311h           ; CD 11 03 -> Unterprogramm an Adresse 0311h aufrufen (Puffer-Check)
-        POP     B               ; C1       -> Registerpaar BC wieder herstellen
-        LXI     D, STACK_BASE   ; 11 00 05 -> DE auf Zieladresse im SRAM STACK_BASE ausrichten
+        LXI     H, REG_BUFF_IDX ; 21 1F 04 -> set HL to RAM address 041Fh (counter value)
+        MOV     C, M            ; 4E       -> load counter value to C
+        MOV     A, M            ; 7E       -> load also to A
+        ORA     A               ; B7       -> is counter zero?
+        JZ      L_0017          ; CA 17 00 -> if counter==0, jump back to main polling loop
+        MVI     M, 00h          ; 36 00    -> if counter>0, set M to 0
+        PUSH    B               ; C5       -> push B to stack
+        CALL    0311h           ; CD 11 03 -> Depending on bit 3 in 0505h, C bytes in memory at HL are inverted or not (L_CHECK_INVERT)
+        POP     B               ; C1       -> restore BC
+        LXI     D, STACK_BASE   ; 11 00 05 -> DE points to STACK_BASE
 L_PACK_LOOP:
 L_02DB:
-        INX     H               ; 23       -> HL-Zeiger erhöhen
-        MOV     A, M            ; 7E       -> Byte aus dem Quellpuffer laden
-        ANI     00Fh            ; E6 0F    -> Die unteren 4 Bits (unteres Nibble) maskieren
-        MOV     B, A            ; 47       -> Nibble in Register B zwischenspeichern
-        DCR     C               ; 0D       -> Schleifenzähler C dekrementieren
-        JM      L_02F3          ; FA F3 02 -> Wenn Zähler negativ wird, Schleife abbrechen nach 02F3h
-        INX     H               ; 23       -> HL-Zeiger für das nächste Byte erhöhen
-        MOV     A, M            ; 7E       -> Nächstes Byte laden
-        ANI     00Fh            ; E6 0F    -> Die unteren 4 Bits maskieren
-        RLC                     ; 07       -> Viermal nach links rotieren, um das Nibble...
+        INX     H               ; 23       -> inc HL
+        MOV     A, M            ; 7E       -> read byte from [HL]
+        ANI     00Fh            ; E6 0F    -> mask lower nibble
+        MOV     B, A            ; 47       -> save in B
+        DCR     C               ; 0D       -> dec loop count
+        JM      L_02F3          ; FA F3 02 -> if <0 continue at L_02F3
+        INX     H               ; 23       -> inc HL
+        MOV     A, M            ; 7E       -> read byte from [HL]
+        ANI     00Fh            ; E6 0F    -> mask lower nibble
+        RLC                     ; 07       -> rotate (4 times) left
         RLC                     ; 07
         RLC                     ; 07
-        RLC                     ; 07       ; ...in das obere Halbnibble zu verschieben
-        ORA     B               ; B0       -> Die beiden Nibbles zu einem vollen Byte zusammenführen
-        DCR     C               ; 0D       -> Schleifenzähler C erneut dekrementieren
-        STAX    D               ; 12       -> Das fertige Byte an die SRAM-Zieladresse [DE] schreiben
-        INX     D               ; 13       -> SRAM-Zielzeiger DE um 1 erhöhen
-        JNZ     L_02DB          ; C2 DB 02 -> Wenn Schleifenzähler C noch nicht Null, nächstes Byte holen
+        RLC                     ; 07       ; ... now (lower) nibble is in upper nibble
+        ORA     B               ; B0       -> add nibble saved before to have complete byte with two nibbles
+        DCR     C               ; 0D       -> dec loop count
+        STAX    D               ; 12       -> write completed byte to target address in RAM [DE]
+        INX     D               ; 13       -> inc target address pointer
+        JNZ     L_02DB          ; C2 DB 02 -> if loop count is larger 0, repeat loop
 L_PACK_DONE:
 L_02F3:
-        LXI     H, RAM_HW_CONFIG2    ; 21 06 05 -> HL auf SRAM-Adresse 0506h ausrichten
-        LDA     ROM_CFG_FLAGS   ; 3A C4 03 -> Konfigurationswert aus dem ROM laden
+        LXI     H, RAM_HW_CONFIG2 ; 21 06 05 -> HL points to 0506h
+        LDA     ROM_CFG_FLAGS   ; 3A C4 03 -> load [03C4h] into A
 L_02F9:
+        MOV     B, A            ; 47       -> save A in B
+        XRI     03h             ; EE 03    -> mask A with 0000.0011
+        MOV     M, A            ; 77       -> write new A to memory mapped register [0506h]
+        PUSH    H               ; E5       -> is this a timing op?
+        PUSH    H               ; E5       ->
+        POP     H               ; E1       ->
+        POP     H               ; E1       ->
+        MOV     M, B            ; 70        -> A value, that was saved in B, back to M (so first masked A, then A is written to M, which looks like a strobe signal is generated)
+        JMP     L_0017          ; C3 17 00 -> back to main polling loop
 ; ------------------------------------------------------------------------------
-; Fortsetzung ab Adresse 02F9h bis 0323h
-; Dynamische Fehlerbehandlung (0305h): Wenn die Daten zuvor nicht den Erwartungen entsprechen, wird hier das fehlerhafte Zeichen isoliert (ANI 07Fh) und über eine separate Befehlstabelle ab ROM-Adresse 03F5h mittels deiner Suchroutine L_014E ausgewertet. Der Befehl PCHL springt dann dynamisch in die passende Behandlung.
-; Puffer-Invertierung (0311h): Dieses Unterprogramm prüft ein Hardware-Statusflag an Adresse 0505h. Ist dieses aktiv (CPI 08h), durchläuft der Code eine Schleife (L_031A), die den gesamten Datenstrom im RAM bitweise invertiert (CMA). Dies deutet stark auf eine Pegel-Anpassung für die angeschlossene Hardware hin.
+; line above is end of boot code; everything else is done in main polling loop L_0017
 ; ------------------------------------------------------------------------------
-        MOV     B, A            ; 47       -> Gekoppelt mit LDA 03C4h aus dem Vorblock
-        XRI     03h             ; EE 03    -> Maskierung mit 03h
-        MOV     M, A            ; 77       -> Zurückschreiben nach RAM [0506h]
-        PUSH    H               ; E5       -> Registerpaare sichern/manipulieren
-        PUSH    H               ; E5
-        POP     H               ; E1
-        POP     H               ; E1
-        MOV     M, B            ; 70
-        JMP     L_0017          ; C3 17 00 -> Unbedingter Rücksprung zum Haupt-Polling
 
+; ------------------------------------------------------------------------------
+; Dynamische Fehlerbehandlung (0305h): Wenn die Daten zuvor nicht den Erwartungen entsprechen, wird hier das fehlerhafte
+; Zeichen isoliert (ANI 07Fh) und über eine separate Befehlstabelle ab ROM-Adresse 03F5h mittels deiner Suchroutine L_014E
+; ausgewertet. Der Befehl PCHL springt dann dynamisch in die passende Behandlung.
+; Puffer-Invertierung (0311h): Dieses Unterprogramm prüft ein Hardware-Statusflag an Adresse 0505h. Ist dieses
+; aktiv (CPI 08h), durchläuft der Code eine Schleife (L_031A), die den gesamten Datenstrom im RAM bitweise invertiert
+; (CMA). Dies deutet stark auf eine Pegel-Anpassung für die angeschlossene Hardware hin.
+; ------------------------------------------------------------------------------
 L_CMD_PARSE_ERR:
 L_0305:
         MOV     A, B            ; 78       -> Hierher wird gesprungen, wenn ASCII-Prüfung bei 02A2h fehlschlägt
@@ -663,23 +672,29 @@ L_0305:
         CALL    L_014E          ; CD 4E 01 -> Tabellen-Suchroutine aufrufen
         PCHL                    ; E9       -> Indirekter Sprung zur gefundenen Routine
 
-; Unterprogramm ab Adresse 0311h (Puffer-Prüfung, aufgerufen bei 02D4h)
+; depending on a flag value (bit 3 from address 0505h), a block in memory is inverted or not.
+; number of bytes to invert controlled by value in C, start address in HL.
+; if bit is set, inversion takes place.
+; called from 02D4h
 L_CHECK_INVERT:
 L_0311:
-        LDA     RAM_HW_CONFIG1  ; 3A 05 05 -> Byte aus dem I/O-SRAM-Status laden
-        ANI     08h             ; E6 08    -> Bit 3 isolieren
-        CPI     08h             ; FE 08    -> Prüfen, ob Bit gesetzt ist
-        RNZ                     ; C0       -> Wenn nicht gesetzt, vorzeitig zurückkehren
-        PUSH    H               ; E5       -> HL-Zeiger sichern
+        LDA     RAM_HW_CONFIG1  ; 3A 05 05 -> read byte from memory mapped HW - Byte aus dem I/O-SRAM-Status laden
+        ANI     08h             ; E6 08    -> isolate bit 3
+        CPI     08h             ; FE 08    -> is bit set?
+        RNZ                     ; C0       -> if bit is not set, simply return
+        PUSH    H               ; E5       -> save HL pointer
+; invert consecutive bytes
+; number of bytes controlled by C. Starting at [HL].
+L_DO_INVERT_BYTES_IN_LOOP:
 L_031A:
-        INX     H               ; 23       -> Zeiger im Puffer erhöhen
-        MOV     A, M            ; 7E       -> Byte laden
-        CMA                     ; 2F       -> Bitweise invertieren
-        MOV     M, A            ; 77       -> Invertiertes Byte zurückschreiben
-        DCR     C               ; 0D       -> Schleifenzähler verringern
-        JNZ     L_031A          ; C2 1A 03 -> Schleife wiederholen, bis C=0
-        POP     H               ; E1       -> HL-Zeiger wiederherstellen
-        RET                     ; C9       -> Unterprogramm sauber beenden
+        INX     H               ; 23       -> inc hl
+        MOV     A, M            ; 7E       -> load byte at [hl] to A
+        CMA                     ; 2F       -> invert bitwise
+        MOV     M, A            ; 77       -> write byte back
+        DCR     C               ; 0D       -> dec loop count
+        JNZ     L_031A          ; C2 1A 03 -> if loop count C > 0, repeat inner loop
+        POP     H               ; E1       -> if loop count==0, restore HL pointer
+        RET                     ; C9       -> back to caller
 
 L_0324:
         LDA     REG_CMD_LOCK    ; 3A 0C 04 -> Lädt den Inhalt der RAM-Adresse 040Ch in den Akkumulator
