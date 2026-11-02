@@ -304,13 +304,13 @@ L_010E:
     	JMP     L_0017          ; C3 17 00  from address 12eh
 
 L_0131:
-    	LDA     IO_TALK_REG06   ; 3A 06 07 -> Lädt den Status aus dem Talker-Register 0706h
-    	ANI     01Fh            ; E6 1F Bits maskieren
-        MOV     C, A            ; 4F       -> Zwischenspeichern in Register C
-    	MOV     A,B             ; 78 from address 137h
-    	ANI     01Fh            ; E6 1F Bits maskieren
-        CMP     C               ; B9       -> Vergleiche das Ergebnis mit Register C
-        RET                     ; C9       -> Wenn gleich, Unterprogramm beenden
+    	LDA     IO_TALK_REG06   ; 3A 06 07 -> loads 0706h into A
+    	ANI     01Fh            ; E6       -> mask with 1F, so lower 5 bits (GPIB address?)
+        MOV     C, A            ; 4F       -> save in C
+    	MOV     A,B             ; 78       -> load B to A
+    	ANI     01Fh            ; E6       -> mask with 1F, lower 5 bits
+        CMP     C               ; B9       -> A=C ?
+        RET                     ; C9       -> result of comparison is in status, return to caller
 
         ; ------------------------------------------------------------------------------
         ; Talker-Statusprüfung & Bitmaskierungs-Unterprogramm (Adresse 013Ch - 014Fh)
