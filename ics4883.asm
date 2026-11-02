@@ -290,8 +290,8 @@ L_010E:
         MOV     A, B            ; 78       -> Holt das aktuelle Zeichen aus Register B
         CPI     03Fh            ; FE 3F    -> Vergleiche mit ASCII '?' (GPIB Talker Query)
         JNZ     L_0017          ; C2 17 00 -> Wenn kein '?', zurück zum Schleifenstart L_0017
-    	XRA     A               ; AF from address 114h
-    	STA     REG_BUFF_IDX    ; 32 1F 04 from address 115h
+    	XRA     A               ; AF       -> XOR A mit A <=> A:=0
+    	STA     REG_BUFF_IDX    ; 32 1F 04 -> write 0 to 041F
     	MVI     C, 0FDh         ; 0E FD    -> Lädt die Ausgabemaske 0FDh in Register C
     	CALL    L_00A1          ; CD A1 00 -> Ruft die I/O-Ausgabestufe auf (Zeichen auf den Bus senden)
         JMP     L_0017          ; C3 17 00 -> Unbedingter Rücksprung zu L_0017
