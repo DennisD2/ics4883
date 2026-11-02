@@ -118,7 +118,7 @@ L_001F:
 
 L_003C:
         CC      L_009C          ; DC 9C 00 -> Bedingter Unterprogramm-Aufruf, wenn Carry-Flag = 1
-        LXI     H, REG_SYS_STATUS        ; 21 07 04 -> Register HL mit Adresse 0407h laden
+        LXI     H, REG_SYS_STATUS  ; 21 07 04 -> Register HL mit Adresse 0407h laden
     	MOV     A,M             ; 7E
     	RRC                     ; 0F
     	RRC                     ; 0F
@@ -134,13 +134,13 @@ L_003C:
         JC      L_006D          ; DA 6D 00 -> Wenn Carry=1, springe zu Adresse 006Dh
         STA     IO_SRAM_FLAG1   ; 32 07 06 -> Berechneten Zustand im RAM 0607h sichern
 L_0060:
-    	LXI     H, REG_SYS_STATE  ; 21 03 04 -> HL-Zeiger auf I/O-Schnittstelle 0403h ausrichten
-    	MOV     A,M             ; 7E from address 63h
-    	ANA     B               ; A0 from address 64h
-    	ORA     C               ; B1 from address 65h
-    	MOV     M,A             ; 77 from address 66h
-    	STA     IO_TALK_DATABUS   ; Zwischenspeichern des aktuellen I/O-Status
-    	JMP     L_0017          ; C3 17 00  back to loop start
+    	LXI     H, REG_SYS_STATE  ; 21 03 04 -> HL points to 0403h
+    	MOV     A,M             ; 7E       -> load [0403h] to A
+    	ANA     B               ; A0       -> AND A with B
+    	ORA     C               ; B1       -> OR A with C
+    	MOV     M,A             ; 77       -> move A to [0403h]
+    	STA     IO_TALK_DATABUS ; 32 03 07 -> write result to 0703h (GPIB connector)
+    	JMP     L_0017          ; C3 17 00 -> back to loop start
 
 ; ------------------------------------------------------------------------------
 ; Ausgelagerter Talker-Status-Handler (Deine Zeilen 68-74)
@@ -234,7 +234,7 @@ L_00C5:
     	RET                     ; C9
 
 L_00C7:
-    	LDA     IO_TALK_DATA           ; 3A 07 05 -> Statuswert aus dem SRAM-Bereich laden
+    	LDA     IO_TALK_DATA    ; 3A 07 05 -> Statuswert aus dem SRAM-Bereich laden
         RLC                     ; 07       -> Akkumulatorinhalt nach links rotieren
         RLC                     ; 07       -> Nochmals nach links rotieren
         RLC                     ; 07       -> Ein drittes Mal nach links rotieren
@@ -720,12 +720,15 @@ L_BIT3_SET:
 L_0346:
         RLC                     ; 07       -> Akkumulator nach links rotieren
         DCR     C               ; 0D       -> Register C um 1 verringern
-    	JNZ     L_0346          ; C2 46 03 -> Wenn nicht Null, Sprung nach 0346h (Hinweis: C2 46 03 ist JNZ)
+    	JNZ     L_0346          ; C2 46 03 -> Wenn nicht Null, Sprung nach 0346h
         STA     REG_PENDING_CMD ; 32 0B 04 -> Akkumulator in RAM-Zelle 040Bh sichern
         LXI     H, REG_SYS_STATUS    ; 21 07 04 -> HL auf RAM-Adresse 0407h ausrichten
         MOV     A, M            ; 7E       -> Wert laden
         ORI     008h            ; F6 08    -> Bit 3 gezielt setzen
         MOV     M, A            ; 77       -> Aktualisierten Wert zurückschreiben
+; 0704h, 0703h are set to 0.
+; value of [040B] REG_PENDING_CMD is written to 0702h IO_TALK_CTRLBUS
+; value of [0407] REG_SYS_STATUS is written to 0707h
 L_0355:
         LXI     H, IO_TALK_CTRL ; 21 04 07 -> HL points to 0704h (GPIB connector related)
         MVI     M, 00h          ; 36 00    -> clear [0704h]
