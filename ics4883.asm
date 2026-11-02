@@ -6,15 +6,15 @@
         ORG	0000h
 
 ; Memory map:
-; 0000 - 03FF ROM
-; 0400 - 04FF RAM and STACK
-; 0500 - 05FF
-; 0600 - 06FF
-; 0700 - 078FF
+; 0000 - 03FF : ROM
+; 0400 - 04FF : RAM and STACK
+; 0500 - 05FF : Input and Output registers (needs more detailing)
+; 0600 - 06FF : Input and Output registers (needs more detailing)
+; 0700 - 07FF : GPIB connector control
 ; 0800 and above - unused
 
-SRAM_START     EQU  0400h       ; Start des internen Arbeitsspeichers
-STACK_BASE     EQU  0500h       ; Initialisierungsadresse für den Stack-Pointer
+SRAM_START     EQU  0400h       ; start of RAM space
+STACK_BASE     EQU  0500h       ; start value for stack pointer
 
 ; ==============================================================================
 ; 0000 - 03FF : ROM constants and table addresses
@@ -56,7 +56,7 @@ RAM_ASCII_BUFF EQU  0430h       ; Startadresse für den übersetzten ASCII-Daten
 ; Hardware Input Section and Hardware Output Section
 ; ==============================================================================
 RAM_HW_CONFIG1 EQU  0505h       ; Hardware-Konfigurationsbyte 1 (z. B. Pegelsteuerung)
-RAM_HW_CONFIG2 EQU  0506h       ; Hardware-Konfigurationsbyte 2 (beim Booten geladen)
+RAM_HW_CONFIG2 EQU  0506h       ; configuration byte (created by L_0006 during boot; value is 1010)
 
 ; ==============================================================================
 ; 0600 - 06FF : HARDWARE-MAPPED I/O REGISTERS (Eingabe & Ausgabe)
@@ -82,13 +82,13 @@ IO_HW_OUTPUT   EQU  0707h       ; Zentrales Hardware-Ausgangsregister (z. B. LED
 ; 0000h - 0016h: boot vector and initialization
 ; ---------------------------------------------------------------------
 L_0000:
-        LXI     SP, STACK_BASE  ; 31 00 05 -> Stack-Pointer setzen
-        CALL    L_008F          ; CD 8F 00 -> memory init for variables
+        LXI     SP, STACK_BASE  ; 31 00 05 -> set stack pointer
+        CALL    L_008F          ; CD 8F 00 -> clear 64 bytes of memory from start of RAM
 L_0006:
-        LDA     ROM_CFG_FLAGS   ; 3A C4 03 -> Konfigurationswert aus dem ROM laden
-        XRI     0Ch             ; EE 0C    -> Maskierung (XOR) für Initialisierung
-        STA     RAM_HW_CONFIG2  ; 32 06 05 -> Im System-SRAM wegsichern
-        LXI     H, ROM_TAB_SRAM_INI        ; 21 B3 03 -> Zeiger auf eine Tabelle laden
+        LDA     ROM_CFG_FLAGS   ; 3A C4 03 -> read config value from ROM 03C4 (value there is: 6=0110)
+        XRI     0Ch             ; EE 0C    -> XOR with C=1100 (result: 1010)
+        STA     RAM_HW_CONFIG2  ; 32 06 05 -> put result to RAM 0506
+        LXI     H, ROM_TAB_SRAM_INI ; 21 B3 03 -> put pointer to ROM table to H
         CALL    L_007B          ; CD 7B 00 -> Speicher-Kopierroutine aufrufen
         JMP     L_02C8          ; C3 C8 02 -> Sprung in die Hauptinitialisierung
 
@@ -155,30 +155,30 @@ L_006D:
         JMP     L_0060          ; C3 60 00 -> Unbedingter Sprung vor zu Adresse 0060h
 
 ; ------------------------------------------------------------------------------
-; 007Bh - 008Eh: Universeller, tabellengesteuerter Block-Kopierer (Data Dispatcher)
-; Aufgerufen während des Boot-Vektors (Zeile 18) zur Systeminitialisierung.
-; Erwartet in HL einen Zeiger auf eine ROM-Tabelle im Format:
-; [Länge C] [Ziel-Adresse DE] [Datenbyte 1] [Datenbyte 2] ...
-; Eine Länge von 00h beendet die gesamte Übertragung.
+; 007Bh - 008Eh: copy a block of ROM into RAM based on control data in a table, pointed to by address in HL (Data Dispatcher)
+; Called during boot (line 18)
+; Expects in HL a pointer to ROM table with following format:
+; [length C] [target address DE] [data byte 1] ... [data byte "length"] ...
+; A length of 0 ends execution
 ; ------------------------------------------------------------------------------
 L_007B:
-        MOV     A, M            ; 7E       -> Lädt das erste Byte (Block-Länge) aus der Tabelle
-        ORA     A               ; B7       -> Prüft, ob die Länge Null ist
-        RZ                      ; C8       -> Wenn Null (End of Table Flag), Unterprogramm beenden
-        MOV     C, A            ; 4F       -> Speichert die Block-Länge als Schleifenzähler in C
-        INX     H               ; 23       -> Zeiger auf das nächste Tabellenbyte (Zieladresse Low)
-        MOV     E, M            ; 5E       -> Lädt die Zieladresse (unteres Byte) nach E
-        INX     H               ; 23       -> Zeiger auf das nächste Tabellenbyte (Zieladresse High)
-        MOV     D, M            ; 56       -> Lädt die Zieladresse (oberes Byte) nach D
-        INX     H               ; 23       -> Zeiger auf das erste tatsächliche Datenbyte im ROM
+        MOV     A, M            ; 7E       -> loads length value from table in ROM
+        ORA     A               ; B7       -> is A=0?
+        RZ                      ; C8       -> if yes, return, we are finished
+        MOV     C, A            ; 4F       -> puts block length to C (loop count)
+        INX     H               ; 23       -> inc H to point to next element in table
+        MOV     E, M            ; 5E       -> loads target address (low byte) to E
+        INX     H               ; 23       -> inc H to next element in table
+        MOV     D, M            ; 56       -> loads target address (hi byte) to D
+        INX     H               ; 23       -> inc H to point to first data byte in ROM
 L_0084:
-        MOV     A, M            ; 7E       -> Holt das aktuelle Datenbyte aus der ROM-Tabelle
-        STAX    D               ; 12       -> Schreibt es an die physische Zieladresse [DE]
-        INX     H               ; 23       -> Erhöhe ROM-Quellzeiger für das nächste Byte
-        INX     D               ; 13       -> Erhöhe RAM-Zielzeiger für das nächste Byte
-        DCR     C               ; 0D       -> Block-Schleifenzähler um 1 verringern
-        JNZ     L_0084          ; C2 84 00 -> Wenn Block noch nicht fertig (C > 0), nächstes Byte holen
-        JMP     L_007B          ; C3 7B 00 -> Block fertig! Zurück zum Start, um nächsten Tabelleneintrag zu lesen
+        MOV     A, M            ; 7E       -> get data byte from ROM table
+        STAX    D               ; 12       -> write to target address in [DE]
+        INX     H               ; 23       -> inc ROM pointer (source)
+        INX     D               ; 13       -> inc RAM pointer (target)
+        DCR     C               ; 0D       -> dec loop count
+        JNZ     L_0084          ; C2 84 00 -> if C>0 (still bytes to copy), repeat inner loop for next byte
+        JMP     L_007B          ; C3 7B 00 -> if C==0, block is finished. go to outer loop to read next table entry
 
 ; ------------------------------------------------------------------------------
 ; RAM-Initialisierung / Block-Clear Routine (Deine Zeilen 79-101)
@@ -186,14 +186,14 @@ L_0084:
 ; fills 64 bytes ab SRAM_START mit 0 bytes
 ; ------------------------------------------------------------------------------
 L_008F:
-        MVI     C, 040h         ; 0E 40    -> Lädt Schleifenzähler (64) in Register C
-        LXI     H, SRAM_START   ; 21 00 04 -> HL auf Startadresse SRAM_START ausrichten
+        MVI     C, 040h         ; 0E 40    -> loop count to C
+        LXI     H, SRAM_START   ; 21 00 04 -> set HL to address SRAM_START
 L_0094:
-        MVI     M, 00h          ; 36 00    -> Speicherstelle [HL] mit Null loeschen
-        INX     H               ; 23       -> HL-Zeiger auf die naechste Adresse erhoehen
-        DCR     C               ; 0D       -> Schleifenzaehler C um 1 verringern
-        JNZ     L_0094          ; C2 94 00 -> Wenn C noch nicht Null, Schleife wiederholen
-        RET                     ; C9       -> Ruecksprung zum Aufrufer (Boot-Vektor)
+        MVI     M, 00h          ; 36 00    -> set byte pointed to by [HL] to 0
+        INX     H               ; 23       -> HL++ (increase HL address pointer)
+        DCR     C               ; 0D       -> C-- (decrease loop count)
+        JNZ     L_0094          ; C2 94 00 -> repeat, as long as C=0 is not reached
+        RET                     ; C9       -> back to caller (boot code)
 
 ; ------------------------------------------------------------------------------
 ; Bit-Manipulation & I/O-Schnittstellen-Ausgabe (Zeile 119 bis 133)
@@ -797,14 +797,17 @@ L_037B:
     	DB 017h	; 017h, from address 3b1h
     	DB 000h	; 000h, from address 3b2h
 
-; 03B3h - 03C3h: Initialisierungs-Tabelle für den RAM-Puffer
-; Wird beim Booten von Routine L_007B gelesen, um den Puffer ab 041Fh vorzubereiten.
-; [Länge 0Bh] [Ziel 041Fh] [Max-Limit 0Ah] [10x Puffer-Nullen]
+; 03B3h - 03C3h: initialization table for RAM buffer - Initialisierungs-Tabelle für den RAM-Puffer
+; values are read by code at L_007B, to prepare buffer starting at location 041Fh
+; [length 0Bh] [target address 041Fh] [max-limit 0Ah] [10x buffer zeroes]
         DB 00Bh, 01Fh, 004h, 00Ah
         DB 000h, 000h, 000h, 000h, 000h, 000h, 000h, 000h, 000h, 000h
+
+ ; [length 01h] [target address 0506h] . data is below at 03C4h [06h]
         DB 001h, 006h, 005h
 
-; 03C4h - 03CDh: System-Konfigurations-Flags
+; 03C4h - 03CDh: system config values
+; 6,2,6,6,2,0,6,2,7,0
     	DB 006h, 002h, 006h, 006h, 002h, 000h, 006h, 002h, 007h, 000h
 
 ; 03CEh - 03D3h: Maskierungs- und Fehler-Grenzwerte
