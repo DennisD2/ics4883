@@ -63,7 +63,7 @@ RAM_HW_CONFIG2 EQU  0506h       ; configuration byte (created by L_0006 during b
 ; Hardware Input Section and Hardware Output Section
 ; ==============================================================================
 IO_HW_INPUT    EQU  0604h       ; Primäres Hardware-Eingangsregister (Datenstrom)
-IO_DIP_SWITCH  EQU  0605h       ; DIP-Schalter für Bus-Adresse & Modus (Hardware-Eingabe)
+IO_GPIB_CTRL_1  EQU  0605h       ; DIP-Schalter für Bus-Adresse & Modus (Hardware-Eingabe)
 IO_SRAM_FLAG1  EQU  0607h       ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung)
 
 ; ==============================================================================
@@ -75,7 +75,7 @@ IO_TALK_CTRLBUS  EQU  0702h       ; Synchronisationsregister 02h für Talker-Sch
 IO_TALK_DATABUS  EQU  0703h       ; Synchronisationsregister 03h für Talker-Schnittstelle
 IO_TALK_CTRL   EQU  0704h       ; Kontrollregister für IEEE-488 Buschip
 IO_TALK_DATA   EQU  0705h       ; Datenpuffer-Register des Talker-Interfaces
-IO_TALK_REG06  EQU  0706h       ; Talker-Schnittstellenregister 06h (Adresse/Status)
+IO_DIP_SWITCH  EQU  0706h       ; DIP Switch byte
 IO_HW_OUTPUT   EQU  0707h       ; Zentrales Hardware-Ausgangsregister (z. B. LEDs/Latch)
 
 ; ---------------------------------------------------------------------
@@ -110,7 +110,7 @@ L_001F:
         CALL    L_00AD          ; CD AD 00 -> Ruft Subroutine an Adresse 00ADh auf
         MVI     C, 0FEh         ; 0E FE    -> Lädt Konstante 0FEh in Register C
         CALL    L_00A1          ; CD A1 00 -> Ruft Subroutine an Adresse 00A1h auf
-        LDA     IO_TALK_REG06   ; 3A 06 07 -> Lädt den Status aus dem Talker-Register 0706h
+        LDA     IO_DIP_SWITCH   ; 3A 06 07 -> Lädt 0706h in A
         RLC                     ; 07       -> Akkumulatorinhalt nach links rotieren
         JMP     L_003C          ; C3 3C 00 -> Unbedingter Sprung zur Routine 003Ch
         POP     H               ; E1       -> Registerpaar HL vom Stack holen (Stack aufräumen)
@@ -126,7 +126,7 @@ L_003C:
         RRC                     ; 0F       -> Akkumulator nach rechts rotieren
         JC      L_01AD          ; DA AD 01 -> Wenn Carry=1, springe zu Adresse 01ADh
         LXI     B,01000h        ; 01 00 10 -> lade 01000h in B
-        LDA     IO_DIP_SWITCH   ; 3A 05 06 -> Holt das Daten-Byte vom I/O-Schnittstellenregister
+        LDA     IO_GPIB_CTRL_1   ; 3A 05 06 -> Holt das Daten-Byte vom I/O-Schnittstellenregister
     	CMA                     ; 2F       -> Akkumulator invertieren (Low-Aktive Signale)
     	RRC                     ; 0F       -> Bit nach rechts rotieren
     	JNC     L_0060          ; D2 60 00 -> Wenn kein Carry, springe vor zu Adresse 0060h
@@ -217,7 +217,7 @@ L_00A1:
 
 L_00AD:
         LXI     H, 0391h        ; 21 91 03 -> HL-Zeiger auf ROM-Tabelle/String 0391h ausrichten
-    	LDA     IO_DIP_SWITCH   ; 3A 05 06 -> Holt das aktuelle I/O-Datenbyte vom Talker
+    	LDA     IO_GPIB_CTRL_1   ; 3A 05 06 -> Holt das aktuelle I/O-Datenbyte vom Talker
         CMA                     ; 2F       -> Akkumulator invertieren (Low-Aktiv Pegel)
         ANI     02h             ; E6 02    -> Bit 1 maskieren (Prüfung eines bestimmten Bus-Signals)
         CMP     M               ; BE       -> Vergleiche das Ergebnis mit dem Wert im ROM [HL]
@@ -249,7 +249,7 @@ L_00CE:
         XRA     A               ; AF       -> Akkumulator löschen (A = 0)
         STA     IO_TALK_CTRLBUS   ; 32 02 07 -> Lösche das Statusregister 0702h im Talker-Interface
         CALL    L_0163          ; CD 63 01 -> Ruft Unterfunktion an Adresse 0163h auf
-        LDA     IO_TALK_REG06   ; 3A 06 07 -> Lädt aktuellen Status aus dem Talker-Register
+        LDA     IO_DIP_SWITCH   ; 3A 06 07 -> Lädt 0607h nach A
         RLC                     ; 07       -> Akkumulator nach links rotieren (Bit-Prüfung)
         JC      L_0017          ; DA 17 00 -> Wenn Carry=1, springe hart zurück zum Schleifenstart L_0017
         ; ------------------------------------------------------------------------------
@@ -303,9 +303,11 @@ L_010E:
         CALL    L_00A1          ; CD A1 00 -> Ruft die I/O-Ausgabestufe auf
     	JMP     L_0017          ; C3 17 00  from address 12eh
 
+; Comparison if GPIB adress just received with address set at dip switch
+L_GPIB_ADRESS_CMP:
 L_0131:
-    	LDA     IO_TALK_REG06   ; 3A 06 07 -> loads 0706h into A
-    	ANI     01Fh            ; E6       -> mask with 1F, so lower 5 bits (GPIB address?)
+    	LDA     IO_DIP_SWITCH   ; 3A 06 07 -> loads 0706h into A
+    	ANI     01Fh            ; E6       -> mask with 1F, so lower 5 bits (GPIB address)
         MOV     C, A            ; 4F       -> save in C
     	MOV     A,B             ; 78       -> load B to A
     	ANI     01Fh            ; E6       -> mask with 1F, lower 5 bits
@@ -403,7 +405,7 @@ L_01AD:
     	LDA     REG_CMD_STATE   ; 3A 0D 04 -> Lädt Kontroll-Flag aus RAM-Zelle
     	ORA     A               ; B7       -> Prüft, ob der Wert im Akkumulator Null ist
     	JNZ     L_0232          ; C2 32 02 -> Wenn ungleich Null, springe weit vor zu Adresse 0232h
-        LXI     H, IO_DIP_SWITCH        ; 21 05 06 -> HL-Zeiger auf I/O-Datenregister 0605h ausrichten
+        LXI     H, IO_GPIB_CTRL_1        ; 21 05 06 -> HL-Zeiger auf I/O-Datenregister 0605h ausrichten
 L_01B8:
         MOV     A, M            ; 7E       -> Holt das aktuelle Datenbyte via HL
     	RRC                     ; 0F from address 1b9h
@@ -523,7 +525,7 @@ convert_out_char:
 ; (in RAM or register?), increment index in d, and keep h in original state
 L_0256:
         MOV     C, A            ; 4F       -> Akkumulator in Register C sichern
-        LDA     IO_DIP_SWITCH   ; 3A 05 06 -> Status/Datenbyte aus I/O-SRAM laden
+        LDA     IO_GPIB_CTRL_1   ; 3A 05 06 -> Status/Datenbyte aus I/O-SRAM laden
         ANI     04h             ; E6 04    -> Bit 2 isolieren DD: check bit 2 (maybe "do we have valid data?)"
         CPI     04h             ; FE 04    -> Mit 04h vergleichen
         MOV     A, C            ; 79       -> Gesichertes Byte zurück nach A holen
