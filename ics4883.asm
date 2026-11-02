@@ -97,15 +97,15 @@ L_0006:
 ; ------------------------------------------------------------------------------
 L_0017:
         DI                      ; F3
-        LDA     REG_IO_STATE    ; 3A 01 04  -> Status von GPIB / I/O Interface-Chip laden
-        ORA     A               ; B7        -> Prüfen, ob der Status 0 ist
-        JNZ     L_0355          ; C2 55 03  -> Wenn ungleich Null -> Zur Service-Routine abzweigen
+        LDA     REG_IO_STATE    ; 3A 01 04 -> load 0401h from RAM to A - Status von GPIB / I/O Interface-Chip laden
+        ORA     A               ; B7       -> is it = 0 ?
+        JNZ     L_0355          ; C2 55 03 -> if no, then handle state change in L_0355
 
 L_001F:
-        LDA     IO_TALK_STATUS  ; 3A 01 07   -> Status des Talker-Interfaces einlesen
-        ANI     0C0h            ; E6 C0      -> Die obersten zwei Bits maskieren
-        CPI     80h             ; FE 80      -> Prüfen auf Status-Flag 80h
-        JZ      L_00CE          ; CA CE 00   -> Bei Treffer -> Abzweigen zur Routine L_00CE
+        LDA     IO_TALK_STATUS  ; 3A 01 07 -> Status des Talker-Interfaces einlesen
+        ANI     0C0h            ; E6 C0    -> Die obersten zwei Bits maskieren
+        CPI     80h             ; FE 80    -> Prüfen auf Status-Flag 80h
+        JZ      L_00CE          ; CA CE 00 -> Bei Treffer -> Abzweigen zur Routine L_00CE
 
         CALL    L_00AD          ; CD AD 00 -> Ruft Subroutine an Adresse 00ADh auf
         MVI     C, 0FEh         ; 0E FE    -> Lädt Konstante 0FEh in Register C
@@ -727,17 +727,17 @@ L_0346:
         ORI     008h            ; F6 08    -> Bit 3 gezielt setzen
         MOV     M, A            ; 77       -> Aktualisierten Wert zurückschreiben
 L_0355:
-        LXI     H, IO_TALK_CTRL ; 21 04 07 -> HL auf I/O-Schnittstelle / Adresse 0704h ausrichten
-        MVI     M, 00h          ; 36 00    -> Speicherzelle [0704h] mit 00h löschen
-        LXI     H, IO_TALK_CTRLBUS   ; 21 02 07 -> HL auf Adresse 0702h ausrichten
-        LDA     REG_PENDING_CMD      ; 3A 0B 04 -> Inhalt aus RAM-Zelle 040Bh in den Akkumulator laden
-        MOV     M, A            ; 77       -> Wert aus 040Bh direkt nach [0702h] schreiben
-        INX     H               ; 23       -> HL-Zeiger erhöhen (zeigt nun auf 0703h)
-        MVI     M, 00h          ; 36 00    -> Speicherzelle [0703h] mit 00h überschreiben
-        MVI     L, 07h          ; 2E 07    -> Nur das untere Byte (L) von HL auf 07h ändern (HL zeigt auf 0707h)
-        LDA     REG_SYS_STATUS  ; 3A 07 04 -> Systemstatus aus RAM 0407h laden
-        MOV     M, A            ; 77       -> Wert direkt an I/O-Register [0707h] ausgeben
-        JMP     L_001F          ; C3 1F 00 -> Unbedingter Sprung zurück zu Label L_001F (Adresse 001Fh)
+        LXI     H, IO_TALK_CTRL ; 21 04 07 -> HL points to 0704h (GPIB connector related)
+        MVI     M, 00h          ; 36 00    -> clear [0704h]
+        LXI     H, IO_TALK_CTRLBUS   ; 21 02 07 -> HL points to 0702h
+        LDA     REG_PENDING_CMD      ; 3A 0B 04 -> load content of RAM 040Bh to A
+        MOV     M, A            ; 77       -> copy A to [0702h]
+        INX     H               ; 23       -> inc HL (now 0703h)
+        MVI     M, 00h          ; 36 00    -> clear [0703h]
+        MVI     L, 07h          ; 2E 07    -> set lower byte of HL to 07h (HL now is 0707h)
+        LDA     REG_SYS_STATUS  ; 3A 07 04 -> load content of RAM 0407h to A
+        MOV     M, A            ; 77       -> copy A to [0707h]
+        JMP     L_001F          ; C3 1F 00 -> continue at L_001F inside main polling loop
 
 ; ------------------------------------------------------------------------------
 ; Behandlungsroutinen für Kommandos (Adresse 036Dh bis 0389h)
