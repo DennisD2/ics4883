@@ -199,21 +199,24 @@ L_0094:
 ; Bit-Manipulation & I/O-Schnittstellen-Ausgabe (Zeile 119 bis 133)
 ; ------------------------------------------------------------------------------
 L_009C:
-        RLC                     ; 07       -> Akkumulatorinhalt nach links rotieren
-        RLC                     ; 07       -> Nochmals nach links rotieren
-        RLC                     ; 07       -> Ein drittes Mal nach links rotieren
+        RLC                     ; 07       -> shift 3 bits left
+        RLC                     ; 07       -> "
+        RLC                     ; 07       -> "
 L_009F:
-    	MVI     C, 0F9h         ; 0E F9    -> Lädt die Konstante 0F9h (mask 11111001b) direkt in Register C
+    	MVI     C, 0F9h         ; 0E F9    -> loads mask value 0F9h (mask 11111001b) into C
+;
+; L_00A1 writes value from 0407 to 0707. It applies a mask value in C
+;
 L_00A1:
-        LXI     H, REG_SYS_STATUS        ; 21 07 04 -> Richtet den HL-Zeiger auf Speicher/Register 0407h aus
-        MOV     B, A            ; 47       -> Sichert das bearbeitete Byte in Register B
-        MOV     A, M            ; 7E       -> Holt den aktuellen Wert aus [HL] (0407h)
-        ANA     C               ; A1       -> Logisches UND mit Register C (Maskierung)
-        ORA     B               ; B0       -> Logisches ODER mit Register B (Bits zusammenführen)
-        MOV     M, A            ; 77       -> Schreibt das Ergebnis zurück nach [HL] (0407h)
-        MVI     H, 07h          ; 26 07    -> Biegt das obere Byte von HL auf 07h um (HL zeigt nun auf 0707h!)
-        MOV     M, A            ; 77       -> Feuert das Zeichen direkt auf das I/O-Register 0707h raus!
-        RET                     ; C9       -> Unterprogramm beenden (Rücksprung)
+        LXI     H, REG_SYS_STATUS ; 21 07 04 -> HL points to 0407h
+        MOV     B, A            ; 47       -> copy A to B
+        MOV     A, M            ; 7E       -> load [HL] (0407h) into A
+        ANA     C               ; A1       -> AND with C (apply mask)
+        ORA     B               ; B0       -> OR with B (Bits zusammenführen) (B contains A unchanged...)
+        MOV     M, A            ; 77       -> write result to [HL] (0407h)
+        MVI     H, 07h          ; 26 07    -> set H of HL to 07h (HL points now to 0707h)
+        MOV     M, A            ; 77       -> write A to 0707h
+        RET                     ; C9       -> back to caller
 
 L_00AD:
         LXI     H, 0391h        ; 21 91 03 -> HL-Zeiger auf ROM-Tabelle/String 0391h ausrichten
@@ -287,12 +290,12 @@ L_0108:
         ; GPIB-Protokollprüfung (? Abfrage) & Bus-Handshake (Adresse 010Eh - 0130h)
         ; ------------------------------------------------------------------------------
 L_010E:
-        MOV     A, B            ; 78       -> Holt das aktuelle Zeichen aus Register B
-        CPI     03Fh            ; FE 3F    -> Vergleiche mit ASCII '?' (GPIB Talker Query)
-        JNZ     L_0017          ; C2 17 00 -> Wenn kein '?', zurück zum Schleifenstart L_0017
+        MOV     A, B            ; 78       -> copy B to A
+        CPI     03Fh            ; FE 3F    -> compare A with ASCII '?' (GPIB Talker Query)
+        JNZ     L_0017          ; C2 17 00 -> if not an '?', jump to main polling loop L_0017
     	XRA     A               ; AF       -> XOR A mit A <=> A:=0
     	STA     REG_BUFF_IDX    ; 32 1F 04 -> write 0 to 041F
-    	MVI     C, 0FDh         ; 0E FD    -> Lädt die Ausgabemaske 0FDh in Register C
+    	MVI     C, 0FDh         ; 0E FD    -> loads 0FDh into C (output mask?)
     	CALL    L_00A1          ; CD A1 00 -> Ruft die I/O-Ausgabestufe auf (Zeichen auf den Bus senden)
         JMP     L_0017          ; C3 17 00 -> Unbedingter Rücksprung zu L_0017
         CALL    L_0131          ; CD 31 01 -> Unterfunktion an Adresse 0131h aufrufen
