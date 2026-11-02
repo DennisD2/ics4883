@@ -90,22 +90,22 @@ L_0006:
         STA     RAM_HW_CONFIG2  ; 32 06 05 -> put result to RAM 0506
         LXI     H, ROM_TAB_SRAM_INI ; 21 B3 03 -> put pointer to ROM table to H
         CALL    L_007B          ; CD 7B 00 -> copy ROM tables to RAM/memory mapped regs
-        JMP     L_02C8          ; C3 C8 02 -> Sprung in die Hauptinitialisierung
+        JMP     L_02C8          ; C3 C8 02 -> Further init code; at its end, main IO polling loop L_0017 is jumped to.
 
 ; ------------------------------------------------------------------------------
 ; main IO polling loop
 ; ------------------------------------------------------------------------------
 L_0017:
-        DI
-        LDA     REG_IO_STATE    ; Status von GPIB / I/O Interface-Chip laden
-        ORA     A               ; Prüfen, ob der Status 0 ist
-        JNZ     L_0355          ; Wenn ungleich Null -> Zur Service-Routine abzweigen
+        DI                      ; F3
+        LDA     REG_IO_STATE    ; 3A 01 04  -> Status von GPIB / I/O Interface-Chip laden
+        ORA     A               ; B7        -> Prüfen, ob der Status 0 ist
+        JNZ     L_0355          ; C2 55 03  -> Wenn ungleich Null -> Zur Service-Routine abzweigen
 
 L_001F:
-        LDA     IO_TALK_STATUS  ; Status des Talker-Interfaces einlesen
-        ANI     0C0h            ; Die obersten zwei Bits maskieren
-        CPI     80h             ; Prüfen auf Status-Flag 80h
-        JZ      L_00CE          ; Bei Treffer -> Abzweigen zur Routine L_00CE
+        LDA     IO_TALK_STATUS  ; 3A 01 07   -> Status des Talker-Interfaces einlesen
+        ANI     0C0h            ; E6 C0      -> Die obersten zwei Bits maskieren
+        CPI     80h             ; FE 80      -> Prüfen auf Status-Flag 80h
+        JZ      L_00CE          ; CA CE 00   -> Bei Treffer -> Abzweigen zur Routine L_00CE
 
         CALL    L_00AD          ; CD AD 00 -> Ruft Subroutine an Adresse 00ADh auf
         MVI     C, 0FEh         ; 0E FE    -> Lädt Konstante 0FEh in Register C
