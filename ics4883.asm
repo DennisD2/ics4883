@@ -296,8 +296,11 @@ L_010E:
     	XRA     A               ; AF       -> XOR A mit A <=> A:=0
     	STA     REG_BUFF_IDX    ; 32 1F 04 -> write 0 to 041F
     	MVI     C, 0FDh         ; 0E FD    -> loads 0FDh into C (output mask?)
-    	CALL    L_00A1          ; CD A1 00 -> Ruft die I/O-Ausgabestufe auf (Zeichen auf den Bus senden)
-        JMP     L_0017          ; C3 17 00 -> Unbedingter Rücksprung zu L_0017
+    	CALL    L_00A1          ; CD A1 00 -> L_00A1 writes value from RAM 0407h to 0707h (maybe GPIB talker write)
+        JMP     L_0017          ; C3 17 00 -> jump back to main loop
+
+; the following lines until the JMP L_0017 is not addressed by any code.
+;
         CALL    L_0131          ; CD 31 01 -> Unterfunktion an Adresse 0131h aufrufen
         MVI     A, 04h          ; 3E 04    -> Konstante 04h in den Akkumulator laden
         JZ      L_0108          ; CA 08 01 -> Wenn Zero-Flag gesetzt, springe zu Adresse 0104h
@@ -307,7 +310,7 @@ L_010E:
     	JMP     L_0017          ; C3 17 00  from address 12eh
 
 ; Comparison if GPIB address just received with address set at dip switch
-L_GPIB_ADRESS_CMP:
+L_GPIB_ADDRESS_CMP:
 L_0131:
     	LDA     IO_DIP_SWITCH   ; 3A 06 07 -> loads 0706h into A
     	ANI     01Fh            ; E6       -> mask with 1F, so lower 5 bits (GPIB address)
