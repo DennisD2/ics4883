@@ -547,7 +547,7 @@ L_0256:
 L_0263:
         ANI     0Fh             ; E6 0F    -> Die unteren 4 Bits maskieren
         PUSH    H               ; E5       -> HL-Registerpaar auf dem Stack sichern
-        LXI     H, ROM_TLK_CHAR_TABLE        ; 21 D4 03 -> HL auf Übersetzungstabelle im ROM ausrichten
+        LXI     H, ROM_TLK_CHAR_TABLE ; 21 D4 03 -> HL auf Übersetzungstabelle im ROM ausrichten
         ADD     L               ; 85       -> Offset zu L addieren
         MOV     L, A            ; 6F       -> Ergebnis zurück in L (indirekte Adressierung)
         MOV     A, M            ; 7E       -> Übersetztes Zeichen aus der ROM-Tabelle holen
