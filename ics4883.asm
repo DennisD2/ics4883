@@ -198,8 +198,8 @@ L_0084:
         JMP     L_007B          ; C3 7B 00 -> if C==0, block is finished. go to outer loop to read next table entry
 
 ; ------------------------------------------------------------------------------
-; RAM-Initialisierung / Block-Clear Routine (Deine Zeilen 79-101)
-; Aufgerufen via CALL 008Fh im Boot-Vektor
+; ram initialization
+; Called from boot code
 ; fills 64 bytes ab SRAM_START mit 0 bytes
 ; ------------------------------------------------------------------------------
 L_008F:
