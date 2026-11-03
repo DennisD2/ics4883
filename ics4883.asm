@@ -118,7 +118,7 @@ L_001F:
         LDA     IO_TALK_STATUS  ; 3A 01 07 -> load 0701h to A
         ANI     0C0h            ; E6 C0    -> mask 2 upper bits of 0701h
         CPI     80h             ; FE 80    -> is masked value equal to 80h (so bit7 was 1 and bit6 was 0)
-        JZ      L_00CE          ; CA CE 00 -> on equality, continue at L_00CE
+        JZ      L_00CE          ; CA CE 00 -> on equality, continue at L_00CE (supposed Listener handling)
 
         CALL    L_00AD          ; CD AD 00 -> calls 00ADh; DD talker handling
         MVI     C, 0FEh         ; 0E FE    -> loads 0FEh to C (looks like a mask 1111.1110)
@@ -127,7 +127,7 @@ L_001F:
         RLC                     ; 07       -> rotate left, move highest bit ("ONLY" switch) to carry flag
         JMP     L_003C          ; C3 3C 00 -> continue at L_003C, with bits 6..0 from 0706h in A; "TL43.210x"
         POP     H               ; E1       -> Registerpaar HL vom Stack holen (Stack aufräumen)
-        JMP     L_00CE          ; C3 CE 00 -> Sprung zur Service-Routine L_00CE
+        JMP     L_00CE          ; C3 CE 00 -> Sprung zur Service-Routine L_00CE  (supposed Listener handling)
 
 L_003C:
         CC      L_009C          ; DC 9C 00 -> if carry flag ist set ("ONLY" switch on), continue at L_009C; in A we have 0706h content shiftet left by 1
@@ -264,41 +264,34 @@ L_00C7:
     	RET                     ; C9       -> return to caller
 
 ; ------------------------------------------------------------------------------
-; Status-Reset & Polling-Handler (Adresse 00CEh - 00E0h)
+; Supposed Listener handling main entry point
 ; ------------------------------------------------------------------------------
 L_00CE:
-        MVI     A, 80h          ; 3E 80    -> Lade Status-Flag 80h in den Akkumulator
-        STA     REG_GPIB_CTRL   ; 32 05 04 -> Schreibe das Flag in das GPIB-Schnittstellenregister
-        XRA     A               ; AF       -> Akkumulator löschen (A = 0)
-        STA     IO_TALK_CTRLBUS ; 32 02 07 -> Lösche das Statusregister 0702h im Talker-Interface
-        CALL    L_0163          ; CD 63 01 -> Ruft Unterfunktion an Adresse 0163h auf
-        LDA     IO_DIP_SWITCH   ; 3A 06 07 -> Lädt 0706h nach A
-        RLC                     ; 07       -> Akkumulator nach links rotieren (Bit-Prüfung)
-        JC      L_MAINLOOP      ; DA 17 00 -> Wenn Carry=1, springe hart zurück zum Schleifenstart L_MAINLOOP
-        ; ------------------------------------------------------------------------------
-        ; ASCII-Validierung & Protokoll-Verzweigung (Adresse 00E1h - 00F6h)
-        ; ------------------------------------------------------------------------------
-        MOV     A, B            ; 78       -> Holt das gesicherte Byte aus Register B in den Akkumulator
-        ANI     07Fh            ; E6 7F    -> Auf 7-Bit-ASCII maskieren
-        MOV     B,A             ; 47       -> In Register B sichern
-        ANI     060h            ; E6 60    -> Prüfe die oberen Kontrollbits des Zeichens
-        CPI     060h            ; FE 60    -> Vergleiche mit dem Kontrollwert 60h
-        JZ      L_00F7          ; CA F7 00 -> Wenn gleich, springe vor zur Service-Routine 00F7h
-        XRA     A               ; AF       -> Akkumulator löschen (A = 0)
-        STA     REG_CMD_LOCK    ; 32 0C 04 -> Schreibt die Null in das Kontrollregister 040Ch
-        MOV     A, B            ; 78       -> Holt das originale Zeichen erneut aus Register B
-        ANI     060h            ; E6 60    -> Erneute Bitmaskierung
-        JNZ     L_00F7          ; C2 F7 00 -> Wenn ungleich Null, springe vor zur Service-Routine L_00F7
-        MOV     A, B            ; 78       -> Holt das Zeichen ein letztes Mal
-
-        ; ------------------------------------------------------------------------------
-        ; Indirekte Sprungsteuerung & indir. Funktionsaufrufe (Adresse 00F7h - 0010Dh)
-        ; ------------------------------------------------------------------------------
+        MVI     A, 80h          ; 3E 80    -> load 80h to A
+        STA     REG_GPIB_CTRL   ; 32 05 04 -> write A to RAM location 0405
+        XRA     A               ; AF       -> A:=0
+        STA     IO_TALK_CTRLBUS ; 32 02 07 -> write A which is 0 to 0702h
+        CALL    L_0163          ; CD 63 01 -> call L_0163 DD seems to write to instrument
+        LDA     IO_DIP_SWITCH   ; 3A 06 07 -> load 0706h to A
+        RLC                     ; 07       -> check ONLY bit of dip switch
+        JC      L_MAINLOOP      ; DA 17 00 -> if ONLY=1, then carry=1, we are finished and jump to L_MAINLOOP
+        MOV     A, B            ; 78       -> load B to A
+        ANI     07Fh            ; E6 7F    -> mask to 7 bits (maybe ASCII char)
+        MOV     B,A             ; 47       -> save to B
+        ANI     060h            ; E6 60    -> isolate bits 6 and 5
+        CPI     060h            ; FE 60    -> Check against 0110.0000
+        JZ      L_00F7          ; CA F7 00 -> if equality (bits 5 and 6 are set) continue at 00F7h (there a handler address is determined and handler code executed)
+        XRA     A               ; AF       -> A := 0
+        STA     REG_CMD_LOCK    ; 32 0C 04 -> writes A, which is 0, to 040Ch, i.e. clear REG_CMD_LOCK
+        MOV     A, B            ; 78       -> load B to A
+        ANI     060h            ; E6 60    -> isolate bits 6 and 5
+        JNZ     L_00F7          ; C2 F7 00 -> if bit 5 or 6 are set, call again L_00F7 (there a handler address is determined and handler code executed)
+        MOV     A, B            ; 78       -> load B to A
 L_00F7:
-        LXI     H, ROM_TAB_DISPATCH ; 21 93 03 -> HL points to 0393h
+        LXI     H, ROM_TAB_DISPATCH ; 21 93 03 -> Load handler jump table at 0393h
         MVI     C, 0Ah          ; 0E 0A    -> loop counter C := 10
         CALL    L_FIND_HANDLER_ADDRESS ; CD 4E 01 -> handle chars by determining correct handling routine address
-        PCHL                    ; E9       -> jump to handler
+        PCHL                    ; E9       -> jump to handler found
 
 ; ------------------------------------------------------------------------------
 ; Handler for character 20h
