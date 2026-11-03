@@ -94,7 +94,7 @@ L_0000:
         CALL    L_008F          ; CD 8F 00 -> clear 64 bytes of memory from start of RAM
 ; ------------------------------------------------------------------------------
 ; Looks like a warm start entry point.
-; Is also handler for character 14h
+; Is also Handler for GPIB command 14h - DCL Device Clear
 ; ------------------------------------------------------------------------------
 L_0006:
         LDA     ROM_CFG_FLAGS   ; 3A C4 03 -> read config value from ROM 03C4 (value there is: 6=0110)
@@ -294,23 +294,24 @@ L_00F7:
         PCHL                    ; E9       -> jump to handler found
 
 ; ------------------------------------------------------------------------------
-; Handler for character 20h
+; Handler for GPIB command 20h - MLA Listener Addresses
+; address value is in B.
+; checks if address in B equals address defined at DIP switches.
 ; ------------------------------------------------------------------------------
 L_0100:
         CALL    L_0131          ; CD 31 01 -> Compare GPIB address received with own address
-        MVI     A, 02h          ; 3E 02    -> load 02 into A
-        JNZ     L_010E          ; C2 0E 01 -> if value of last cmp (address compare) !=0, jump to 010Eh
+        MVI     A, 02h          ; 3E 02    -> load 02h into A
+        JNZ     L_010E          ; C2 0E 01 -> if value of last cmp (address compare) !=0, jump to 010Eh; so: nout our address
 L_0108:
+        ; address equals our address
         CALL    L_009F          ; CD 9F 00 -> call 009Fh, which seems to write out a byte to 0707h (maybe GPIB talker write)
         JMP     L_MAINLOOP      ; C3 17 00 -> jump to main loop
 
-        ; ------------------------------------------------------------------------------
-        ; GPIB-Protokollprüfung (? Abfrage) & Bus-Handshake (Adresse 010Eh - 0130h)
-        ; ------------------------------------------------------------------------------
 L_010E:
+        ; address is not our address
         MOV     A, B            ; 78       -> copy B to A
-        CPI     03Fh            ; FE 3F    -> compare A with ASCII '?' (GPIB Talker Query)
-        JNZ     L_MAINLOOP      ; C2 17 00 -> if not an '?', jump to main polling loop L_MAINLOOP
+        CPI     03Fh            ; FE 3F    -> is command UNL Universal Unlisten (3Fh / '?')?
+        JNZ     L_MAINLOOP      ; C2 17 00 -> if not an UNL, jump to main polling loop L_MAINLOOP
     	XRA     A               ; AF       -> XOR A mit A <=> A:=0
     	STA     REG_BUFF_IDX    ; 32 1F 04 -> write 0 to 041F
     	MVI     C, 0FDh         ; 0E FD    -> loads 0FDh into C (output mask?)
@@ -318,16 +319,16 @@ L_010E:
         JMP     L_MAINLOOP      ; C3 17 00 -> jump back to main loop
 
 ; ------------------------------------------------------------------------------
-; Handler for character 40h
+; Handler for GPIB command 40h - MTA Talker Addresses
 ; ------------------------------------------------------------------------------
 L_0120:
-        CALL    L_0131          ; CD 31 01 -> Unterfunktion an Adresse 0131h aufrufen
-        MVI     A, 04h          ; 3E 04    -> Konstante 04h in den Akkumulator laden
-        JZ      L_0108          ; CA 08 01 -> Wenn Zero-Flag gesetzt, springe zu Adresse 0104h
-        MVI     C, 0FBh         ; 0E FB    -> Lädt die nächste Steuermaske 0FBh in Register C
-        XRA     A               ; AF       -> Akkumulator löschen (A = 0)
+        CALL    L_0131          ; CD 31 01 -> Compare GPIB address received with own address
+        MVI     A, 04h          ; 3E 04    -> load 04h into A
+        JZ      L_0108          ; CA 08 01 -> if value of last cmp (address compare) ==0, jump to L_0108
+        MVI     C, 0FBh         ; 0E FB    -> loads mask 0FBh 1111.1100 to C
+        XRA     A               ; AF       -> clear A
         CALL    L_00A1          ; CD A1 00 -> Ruft die I/O-Ausgabestufe auf
-    	JMP     L_MAINLOOP      ; C3 17 00  from address 12eh
+    	JMP     L_MAINLOOP      ; C3 17 00 -> jump back to main loop
 
 ; Comparison if GPIB address just received with address set at dip switch
 L_GPIB_ADDRESS_CMP:
@@ -341,21 +342,21 @@ L_0131:
         RET                     ; C9       -> result of comparison is in status, return to caller
 
 ; ------------------------------------------------------------------------------
-; Handler for character 04h
+; Handler for GPIB command 04h - SDC Selected Device Clear
 ; ------------------------------------------------------------------------------
 L_013C:
     	LDA     REG_SYS_STATUS  ; 3A 07 04 -> load 0407 into A
     	ANI     02h             ; E6 02    -> isolate bit 1
-    	JZ      L_MAINLOOP      ; CA 17 00 -> if bit is 0, continue at mainloop
+    	JZ      L_MAINLOOP      ; CA 17 00 -> if bit is 0, continue at mainloop (looks like nothing to do then)
     	JMP     L_0006          ; C3 06 00 -> if bit is 1, continue at L_0006 (looks like a warmstart)
 
 ; ------------------------------------------------------------------------------
-; Handler for character 19h
+; Handler for GPIB command 19h - SPD Serial Poll Disable
 ; ------------------------------------------------------------------------------
 L_0147:
     	XRA     A               ; AF        -> A:=0
 ; ------------------------------------------------------------------------------
-; Handler for character 18h
+; Handler for GPIB command 18h - SPE - Serial Poll Enable
 ; ------------------------------------------------------------------------------
 L_0148:
     	STA     REG_CMD_STATE   ; 32 0D 04  -> store A to 040Dh
@@ -627,7 +628,7 @@ L_0263:
 
 
 ; ------------------------------------------------------------------------------
-; Handler for character 08h
+; Handler for GPIB command 08h - GET Group Execution Trigger
 ; ------------------------------------------------------------------------------
 L_028A:
         LDA     REG_SYS_STATUS  ; 3A 07 04 -> Lädt den Gerätestatus aus dem RAM
@@ -674,7 +675,8 @@ L_02BE:
         JNZ     L_02A5          ; C2 A5 02 -> Sprung wenn != 0
 
 ; ------------------------------------------------------------------------------
-; Handler for character 0D/CR, LF/0A, comma/2C
+; Handler for characters received via GPIB bus for  0D/CR, LF/0A, comma/2C
+; which are considered 'special' by ICS4883 (i.e. these are separators)
 ; ------------------------------------------------------------------------------
 ; ------------------------------------------------------------------------------
 ; Nibble-Packing Routine: Der Code ab Adresse 02DBh ist ein hocheffizienter Packer. Er nimmt
@@ -771,7 +773,7 @@ L_031A:
         RET                     ; C9       -> back to caller
 
 ; ------------------------------------------------------------------------------
-; Handler for character 60h
+; Handler for GPIB command 60h - PPE Parallel Poll Enable
 ; ------------------------------------------------------------------------------
 L_0324:
         LDA     REG_CMD_LOCK    ; 3A 0C 04 -> Lädt den Inhalt der RAM-Adresse 040Ch in den Akkumulator
@@ -820,33 +822,32 @@ L_0355:
         JMP     L_001F          ; C3 1F 00 -> continue at L_001F inside main polling loop
 
 ; ------------------------------------------------------------------------------
-; Behandlungsroutinen für Kommandos (Adresse 036Dh bis 0389h)
-; ------------------------------------------------------------------------------
-; ------------------------------------------------------------------------------
-; Handler for character 15h
+; Handler for GPIB command 15h - LLO Local Lockout
+; prevents local control; control is only possible via remote (GPIB commands)
+; bit 3 of 0407 seems to represent "LOCAL_ENABLED"
 ; ------------------------------------------------------------------------------
 L_CMD_P_HANDLER:
 L_036D:
-        XRA     A               ; AF       -> Akkumulator nullen (A = 00h)
-        STA     REG_IO_STATE    ; 32 01 04 -> Schreibt die Null in die RAM-Zelle REG_IO_STATE
-        LXI     H, REG_SYS_STATUS ; 21 07 04 -> HL auf Kontrollregister 0407h ausrichten
-        MOV     A, M            ; 7E       -> Aktuellen Statuswert laden
-        ANI     0F7h            ; E6 F7    -> Bit 3 gezielt löschen (Maske 1111 0111)
-        MOV     M, A            ; 77       -> Modifizierten Status zurückschreiben
-        JMP     L_MAINLOOP      ; C3 17 00 -> Unbedingter Rücksprung zum Haupt-Polling L_MAINLOOP
+        XRA     A               ; AF       -> A:=0
+        STA     REG_IO_STATE    ; 32 01 04 -> writes A i.e. 0 to REG_IO_STATE 0401
+        LXI     H, REG_SYS_STATUS ; 21 07 04 -> HL points to 0407h
+        MOV     A, M            ; 7E       -> load [HL] to A
+        ANI     0F7h            ; E6 F7    -> clear bit 3 (mask 1111 0111)
+        MOV     M, A            ; 77       -> write back new value to [HL] i.e. 0407h
+        JMP     L_MAINLOOP      ; C3 17 00 -> start over in mainloop
 
 ; ------------------------------------------------------------------------------
-; Handler for character 05h
+; Handler for GPIB command 05h - GTL Go To Local
+; disconnects from remote control. Only local controls will be possible after this command.
+; bit 1 in 0407 seems to represent "REMOTE_ENABLED"
 ; ------------------------------------------------------------------------------
-; Dieser Zweig (ab 037Bh) verarbeitet das alternative Szenario ('q')
 L_037B:
-;;; "Bit-Prüfung und Bedingter Abbruch"
-        LDA     REG_SYS_STATUS  ; 3A 07 04 -> Lädt den Systemstatus aus RAM 0407h
-        ANI     002h            ; E6 02    -> Isolierte Betrachtung von Bit 1
-        JZ      L_MAINLOOP      ; CA 17 00 -> Wenn Bit 1 Null ist, zurück zum Polling L_MAINLOOP
-        MOV     A, B            ; 78       -> Originales Zeichen aus Register B holen
-        STA     REG_CMD_LOCK    ; 32 0C 04 -> Zeichen in Kontrollregister 040Ch wegsichern
-        JMP     L_MAINLOOP      ; C3 17 00 -> Unbedingter Rücksprung zum Haupt-Polling L_MAINLOOP
+        LDA     REG_SYS_STATUS  ; 3A 07 04 -> load status byte from RAM 0407h
+        ANI     002h            ; E6 02    -> isolate bit 1
+        JZ      L_MAINLOOP      ; CA 17 00 -> if bit 1==0, continue in L_MAINLOOP (nothing to do it seems)
+        MOV     A, B            ; 78       -> copy B to A (B seems to contain command character 05h)
+        STA     REG_CMD_LOCK    ; 32 0C 04 -> write A to 040Ch
+        JMP     L_MAINLOOP      ; C3 17 00 -> start over in mainloop
 
 ; 038Ah - 038Fh: Padding / Unused ROM-Space (Füllbytes)
     	DB 0FFh	; 0FFh, from address 38ah
@@ -865,16 +866,16 @@ L_037B:
 ; Format des universalen Kopierers (Routine L_FIND_HANDLER_ADDRESS / L_007B):
 ; Format: [ASCII-Zeichen] [Sprungadresse (Low/High)]
 L_ROM_TAB_DISPATCH:
-    	DB 004h, L_013C & 0FFh, L_013C >> 8   ; 04h (..)     -> jump to L_013C ()
-    	DB 014h, L_0006 & 0FFh, L_0006 >> 8   ; 14h (..)     -> jump to L_0006 ()
-        DB 015h, L_036D & 0FFh, L_036D >> 8   ; 15h (..)     -> jump to L_036D ()
-        DB 018h, L_0148 & 0FFh, L_0148 >> 8   ; 18h (..)     -> jump to L_0148 ()
-        DB 019h, L_0147 & 0FFh, L_0147 >> 8   ; 19h (..)     -> jump to L_0147 ()
-        DB 008h, L_028A & 0FFh, L_028A >> 8   ; 08h (..)     -> jump to L_028A ()
-        DB 020h, L_0100 & 0FFh, L_0100 >> 8   ; 20h (..)     -> jump to L_0100 ()
-        DB 040h, L_0120 & 0FFh, L_0120 >> 8   ; 40h (..)     -> jump to L_0120 ()
-        DB 005h, L_037B & 0FFh, L_037B >> 8   ; 05h (..)     -> jump to L_037B ()
-        DB 060h, L_0324 & 0FFh, L_0324 >> 8   ; 60h (..)     -> jump to L_0324 ()
+    	DB 004h, L_013C & 0FFh, L_013C >> 8 ; 04h (SDC Selected Device Clear)       -> jump to L_013C ()
+    	DB 014h, L_0006 & 0FFh, L_0006 >> 8 ; 14h (DCL Device Clear)                -> jump to L_0006 ()
+        DB 015h, L_036D & 0FFh, L_036D >> 8 ; 15h (LLO Local Lockout)               -> jump to L_036D ()
+        DB 018h, L_0148 & 0FFh, L_0148 >> 8 ; 18h (SPE Serial Poll Enable)          -> jump to L_0148 ()
+        DB 019h, L_0147 & 0FFh, L_0147 >> 8 ; 19h (SPD Serial Poll Disable)         -> jump to L_0147 ()
+        DB 008h, L_028A & 0FFh, L_028A >> 8 ; 08h (GET Group Execution Trigger)     -> jump to L_028A ()
+        DB 020h, L_0100 & 0FFh, L_0100 >> 8 ; 20h (MLA Listener Addresses)          -> jump to L_0100 ()
+        DB 040h, L_0120 & 0FFh, L_0120 >> 8 ; 40h (MTA Talker Addresses)            -> jump to L_0120 ()
+        DB 005h, L_037B & 0FFh, L_037B >> 8 ; 05h (GTL Go To Local)                 -> jump to L_037B ()
+        DB 060h, L_0324 & 0FFh, L_0324 >> 8 ; 60h (PPE Parallel Poll Enable)        -> jump to L_0324 ()
     	DB L_MAINLOOP & 0FFh, L_MAINLOOP >> 8 ; Default      -> jump to L_MAINLOOP ()
 
 ; 03B3h - 03C3h: initialization table for RAM buffer - Initialisierungs-Tabelle für den RAM-Puffer
