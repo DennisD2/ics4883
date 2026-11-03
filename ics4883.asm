@@ -27,7 +27,7 @@ ROM_TAB_DISPATCH EQU  0393h     ; Sprung- und Befehlstabelle für den Data Dispa
 ROM_TAB_SRAM_INI EQU  03B3h     ; Initialisierungs-Tabelle für den RAM-Puffer
 ROM_CFG_FLAGS    EQU  03C4h     ; System-Konfigurations-Flags im ROM
 ROM_CFG_LIMITS   EQU  03CEh     ; Maskierungs- und Fehler-Grenzwerte
-ROM_TAB_ASCII    EQU  03D4h     ; IEEE-488 Bus ASCII-Übersetzungstabelle ('0123...')
+ROM_TLK_CHAR_TABLE EQU 03D4h    ; VER Talker Character Table (tranlates HEX input values to ICS4883 chars) ('0123...')
 ROM_PROT_LIMITS  EQU  03E4h     ; Status- und Protokoll-Grenzwerte
 ROM_STR_TERMS    EQU  03EEh     ; String-Terminatoren und Kontroll-Codes (CR/LF)
 ROM_TAB_CMD_VEC  EQU  03F5h     ; Primäre Befehls-Sprungtabelle (für CR, LF, Komma)
@@ -547,7 +547,7 @@ L_0256:
 L_0263:
         ANI     0Fh             ; E6 0F    -> Die unteren 4 Bits maskieren
         PUSH    H               ; E5       -> HL-Registerpaar auf dem Stack sichern
-        LXI     H, ROM_TAB_ASCII        ; 21 D4 03 -> HL auf Übersetzungstabelle im ROM ausrichten
+        LXI     H, ROM_TLK_CHAR_TABLE        ; 21 D4 03 -> HL auf Übersetzungstabelle im ROM ausrichten
         ADD     L               ; 85       -> Offset zu L addieren
         MOV     L, A            ; 6F       -> Ergebnis zurück in L (indirekte Adressierung)
         MOV     A, M            ; 7E       -> Übersetztes Zeichen aus der ROM-Tabelle holen
@@ -848,6 +848,7 @@ L_037B:
     	DB 000h, 080h, 000h, 000h, 000h, 000h
 
 ; 03D4h - 03E3h: IEEE-488 Bus ASCII-Übersetzungstabelle
+TALK_CHAR_TABLE:
         DB '0123456789+-.,E '
                     ;DB 030h	; 030h, from address 3d4h
                     ;DB 031h	; 031h, from address 3d5h
