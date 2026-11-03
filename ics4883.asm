@@ -92,12 +92,12 @@ L_0006:
         STA     RAM_HW_CONFIG2  ; 32 06 05 -> put result to RAM 0506
         LXI     H, ROM_TAB_SRAM_INI ; 21 B3 03 -> put pointer to ROM table to H
         CALL    L_007B          ; CD 7B 00 -> copy ROM tables to RAM/memory mapped regs
-        JMP     L_02C8          ; C3 C8 02 -> Further init code; at its end, main IO polling loop L_0017 is jumped to.
+        JMP     L_02C8          ; C3 C8 02 -> Further init code; at its end, main IO polling loop L_MAINLOOP is jumped to.
 
 ; ------------------------------------------------------------------------------
 ; main IO polling loop
 ; ------------------------------------------------------------------------------
-L_0017:
+L_MAINLOOP:                     ; was: L_0017
         DI                      ; F3
         LDA     REG_IO_STATE    ; 3A 01 04 -> load 0401h from RAM to A - Status von GPIB / I/O Interface-Chip laden
         ORA     A               ; B7       -> is it = 0 ?
@@ -133,7 +133,7 @@ L_003C:
     	RRC                     ; 0F       -> put lowest bit into carry flag
     	JNC     L_0060          ; D2 60 00 -> if no carry (lowest bit was 0) then continue at 0060h, which will return from there to main loop
     	CALL    L_00C7          ; CD C7 00 -> if we had carry at lowest bit, puts bit 5 of IO_TALK_DATA into carry flag
-        JC      L_006D          ; DA 6D 00 -> if carry, jump to L_006D = L_SET_DATA_AVAILABLE - Wenn Carry=1, springe zu Adresse 006Dh
+        JC      L_SET_DATA_AVAILABLE          ; DA 6D 00 -> if carry, jump to L_SET_DATA_AVAILABLE = L_SET_DATA_AVAILABLE - Wenn Carry=1, springe zu Adresse 006Dh
         STA     IO_SRAM_FLAG1   ; 32 07 06 -> no carry, no data available, put A to 0607h
 
 ; ------------------------------------------------------------------------------
@@ -146,13 +146,12 @@ L_0060:
     	ORA     C               ; B1       -> OR A with C
     	MOV     M,A             ; 77       -> move A to [0403h]
     	STA     IO_TALK_DATABUS ; 32 03 07 -> write result to 0703h (GPIB connector)
-    	JMP     L_0017          ; C3 17 00 -> back to loop start
+    	JMP     L_MAINLOOP          ; C3 17 00 -> back to loop start
 
 ; ------------------------------------------------------------------------------
 ; Set GPIB Status Byte (Talker) to 41h, which means "data available"
 ; ------------------------------------------------------------------------------
-L_SET_DATA_AVAILABLE:
-L_006D:
+L_SET_DATA_AVAILABLE:           ; was L_006D
         LXI     H, REG_BUS_STATUS ; 21 0E 04 -> HL points to 040Eh (GPIB status reg)
         MOV     A, M            ; 7E       -> load GPIB status reg to A
         RRC                     ; 0F       -> check if lowest bit is set
@@ -261,7 +260,7 @@ L_00CE:
         CALL    L_0163          ; CD 63 01 -> Ruft Unterfunktion an Adresse 0163h auf
         LDA     IO_DIP_SWITCH   ; 3A 06 07 -> Lädt 0607h nach A
         RLC                     ; 07       -> Akkumulator nach links rotieren (Bit-Prüfung)
-        JC      L_0017          ; DA 17 00 -> Wenn Carry=1, springe hart zurück zum Schleifenstart L_0017
+        JC      L_MAINLOOP          ; DA 17 00 -> Wenn Carry=1, springe hart zurück zum Schleifenstart L_MAINLOOP
         ; ------------------------------------------------------------------------------
         ; ASCII-Validierung & Protokoll-Verzweigung (Adresse 00E1h - 00F6h)
         ; ------------------------------------------------------------------------------
@@ -291,7 +290,7 @@ L_00F7:
         JNZ     L_010E          ; C2 0E 01 -> if value of last cmp (address compare) !=0, jump to 010Eh
 L_0108:
         CALL    L_009F          ; CD 9F 00 -> call 009Fh, which seems to write out a byte to 0707h (maybe GPIB talker write)
-        JMP     L_0017          ; C3 17 00 -> jump to main loop
+        JMP     L_MAINLOOP          ; C3 17 00 -> jump to main loop
 
         ; ------------------------------------------------------------------------------
         ; GPIB-Protokollprüfung (? Abfrage) & Bus-Handshake (Adresse 010Eh - 0130h)
@@ -299,14 +298,14 @@ L_0108:
 L_010E:
         MOV     A, B            ; 78       -> copy B to A
         CPI     03Fh            ; FE 3F    -> compare A with ASCII '?' (GPIB Talker Query)
-        JNZ     L_0017          ; C2 17 00 -> if not an '?', jump to main polling loop L_0017
+        JNZ     L_MAINLOOP          ; C2 17 00 -> if not an '?', jump to main polling loop L_MAINLOOP
     	XRA     A               ; AF       -> XOR A mit A <=> A:=0
     	STA     REG_BUFF_IDX    ; 32 1F 04 -> write 0 to 041F
     	MVI     C, 0FDh         ; 0E FD    -> loads 0FDh into C (output mask?)
     	CALL    L_00A1          ; CD A1 00 -> L_00A1 writes value from RAM 0407h to 0707h (maybe GPIB talker write)
-        JMP     L_0017          ; C3 17 00 -> jump back to main loop
+        JMP     L_MAINLOOP          ; C3 17 00 -> jump back to main loop
 
-; the following lines until the JMP L_0017 is not addressed by any code.
+; the following lines until the JMP L_MAINLOOP is not addressed by any code.
 ;
         CALL    L_0131          ; CD 31 01 -> Unterfunktion an Adresse 0131h aufrufen
         MVI     A, 04h          ; 3E 04    -> Konstante 04h in den Akkumulator laden
@@ -314,7 +313,7 @@ L_010E:
         MVI     C, 0FBh         ; 0E FB    -> Lädt die nächste Steuermaske 0FBh in Register C
         XRA     A               ; AF       -> Akkumulator löschen (A = 0)
         CALL    L_00A1          ; CD A1 00 -> Ruft die I/O-Ausgabestufe auf
-    	JMP     L_0017          ; C3 17 00  from address 12eh
+    	JMP     L_MAINLOOP          ; C3 17 00  from address 12eh
 
 ; Comparison if GPIB address just received with address set at dip switch
 L_GPIB_ADDRESS_CMP:
@@ -333,11 +332,11 @@ L_0131:
 L_013C:
     	LDA     REG_SYS_STATUS  ; 3A 07 04 from address 13ch
     	ANI     02h             ; E6 02 from address 13fh
-    	JZ      L_0017          ; CA 17 00 from address 141h
+    	JZ      L_MAINLOOP          ; CA 17 00 from address 141h
     	JMP     L_0006          ; C3 06 00 from address 144h
     	XRA     A               ; AF from address 147h
     	STA     REG_CMD_STATE   ; 32 from address 148h
-    	JMP     L_0017          ; C3 17 00
+    	JMP     L_MAINLOOP          ; C3 17 00
 
 L_014E:
         ; ------------------------------------------------------------------------------
@@ -411,7 +410,7 @@ L_01A9:
         ; Stack aufräumen & Treiber-Rücksprung (Adresse 01A9h - 01ACh)
         ; ------------------------------------------------------------------------------
         POP     H               ; E1       -> Holt das Registerpaar HL vom Stack zurück
-        JMP     L_0017          ; C3 17 00 -> Unbedingter Sprung zur Systemadresse 00FBh
+        JMP     L_MAINLOOP          ; C3 17 00 -> Unbedingter Sprung zur Systemadresse 00FBh
 
 ; ------------------------------------------------------------------------------
 ; Handle input from instrument
@@ -444,7 +443,7 @@ L_01D6:
         SHLD    REG_BUFF_PTR    ; 22 1D 04 -> Aktuellen HL-Zeiger im RAM 041Dh sichern
         CPI     19h             ; FE 19    -> Akkumulator mit Konstante 19h vergleichen
 
-        JZ      L_0017          ; CA 17 00 -> Wenn gleich, springe weit zurück zu Adresse 0017h
+        JZ      L_MAINLOOP          ; CA 17 00 -> Wenn gleich, springe weit zurück zu Adresse 0017h
         ORA     A               ; B7       -> Flags aktualisieren (Prüfen auf Null/Vorzeichen)
         JP      L_01F0          ; F2 F0 01 -> Wenn positiv (Bit 7 = 0), springe vor zu Adresse 01F0h
         ANI     040h            ; E6 40    -> Bit 6 maskieren
@@ -487,7 +486,7 @@ L_020A:
         MOV     A, M            ; 7E
         MVI     M, 00h          ; 36 00    -> Speicherzelle mit 00h überschreiben
         ORA     A               ; B7       -> Flags aktualisieren
-        JM      L_0017          ; FA 17 00 -> Wenn negativ (Bit 7=1), Sprung zu L_0017
+        JM      L_MAINLOOP          ; FA 17 00 -> Wenn negativ (Bit 7=1), Sprung zu L_MAINLOOP
         JZ      L_022B          ; CA 2B 02 -> Wenn Null, Sprung zu RAM/ROM-Adresse 022Bh
         XRA     A               ; AF
         STA     IO_SRAM_FLAG1   ; 32 07 06
@@ -568,23 +567,23 @@ L_0263:
         MOV     A, B            ; 78       -> Register B (04h) nach A holen
         ANI     01Fh            ; E6 1F    -> 5-Bit-Maskierung
         CMP     M               ; BE       -> Mit Speicherwert [HL] vergleichen
-        JNZ     L_0017          ; C2 17 00 -> Bei Ungleichheit harter Sprung zurück zu L_0017
+        JNZ     L_MAINLOOP          ; C2 17 00 -> Bei Ungleichheit harter Sprung zurück zu L_MAINLOOP
         LXI     H, REG_SYS_STATUS        ; 21 07 04 -> HL auf RAM-Adresse 0407h setzen
         MOV     A, M            ; 7E       -> Wert aus 0407h lesen
         ANI     030h            ; E6 30    -> Bits 4 und 5 maskieren
-        JZ      L_0017          ; CA 17 00 -> Wenn Null, ebenfalls zurück zu L_0017
+        JZ      L_MAINLOOP          ; CA 17 00 -> Wenn Null, ebenfalls zurück zu L_MAINLOOP
         RRC                     ; 0F       -> Bits rotieren
         RRC                     ; 0F
         RRC                     ; 0F
         MOV     M, A            ; 77       -> Modifizierten Wert zurück nach 0407h schreiben
-        JMP     L_0017          ; C3 17 00 -> Unbedingter Rücksprung zum Haupt-Polling
+        JMP     L_MAINLOOP          ; C3 17 00 -> Unbedingter Rücksprung zum Haupt-Polling
 
 ; ------------------------------------------------------------------------------
 ; Fortsetzung ab Adresse 028Ah bis 029Ch
 ; ------------------------------------------------------------------------------
         LDA     REG_SYS_STATUS  ; 3A 07 04 -> Lädt den Gerätestatus aus dem RAM
         ANI     02h             ; E6 02    -> Bit 1 maskieren (z. B. Remote/Local oder ein Bus-Flag)
-        JZ      L_0017          ; CA 17 00 -> Wenn Bit 0 ist, Schleife abbrechen und zurück zu L_0017
+        JZ      L_MAINLOOP          ; CA 17 00 -> Wenn Bit 0 ist, Schleife abbrechen und zurück zu L_MAINLOOP
         LXI     H, IO_SRAM_FLAG1        ; 21 07 06 -> HL auf Ausgangs-Datenregister ausrichten
         MOV     M, A            ; 77       -> Den maskierten Statuswert direkt dorthin schreiben
         DCX     H               ; 2B       -> HL dekrementieren auf 0606h
@@ -633,7 +632,7 @@ L_02C8:
         MOV     C, M            ; 4E       -> load counter value to C
         MOV     A, M            ; 7E       -> load also to A
         ORA     A               ; B7       -> is counter zero?
-        JZ      L_0017          ; CA 17 00 -> if counter==0, jump back to main polling loop
+        JZ      L_MAINLOOP          ; CA 17 00 -> if counter==0, jump back to main polling loop
         MVI     M, 00h          ; 36 00    -> if counter>0, set M to 0
         PUSH    B               ; C5       -> push B to stack
         CALL    0311h           ; CD 11 03 -> Depending on bit 3 in 0505h, C bytes in memory at HL are inverted or not (L_CHECK_INVERT)
@@ -672,9 +671,9 @@ L_02F9:
         POP     H               ; E1       ->
         POP     H               ; E1       ->
         MOV     M, B            ; 70        -> A value, that was saved in B, back to M (so first masked A, then A is written to M, which looks like a strobe signal is generated)
-        JMP     L_0017          ; C3 17 00 -> back to main polling loop
+        JMP     L_MAINLOOP          ; C3 17 00 -> back to main polling loop
 ; ------------------------------------------------------------------------------
-; line above is end of boot code; everything else is done in main polling loop L_0017
+; line above is end of boot code; everything else is done in main polling loop L_MAINLOOP
 ; ------------------------------------------------------------------------------
 
 ; ------------------------------------------------------------------------------
@@ -721,7 +720,7 @@ L_031A:
 L_0324:
         LDA     REG_CMD_LOCK    ; 3A 0C 04 -> Lädt den Inhalt der RAM-Adresse 040Ch in den Akkumulator
         ORA     A               ; B7       -> Setzt die Flags (Zero/Sign) basierend auf dem Akkumulator
-        JZ      L_0017          ; CA 17 00 -> Wenn der Wert Null ist, Sprung zurück zum Haupt-Polling L_0017
+        JZ      L_MAINLOOP          ; CA 17 00 -> Wenn der Wert Null ist, Sprung zurück zum Haupt-Polling L_MAINLOOP
         MOV     A, B            ; 78       -> Holt den Wert aus Register B zurück nach A
         CPI     070h            ; FE 70    -> Prüfen, ob das Zeichen im Akkumulator 70h entspricht (70h = 'p')
     	JZ      L_036D          ; CA 6D 03 -> Wenn ja, Sprung nach vorne zu Adresse 036Dh
@@ -775,17 +774,17 @@ L_036D:
         MOV     A, M            ; 7E       -> Aktuellen Statuswert laden
         ANI     0F7h            ; E6 F7    -> Bit 3 gezielt löschen (Maske 1111 0111)
         MOV     M, A            ; 77       -> Modifizierten Status zurückschreiben
-        JMP     L_0017          ; C3 17 00 -> Unbedingter Rücksprung zum Haupt-Polling L_0017
+        JMP     L_MAINLOOP          ; C3 17 00 -> Unbedingter Rücksprung zum Haupt-Polling L_MAINLOOP
 
 ; Dieser Zweig (ab 037Bh) verarbeitet das alternative Szenario ('q')
 L_037B:
 ;;; "Bit-Prüfung und Bedingter Abbruch"
         LDA     REG_SYS_STATUS  ; 3A 07 04 -> Lädt den Systemstatus aus RAM 0407h
         ANI     002h            ; E6 02    -> Isolierte Betrachtung von Bit 1
-        JZ      L_0017          ; CA 17 00 -> Wenn Bit 1 Null ist, zurück zum Polling L_0017
+        JZ      L_MAINLOOP          ; CA 17 00 -> Wenn Bit 1 Null ist, zurück zum Polling L_MAINLOOP
         MOV     A, B            ; 78       -> Originales Zeichen aus Register B holen
         STA     REG_CMD_LOCK    ; 32 0C 04 -> Zeichen in Kontrollregister 040Ch wegsichern
-        JMP     L_0017          ; C3 17 00 -> Unbedingter Rücksprung zum Haupt-Polling L_0017
+        JMP     L_MAINLOOP          ; C3 17 00 -> Unbedingter Rücksprung zum Haupt-Polling L_MAINLOOP
 
 ; 038Ah - 038Fh: Padding / Unused ROM-Space (Füllbytes)
     	DB 0FFh	; 0FFh, from address 38ah
