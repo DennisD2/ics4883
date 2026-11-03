@@ -341,12 +341,12 @@ L_0131:
 L_013C:
     	LDA     REG_SYS_STATUS  ; 3A 07 04 from address 13ch
     	ANI     02h             ; E6 02 from address 13fh
-    	JZ      L_MAINLOOP          ; CA 17 00 from address 141h
+    	JZ      L_MAINLOOP      ; CA 17 00 from address 141h
     	JMP     L_0006          ; C3 06 00 from address 144h
     	XRA     A               ; AF from address 147h
+L_0148:
     	STA     REG_CMD_STATE   ; 32 from address 148h
-    	JMP     L_MAINLOOP          ; C3 17 00
-
+    	JMP     L_MAINLOOP      ; C3 17 00
 
 ; ------------------------------------------------------------------------------
 ; based on input byte value, a handling routine address in ROM is selected and returned in HL.
@@ -830,39 +830,38 @@ L_037B:
 
 ; 0393h - 03B2h: Sprung- und Befehlstabelle für den Data Dispatcher
 ; Format des universalen Kopierers (Routine L_FIND_SEP_HANDLER_ADR / L_007B):
-; [Block-Länge] [Ziel-Adresse DE (Low/High)] [Daten...]
+; Format: [ASCII-Zeichen] [Sprungadresse (Low/High)]
+L_ROM_TAB_DISPATCH:
 ; Eine Länge von 00h bricht den Suchprozess ab.
-    	DB 004h	; 004h, from address 393h
-    	DB 03Ch	; 03Ch, from address 394h
-    	DB 001h	; 001h, from address 395h
-    	DB 014h	; 014h, from address 396h
-    	DB 006h	; 006h, from address 397h
-    	DB 000h	; 000h, from address 398h
-    	DB 015h	; 015h, from address 399h
+    	DB 004h, 03Ch, 001h    ; 04h (..)     -> Springe zu 013Ch ()
+    	DB 014h, 006h, 000h    ; 14h (..)     -> Springe zu 0060h ()
+        DB 015h, 06Dh, 003h    ; 15h (..)     -> Springe zu 036Dh ()
+        DB 018h, 048h, 001h    ; 18h (..)     -> Springe zu 0148h ()
 
-    	DB 06Dh	; 06Dh, from address 39ah
-    	DB 003h	; 003h, from address 39bh
-    	DB 018h	; 018h, from address 39ch
-    	DB 048h	; 048h, from address 39dh
-    	DB 001h	; 001h, from address 39eh
     	DB 019h	; 019h, from address 39fh
     	DB 047h	; 047h, from address 3a0h
     	DB 001h	; 001h, from address 3a1h
+
     	DB 008h	; 008h, from address 3a2h
     	DB 08Ah	; 08Ah, from address 3a3h
     	DB 002h	; 002h, from address 3a4h
+
     	DB 020h	; 020h, from address 3a5h
     	DB 000h	; 000h, from address 3a6h
     	DB 001h	; 001h, from address 3a7h
+
     	DB 040h	; 040h, from address 3a8h
     	DB 020h	; 020h, from address 3a9h
     	DB 001h	; 001h, from address 3aah
+
     	DB 005h	; 005h, from address 3abh
     	DB 07Bh	; 07Bh, from address 3ach
     	DB 003h	; 003h, from address 3adh
+
     	DB 060h	; 060h, from address 3aeh
     	DB 024h	; 024h, from address 3afh
     	DB 003h	; 003h, from address 3b0h
+
     	DB 017h	; 017h, from address 3b1h
     	DB 000h	; 000h, from address 3b2h
 
