@@ -16,6 +16,8 @@
 SRAM_START     EQU  0400h       ; start of RAM space
 STACK_BASE     EQU  0500h       ; start value for stack pointer
 
+; "VER" at EQU comments means "verified", I am sure that the name of EQU fits to reality
+
 ; ==============================================================================
 ; 0000 - 03FF : ROM constants and table addresses
 ; ==============================================================================
@@ -44,7 +46,7 @@ REG_INIT_FLAG  EQU  0408h       ; Initialisierungs- und Reset-Steuerflag
 REG_PENDING_CMD EQU  040Bh      ; Zwischenspeicher für anstehende Handshake-Befehle
 REG_CMD_LOCK   EQU  040Ch       ; Sperrregister für eingehende Bus-Befehle
 REG_CMD_STATE  EQU  040Dh       ; Befehls-Statusregister (Steuerflag für Modus/Fehler)
-REG_BUS_STATUS EQU  040Eh       ; Bus-Zustandsregister (z. B. Talker/Listener)
+REG_BUS_STATUS EQU  040Eh       ; VER GPIB status register (Talker, is 41h if data available)
 REG_EOS_FLAG   EQU  040Fh       ; End-Of-Sequence / EOI Status-Register
 REG_BUFF_PTR   EQU  041Dh       ; Letzter Tabellenzeiger / Puffer-Pointer
 REG_BUFF_IDX   EQU  041Fh       ; Index-Zähler für den Zeichenpuffer (Max 10)
@@ -63,7 +65,7 @@ RAM_HW_CONFIG2 EQU  0506h       ; configuration byte (created by L_0006 during b
 ; Hardware Input Section and Hardware Output Section
 ; ==============================================================================
 IO_HW_INPUT    EQU  0604h       ; Primäres Hardware-Eingangsregister (Datenstrom)
-IO_GPIB_CTRL_1  EQU  0605h       ; DIP-Schalter für Bus-Adresse & Modus (Hardware-Eingabe)
+IO_GPIB_CTRL_1  EQU  0605h      ; DIP-Schalter für Bus-Adresse & Modus (Hardware-Eingabe)
 IO_SRAM_FLAG1  EQU  0607h       ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung)
 
 ; ==============================================================================
@@ -71,11 +73,11 @@ IO_SRAM_FLAG1  EQU  0607h       ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung
 ; GPIB connector control (no special chip used, just 74xx chips)
 ; ==============================================================================
 IO_TALK_STATUS EQU  0701h       ; Status des Talker-Interfaces (Eingang/Ausgang)
-IO_TALK_CTRLBUS  EQU  0702h       ; Synchronisationsregister 02h für Talker-Schnittstelle
-IO_TALK_DATABUS  EQU  0703h       ; Synchronisationsregister 03h für Talker-Schnittstelle
+IO_TALK_CTRLBUS  EQU  0702h     ; Synchronisationsregister 02h für Talker-Schnittstelle
+IO_TALK_DATABUS  EQU  0703h     ; Synchronisationsregister 03h für Talker-Schnittstelle
 IO_TALK_CTRL   EQU  0704h       ; Kontrollregister für IEEE-488 Buschip
 IO_TALK_DATA   EQU  0705h       ; Datenpuffer-Register des Talker-Interfaces
-IO_DIP_SWITCH  EQU  0706h       ; DIP Switch byte
+IO_DIP_SWITCH  EQU  0706h       ; VER DIP Switch byte
 IO_HW_OUTPUT   EQU  0707h       ; Zentrales Hardware-Ausgangsregister (z. B. LEDs/Latch)
 
 ; ---------------------------------------------------------------------
@@ -128,11 +130,15 @@ L_003C:
         LXI     B,01000h        ; 01 00 10 -> lade 01000h in B
         LDA     IO_GPIB_CTRL_1   ; 3A 05 06 -> Holt das Daten-Byte vom I/O-Schnittstellenregister
     	CMA                     ; 2F       -> Akkumulator invertieren (Low-Aktive Signale)
-    	RRC                     ; 0F       -> Bit nach rechts rotieren
-    	JNC     L_0060          ; D2 60 00 -> Wenn kein Carry, springe vor zu Adresse 0060h
-    	CALL    L_00C7          ; CD C7 00 -> Unterfunktion an Adresse 00C7h ausf
-        JC      L_006D          ; DA 6D 00 -> Wenn Carry=1, springe zu Adresse 006Dh
-        STA     IO_SRAM_FLAG1   ; 32 07 06 -> Berechneten Zustand im RAM 0607h sichern
+    	RRC                     ; 0F       -> put lowest bit into carry flag
+    	JNC     L_0060          ; D2 60 00 -> if no carry (lowest bit was 0) then continue at 0060h, which will return from there to main loop
+    	CALL    L_00C7          ; CD C7 00 -> if we had carry at lowest bit, puts bit 5 of IO_TALK_DATA into carry flag
+        JC      L_006D          ; DA 6D 00 -> if carry, jump to L_006D = L_SET_DATA_AVAILABLE - Wenn Carry=1, springe zu Adresse 006Dh
+        STA     IO_SRAM_FLAG1   ; 32 07 06 -> no carry, no data available, put A to 0607h
+
+; ------------------------------------------------------------------------------
+; Some cleanup at end of talker handling
+; ------------------------------------------------------------------------------
 L_0060:
     	LXI     H, REG_SYS_STATE  ; 21 03 04 -> HL points to 0403h
     	MOV     A,M             ; 7E       -> load [0403h] to A
@@ -143,16 +149,17 @@ L_0060:
     	JMP     L_0017          ; C3 17 00 -> back to loop start
 
 ; ------------------------------------------------------------------------------
-; Ausgelagerter Talker-Status-Handler (Deine Zeilen 68-74)
+; Set GPIB Status Byte (Talker) to 41h, which means "data available"
 ; ------------------------------------------------------------------------------
+L_SET_DATA_AVAILABLE:
 L_006D:
-        LXI     H, REG_BUS_STATUS        ; 21 0E 04 -> HL auf Register 040Eh (GPIB/Bus-Steuerung) ausrichten
-        MOV     A, M            ; 7E       -> Status-Byte aus 040Eh in den Akkumulator laden
-        RRC                     ; 0F       -> Nach rechts rotieren (Bit-Prüfung)
-        JC      L_0060          ; DA 60 00 -> Wenn Carry=1, springe vor zu Adresse 0060h
-        MVI     M, 41h          ; 36 41    -> Schreibe den Wert 41h (ASCII 'A') nach 040Eh
-        MOV     C, B            ; 48       -> Kopiere Register B nach C
-        JMP     L_0060          ; C3 60 00 -> Unbedingter Sprung vor zu Adresse 0060h
+        LXI     H, REG_BUS_STATUS ; 21 0E 04 -> HL points to 040Eh (GPIB status reg)
+        MOV     A, M            ; 7E       -> load GPIB status reg to A
+        RRC                     ; 0F       -> check if lowest bit is set
+        JC      L_0060          ; DA 60 00 -> if yes, handle that at 0060h (will not return here, but go to main loop)
+        MVI     M, 41h          ; 36 41    -> put 41h (ASCII 'A') to 040Eh, means "data available"
+        MOV     C, B            ; 48       -> copy B to C
+        JMP     L_0060          ; C3 60 00 -> continue at 0060h, which will return from there to main loop
 
 ; ------------------------------------------------------------------------------
 ; 007Bh - 008Eh: copy a block of ROM into RAM based on control data in a table, pointed to by address in HL (Data Dispatcher)
@@ -237,11 +244,11 @@ L_00C5:
     	RET                     ; C9
 
 L_00C7:
-    	LDA     IO_TALK_DATA    ; 3A 07 05 -> Statuswert aus dem SRAM-Bereich laden
-        RLC                     ; 07       -> Akkumulatorinhalt nach links rotieren
-        RLC                     ; 07       -> Nochmals nach links rotieren
-        RLC                     ; 07       -> Ein drittes Mal nach links rotieren
-    	RET                     ; C9       -> Unterprogramm beenden (Rücksprung)
+    	LDA     IO_TALK_DATA    ; 3A 07 05 -> load 0507h to A
+        RLC                     ; 07       -> put bit 5 to carry flag by rotating 3x
+        RLC                     ; 07       ->
+        RLC                     ; 07       ->
+    	RET                     ; C9       -> return to caller
 
 ; ------------------------------------------------------------------------------
 ; Status-Reset & Polling-Handler (Adresse 00CEh - 00E0h)
@@ -275,16 +282,16 @@ L_00CE:
         ; Indirekte Sprungsteuerung & indir. Funktionsaufrufe (Adresse 00F7h - 0010Dh)
         ; ------------------------------------------------------------------------------
 L_00F7:
-        LXI     H, ROM_TAB_DISPATCH        ; 21 93 03 -> HL-Zeiger auf Adresse 0393h im ROM ausrichten
-        MVI     C, 0Ah          ; 0E 0A    -> Schleifenzähler C auf 10 setzen
+        LXI     H, ROM_TAB_DISPATCH ; 21 93 03 -> HL points to 0393h
+        MVI     C, 0Ah          ; 0E 0A    -> loop counter C := 10
         CALL    L_014E          ; CD 4E 01 -> Unterprogramm an Adresse 014Eh aufrufen
         PCHL                    ; E9       -> Indirekter Sprung: Kopiert HL in den Program Counter!
-        CALL    L_0131          ; CD 31 01 -> Unterprogramm an Adresse 0131h aufrufen
-        MVI     A, 02h          ; 3E 02    -> Konstante 02h in den Akkumulator laden
-        JNZ     L_010E          ; C2 0E 01 -> Wenn ungleich Null, springe vor zu Adresse 010Eh
+        CALL    L_0131          ; CD 31 01 -> Compare GPIB address received with own address
+        MVI     A, 02h          ; 3E 02    -> load 02 into A
+        JNZ     L_010E          ; C2 0E 01 -> if value of last cmp (address compare) !=0, jump to 010Eh
 L_0108:
-        CALL    L_009F          ; CD 9F 00 -> Unterprogramm an Adresse 009Fh aufrufen
-        JMP     L_0017          ; C3 17 00 -> Unbedingter Rücksprung zum Schleifenstart L_0017
+        CALL    L_009F          ; CD 9F 00 -> call 009Fh, which seems to write out a byte to 0707h (maybe GPIB talker write)
+        JMP     L_0017          ; C3 17 00 -> jump to main loop
 
         ; ------------------------------------------------------------------------------
         ; GPIB-Protokollprüfung (? Abfrage) & Bus-Handshake (Adresse 010Eh - 0130h)
@@ -797,6 +804,7 @@ L_037B:
     	DB 006h	; 006h, from address 397h
     	DB 000h	; 000h, from address 398h
     	DB 015h	; 015h, from address 399h
+
     	DB 06Dh	; 06Dh, from address 39ah
     	DB 003h	; 003h, from address 39bh
     	DB 018h	; 018h, from address 39ch
