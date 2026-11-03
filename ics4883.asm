@@ -45,7 +45,7 @@ REG_SYS_STATUS EQU  0407h       ; Zentrales Statusregister (Remote/Local, Bit 3 
 REG_INIT_FLAG  EQU  0408h       ; Initialisierungs- und Reset-Steuerflag
 REG_PENDING_CMD EQU  040Bh      ; Zwischenspeicher für anstehende Handshake-Befehle
 REG_CMD_LOCK   EQU  040Ch       ; Sperrregister für eingehende Bus-Befehle
-REG_CMD_STATE  EQU  040Dh       ; Befehls-Statusregister (Steuerflag für Modus/Fehler)
+REG_CMD_SERIALPOLL  EQU  040Dh       ; VER Befehls-Statusregister (Steuerflag für Modus/Fehler)
 REG_BUS_STATUS EQU  040Eh       ; VER GPIB status register (Talker, is 41h if data available)
 REG_EOS_FLAG   EQU  040Fh       ; End-Of-Sequence / EOI Status-Register
 REG_BUFF_PTR   EQU  041Dh       ; Letzter Tabellenzeiger / Puffer-Pointer
@@ -359,9 +359,11 @@ L_0147:
     	XRA     A               ; AF        -> A:=0
 ; ------------------------------------------------------------------------------
 ; Handler for GPIB command 18h - SPE - Serial Poll Enable
+; writes A value into register REG_CMD_SERIALPOLL
+; A is 0, for SPD command, and !=0 for serial poll start SPE
 ; ------------------------------------------------------------------------------
 L_0148:
-    	STA     REG_CMD_STATE   ; 32 0D 04  -> store A to 040Dh
+    	STA     REG_CMD_SERIALPOLL ; 32 0D 04  -> store A to 040Dh (in serial poll start case, A is something != 0)
     	JMP     L_MAINLOOP      ; C3 17 00  -> continue at mainloop
 
 ; ------------------------------------------------------------------------------
@@ -466,9 +468,9 @@ L_01A9:
 ; ------------------------------------------------------------------------------
 L_01AD:
     	EI                      ; FB       -> enable interrupts
-    	LDA     REG_CMD_STATE   ; 3A 0D 04 -> loads 040Dh into A
-    	ORA     A               ; B7       -> is 040Dh == 0 ?
-    	JNZ     L_0232          ; C2 32 02 -> if not zero, jump to 0232h
+    	LDA     REG_CMD_SERIALPOLL   ; 3A 0D 04 -> loads 040Dh into A
+    	ORA     A               ; B7       -> is 040Dh == 0 ? this means: are we in a serial poll process?
+    	JNZ     L_0232          ; C2 32 02 -> if in serial poll, jump to 0232h
         LXI     H, IO_GPIB_CTRL_1 ; 21 05 06 -> HL points to 0605h
 WAIT_FOR_BIT0_SET:
 ; we do busy waiting until bit0 from 0605h is cleared
@@ -545,14 +547,17 @@ L_022B:
         EI                      ; FB       -> Interrupts wieder freigeben
         LHLD    REG_BUFF_PTR    ; 2A 1D 04
         JMP     L_01D6          ; C3 D6 01 -> Sprung zu RAM/ROM-Adresse 01D6h
+; ------------------------------------------------------------------------------
+; Handle a serial poll. The coupler is addressed as talker, and must present its status byte.
+; ------------------------------------------------------------------------------
 L_0232:
-        MVI     A, 0FFh         ; 3E FF
-        STA     SRAM_START      ; 32 00 04
-        LXI     H, REG_BUS_STATUS ; 21 0E 04 -> HL auf Kontrollregister setzen
-        MOV     B, M            ; 46
-        MOV     A, M            ; 7E
-        ANI     0BFh            ; E6 BF    -> Bit 6 löschen (Maskierung)
-        MOV     M, A            ; 77
+        MVI     A, 0FFh         ; 3E FF    -> load 0FFh to A
+        STA     SRAM_START      ; 32 00 04 -> write A to SRAM_START
+        LXI     H, REG_BUS_STATUS ; 21 0E 04 -> HL points to GPIB status byte of coupler
+        MOV     B, M            ; 46       -> load status byte to B
+        MOV     A, M            ; 7E       -> and load it to A
+        ANI     0BFh            ; E6 BF    -> clear bit 6 in A (mask 1011.1111)
+        MOV     M, A            ; 77       -> write A back to REG_BUS_STATUS
         JMP     L_01F1          ; C3 F1 01 -> Sprung zu RAM/ROM-Adresse 01F1h
 
 ; ------------------------------------------------------------------------------
