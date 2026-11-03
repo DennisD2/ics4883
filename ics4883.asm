@@ -740,7 +740,7 @@ L_02F9:
 
 ; ------------------------------------------------------------------------------
 ; Handle non-data chars, i.e. separators (CR, LF, comma, 'other').
-; correct handler routine address is determined by L_FIND_HANDLER_ADDRESS.  Opcode PCHL will directly execute then
+; correct handler routine address is determined by L_FIND_HANDLER_ADDRESS. Opcode PCHL will directly execute then
 ; the handler.
 ; ------------------------------------------------------------------------------
 L_CMD_PARSE_SEPERATORS:
@@ -866,7 +866,7 @@ L_037B:
     	DB 005h	; 005h, from address 392h
 
 ; 0393h - 03B2h: jump table for GPIB commands. Used by code at L_FIND_HANDLER_ADDRESS / L_007B
-; for a GPIB command byte, a handler address is found.
+; for a GPIB command byte, a handler address is defined.
 ; Format: [command byte] [handler address (Low/High)]
 L_GPIB_CMD_JUMPTABLE:
     	DB 004h, L_013C & 0FFh, L_013C >> 8 ; 04h (SDC Selected Device Clear)       -> jump to L_013C ()
@@ -930,7 +930,7 @@ TALK_CHAR_TABLE:
     	DB 019h	; 019h, from address 3f4h
 
 ; 03F5h - 03FFh: jump table to handle separator characters. Used by code at L_FIND_HANDLER_ADDRESS / L_007B
-; for a separator byte, a handler address is found.
+; for a separator byte, a handler address is defined.
 ; Format: [separator byte] [handler address (Low/High)]
 L_SEPARATOR_JUMP_TABLE:
         DB 00Dh, L_02C8 & 0FFh, L_02C8 >> 8 ; 0Dh (CR)     -> jump to L_02C8 (Haupt-Init)
