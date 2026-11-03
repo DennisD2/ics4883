@@ -413,24 +413,26 @@ L_01A9:
         POP     H               ; E1       -> Holt das Registerpaar HL vom Stack zurück
         JMP     L_0017          ; C3 17 00 -> Unbedingter Sprung zur Systemadresse 00FBh
 
+; ------------------------------------------------------------------------------
+; Handle input from instrument
+; ------------------------------------------------------------------------------
 L_01AD:
-    	EI                      ; FB from address 1adh
-    	LDA     REG_CMD_STATE   ; 3A 0D 04 -> Lädt Kontroll-Flag aus RAM-Zelle
-    	ORA     A               ; B7       -> Prüft, ob der Wert im Akkumulator Null ist
-    	JNZ     L_0232          ; C2 32 02 -> Wenn ungleich Null, springe weit vor zu Adresse 0232h
-        LXI     H, IO_GPIB_CTRL_1        ; 21 05 06 -> HL-Zeiger auf I/O-Datenregister 0605h ausrichten
+    	EI                      ; FB       -> enable interrupts
+    	LDA     REG_CMD_STATE   ; 3A 0D 04 -> Lädt Kontroll-Flag aus RAM-Zelle 040Dh into A
+    	ORA     A               ; B7       -> is A==0 ?
+    	JNZ     L_0232          ; C2 32 02 -> if not zero, jump to 0232h
+        LXI     H, IO_GPIB_CTRL_1 ; 21 05 06 -> HL points to 0605h
+WAIT_FOR_BIT0_SET:
+; bit0 will be set externally by some interrupt-driven action (not code)
 L_01B8:
-        MOV     A, M            ; 7E       -> Holt das aktuelle Datenbyte via HL
-    	RRC                     ; 0F from address 1b9h
-        JC      L_01B8          ; DA B8 01 -> Wenn Carry=1, springe zu Adresse 01B8h
-        DI                      ; F3       -> Interrupts sperren (Disable Interrupts)
-        LXI     D, RAM_ASCII_BUFF        ; 11 30 04 -> Registerpaar DE mit SRAM-Adresse 0430h laden
-        LXI     H, IO_HW_INPUT  ; 21 04 06 -> HL-Zeiger auf I/O-Schnittstellenregister 0604h ausrichten DD: h := 0x0604 = start address of bytes read from input (5 bytes containing 10 nibbles)
-    	CALL    L_0242          ; CD 42 02 -> Ruft Unterfunktion an Adresse 0242h auf DD: konvertiert 5 inpt bytes
-    	MVI     A, 0Fh          ; 3E 0F    -> Lädt die Konstante 0Fh in den Akkumulator
-        ; ------------------------------------------------------------------------------
-        ; SRAM-Puffer-Verwaltung & Bitmaskierung (Adresse 01C9h - 01F5h)
-        ; ------------------------------------------------------------------------------
+        MOV     A, M            ; 7E       -> load [HL] to A
+    	RRC                     ; 0F       -> bit 0 to Carry flag
+        JC      L_01B8          ; DA B8 01 -> if Carry set, loop back to 01B8h WAIT_FOR_BIT0_SET
+        DI                      ; F3       -> Disable Interrupts
+        LXI     D, RAM_ASCII_BUFF ; 11 30 04 -> load 0430h to DE (target pointer)
+        LXI     H, IO_HW_INPUT  ; 21 04 06 -> load 0604h to HL; DD: h := 0x0604 = start address of bytes read from input (5 bytes containing 10 nibbles)
+    	CALL    L_0242          ; CD 42 02 -> read in and convert 5 input bytes
+    	MVI     A, 0Fh          ; 3E 0F    -> load 0fh to A
         STA     SRAM_START      ; 32 00 04 -> Akkumulator-Inhalt direkt in RAM SRAM_START sichern
         EI                      ; FB       -> Interrupts wieder freigeben (Enable Interrupts)
         LXI     H, RAM_ASCII_BUFF        ; 21 30 04 -> HL-Zeiger auf SRAM-Adresse 0430h laden DD: h := address of created 10 bytes
@@ -512,7 +514,7 @@ L_0232:
 ; h,l point to memory location for input byte (is decremented in a loop)
 ; it looks that two 4-bit values are in 1 byte as HI/LO nibble
 ;
-: we load from 0604 up to 0608h (5 bytes).
+; we load from 0604 up to 0608h (5 bytes).
 convert_5input_bytes:
 L_0242:
         MVI     B, 05h          ; 06 05    -> set loop counter B to 5: num of bytes to convert (5 bytes = 10 nibbles)
