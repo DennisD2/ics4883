@@ -703,7 +703,7 @@ L_02F9:
         POP     H               ; E1       ->
         POP     H               ; E1       ->
         MOV     M, B            ; 70        -> A value, that was saved in B, back to M (so first masked A, then A is written to M, which looks like a strobe signal is generated)
-        JMP     L_MAINLOOP          ; C3 17 00 -> back to main polling loop
+        JMP     L_MAINLOOP      ; C3 17 00 -> back to main polling loop
 ; ------------------------------------------------------------------------------
 ; line above is end of boot code; everything else is done in main polling loop L_MAINLOOP
 ; ------------------------------------------------------------------------------
@@ -749,7 +749,7 @@ L_031A:
 L_0324:
         LDA     REG_CMD_LOCK    ; 3A 0C 04 -> Lädt den Inhalt der RAM-Adresse 040Ch in den Akkumulator
         ORA     A               ; B7       -> Setzt die Flags (Zero/Sign) basierend auf dem Akkumulator
-        JZ      L_MAINLOOP          ; CA 17 00 -> Wenn der Wert Null ist, Sprung zurück zum Haupt-Polling L_MAINLOOP
+        JZ      L_MAINLOOP      ; CA 17 00 -> Wenn der Wert Null ist, Sprung zurück zum Haupt-Polling L_MAINLOOP
         MOV     A, B            ; 78       -> Holt den Wert aus Register B zurück nach A
         CPI     070h            ; FE 70    -> Prüfen, ob das Zeichen im Akkumulator 70h entspricht (70h = 'p')
     	JZ      L_036D          ; CA 6D 03 -> Wenn ja, Sprung nach vorne zu Adresse 036Dh
@@ -772,7 +772,7 @@ L_0346:
         DCR     C               ; 0D       -> Register C um 1 verringern
     	JNZ     L_0346          ; C2 46 03 -> Wenn nicht Null, Sprung nach 0346h
         STA     REG_PENDING_CMD ; 32 0B 04 -> Akkumulator in RAM-Zelle 040Bh sichern
-        LXI     H, REG_SYS_STATUS    ; 21 07 04 -> HL auf RAM-Adresse 0407h ausrichten
+        LXI     H, REG_SYS_STATUS ; 21 07 04 -> HL auf RAM-Adresse 0407h ausrichten
         MOV     A, M            ; 7E       -> Wert laden
         ORI     008h            ; F6 08    -> Bit 3 gezielt setzen
         MOV     M, A            ; 77       -> Aktualisierten Wert zurückschreiben
@@ -782,8 +782,8 @@ L_0346:
 L_0355:
         LXI     H, IO_TALK_CTRL ; 21 04 07 -> HL points to 0704h (GPIB connector related)
         MVI     M, 00h          ; 36 00    -> clear [0704h]
-        LXI     H, IO_TALK_CTRLBUS   ; 21 02 07 -> HL points to 0702h
-        LDA     REG_PENDING_CMD      ; 3A 0B 04 -> load content of RAM 040Bh to A
+        LXI     H, IO_TALK_CTRLBUS ; 21 02 07 -> HL points to 0702h
+        LDA     REG_PENDING_CMD ; 3A 0B 04 -> load content of RAM 040Bh to A
         MOV     M, A            ; 77       -> copy A to [0702h]
         INX     H               ; 23       -> inc HL (now 0703h)
         MVI     M, 00h          ; 36 00    -> clear [0703h]
@@ -799,21 +799,21 @@ L_CMD_P_HANDLER:
 L_036D:
         XRA     A               ; AF       -> Akkumulator nullen (A = 00h)
         STA     REG_IO_STATE    ; 32 01 04 -> Schreibt die Null in die RAM-Zelle REG_IO_STATE
-        LXI     H, REG_SYS_STATUS    ; 21 07 04 -> HL auf Kontrollregister 0407h ausrichten
+        LXI     H, REG_SYS_STATUS ; 21 07 04 -> HL auf Kontrollregister 0407h ausrichten
         MOV     A, M            ; 7E       -> Aktuellen Statuswert laden
         ANI     0F7h            ; E6 F7    -> Bit 3 gezielt löschen (Maske 1111 0111)
         MOV     M, A            ; 77       -> Modifizierten Status zurückschreiben
-        JMP     L_MAINLOOP          ; C3 17 00 -> Unbedingter Rücksprung zum Haupt-Polling L_MAINLOOP
+        JMP     L_MAINLOOP      ; C3 17 00 -> Unbedingter Rücksprung zum Haupt-Polling L_MAINLOOP
 
 ; Dieser Zweig (ab 037Bh) verarbeitet das alternative Szenario ('q')
 L_037B:
 ;;; "Bit-Prüfung und Bedingter Abbruch"
         LDA     REG_SYS_STATUS  ; 3A 07 04 -> Lädt den Systemstatus aus RAM 0407h
         ANI     002h            ; E6 02    -> Isolierte Betrachtung von Bit 1
-        JZ      L_MAINLOOP          ; CA 17 00 -> Wenn Bit 1 Null ist, zurück zum Polling L_MAINLOOP
+        JZ      L_MAINLOOP      ; CA 17 00 -> Wenn Bit 1 Null ist, zurück zum Polling L_MAINLOOP
         MOV     A, B            ; 78       -> Originales Zeichen aus Register B holen
         STA     REG_CMD_LOCK    ; 32 0C 04 -> Zeichen in Kontrollregister 040Ch wegsichern
-        JMP     L_MAINLOOP          ; C3 17 00 -> Unbedingter Rücksprung zum Haupt-Polling L_MAINLOOP
+        JMP     L_MAINLOOP      ; C3 17 00 -> Unbedingter Rücksprung zum Haupt-Polling L_MAINLOOP
 
 ; 038Ah - 038Fh: Padding / Unused ROM-Space (Füllbytes)
     	DB 0FFh	; 0FFh, from address 38ah
