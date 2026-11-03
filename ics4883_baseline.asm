@@ -330,7 +330,9 @@
 	DB 0C3h	; C3 (oct=303), from address h/d = 144 324
 	DB 006h	; 06 (oct=6), from address h/d = 145 325
 	DB 000h	; 00 (oct=0), from address h/d = 146 326
+
 	DB 0AFh	; AF (oct=257), from address h/d = 147 327
+
 	DB 032h	; 32 (oct=62), from address h/d = 148 328
 	DB 00Dh	; 0D (oct=15), from address h/d = 149 329
 	DB 004h	; 04 (oct=4), from address h/d = 14a 330

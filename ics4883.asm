@@ -92,6 +92,9 @@ IO_HW_OUTPUT   EQU  0707h       ; Zentrales Hardware-Ausgangsregister (z. B. LED
 L_0000:
         LXI     SP, STACK_BASE  ; 31 00 05 -> set stack pointer
         CALL    L_008F          ; CD 8F 00 -> clear 64 bytes of memory from start of RAM
+; ------------------------------------------------------------------------------
+; Looks like a warm start entry point. Is also handler for character 14h
+; ------------------------------------------------------------------------------
 L_0006:
         LDA     ROM_CFG_FLAGS   ; 3A C4 03 -> read config value from ROM 03C4 (value there is: 6=0110)
         XRI     0Ch             ; EE 0C    -> XOR with C=1100 (result: 1010)
@@ -235,7 +238,7 @@ L_00A1:
 
 L_00AD:
         LXI     H, 0391h        ; 21 91 03 -> HL-Zeiger auf ROM-Tabelle/String 0391h ausrichten
-    	LDA     IO_GPIB_CTRL_1   ; 3A 05 06 -> Holt das aktuelle I/O-Datenbyte vom Talker
+    	LDA     IO_GPIB_CTRL_1  ; 3A 05 06 -> Holt das aktuelle I/O-Datenbyte vom Talker
         CMA                     ; 2F       -> Akkumulator invertieren (Low-Aktiv Pegel)
         ANI     02h             ; E6 02    -> Bit 1 maskieren (Prüfung eines bestimmten Bus-Signals)
         CMP     M               ; BE       -> Vergleiche das Ergebnis mit dem Wert im ROM [HL]
@@ -265,11 +268,11 @@ L_00CE:
         MVI     A, 80h          ; 3E 80    -> Lade Status-Flag 80h in den Akkumulator
         STA     REG_GPIB_CTRL   ; 32 05 04 -> Schreibe das Flag in das GPIB-Schnittstellenregister
         XRA     A               ; AF       -> Akkumulator löschen (A = 0)
-        STA     IO_TALK_CTRLBUS   ; 32 02 07 -> Lösche das Statusregister 0702h im Talker-Interface
+        STA     IO_TALK_CTRLBUS ; 32 02 07 -> Lösche das Statusregister 0702h im Talker-Interface
         CALL    L_0163          ; CD 63 01 -> Ruft Unterfunktion an Adresse 0163h auf
         LDA     IO_DIP_SWITCH   ; 3A 06 07 -> Lädt 0706h nach A
         RLC                     ; 07       -> Akkumulator nach links rotieren (Bit-Prüfung)
-        JC      L_MAINLOOP          ; DA 17 00 -> Wenn Carry=1, springe hart zurück zum Schleifenstart L_MAINLOOP
+        JC      L_MAINLOOP      ; DA 17 00 -> Wenn Carry=1, springe hart zurück zum Schleifenstart L_MAINLOOP
         ; ------------------------------------------------------------------------------
         ; ASCII-Validierung & Protokoll-Verzweigung (Adresse 00E1h - 00F6h)
         ; ------------------------------------------------------------------------------
@@ -295,13 +298,16 @@ L_00F7:
         CALL    L_FIND_HANDLER_ADDRESS ; CD 4E 01 -> handle chars by determining correct handling routine address
         PCHL                    ; E9       -> jump to handler
 
+; ------------------------------------------------------------------------------
+; Handler for character 20h
+; ------------------------------------------------------------------------------
 L_0100:
         CALL    L_0131          ; CD 31 01 -> Compare GPIB address received with own address
         MVI     A, 02h          ; 3E 02    -> load 02 into A
         JNZ     L_010E          ; C2 0E 01 -> if value of last cmp (address compare) !=0, jump to 010Eh
 L_0108:
         CALL    L_009F          ; CD 9F 00 -> call 009Fh, which seems to write out a byte to 0707h (maybe GPIB talker write)
-        JMP     L_MAINLOOP          ; C3 17 00 -> jump to main loop
+        JMP     L_MAINLOOP      ; C3 17 00 -> jump to main loop
 
         ; ------------------------------------------------------------------------------
         ; GPIB-Protokollprüfung (? Abfrage) & Bus-Handshake (Adresse 010Eh - 0130h)
@@ -309,13 +315,16 @@ L_0108:
 L_010E:
         MOV     A, B            ; 78       -> copy B to A
         CPI     03Fh            ; FE 3F    -> compare A with ASCII '?' (GPIB Talker Query)
-        JNZ     L_MAINLOOP          ; C2 17 00 -> if not an '?', jump to main polling loop L_MAINLOOP
+        JNZ     L_MAINLOOP      ; C2 17 00 -> if not an '?', jump to main polling loop L_MAINLOOP
     	XRA     A               ; AF       -> XOR A mit A <=> A:=0
     	STA     REG_BUFF_IDX    ; 32 1F 04 -> write 0 to 041F
     	MVI     C, 0FDh         ; 0E FD    -> loads 0FDh into C (output mask?)
     	CALL    L_00A1          ; CD A1 00 -> L_00A1 writes value from RAM 0407h to 0707h (maybe GPIB talker write)
-        JMP     L_MAINLOOP          ; C3 17 00 -> jump back to main loop
+        JMP     L_MAINLOOP      ; C3 17 00 -> jump back to main loop
 
+; ------------------------------------------------------------------------------
+; Handler for character 40h
+; ------------------------------------------------------------------------------
 L_0120:
         CALL    L_0131          ; CD 31 01 -> Unterfunktion an Adresse 0131h aufrufen
         MVI     A, 04h          ; 3E 04    -> Konstante 04h in den Akkumulator laden
@@ -323,7 +332,7 @@ L_0120:
         MVI     C, 0FBh         ; 0E FB    -> Lädt die nächste Steuermaske 0FBh in Register C
         XRA     A               ; AF       -> Akkumulator löschen (A = 0)
         CALL    L_00A1          ; CD A1 00 -> Ruft die I/O-Ausgabestufe auf
-    	JMP     L_MAINLOOP          ; C3 17 00  from address 12eh
+    	JMP     L_MAINLOOP      ; C3 17 00  from address 12eh
 
 ; Comparison if GPIB address just received with address set at dip switch
 L_GPIB_ADDRESS_CMP:
@@ -336,19 +345,26 @@ L_0131:
         CMP     C               ; B9       -> A=C ?
         RET                     ; C9       -> result of comparison is in status, return to caller
 
-        ; ------------------------------------------------------------------------------
-        ; Talker-Statusprüfung & Bitmaskierungs-Unterprogramm (Adresse 013Ch - 014Fh)
-        ; ------------------------------------------------------------------------------
+; ------------------------------------------------------------------------------
+; Handler for character 04h
+; ------------------------------------------------------------------------------
 L_013C:
-    	LDA     REG_SYS_STATUS  ; 3A 07 04 from address 13ch
-    	ANI     02h             ; E6 02 from address 13fh
-    	JZ      L_MAINLOOP      ; CA 17 00 from address 141h
-    	JMP     L_0006          ; C3 06 00 from address 144h
+    	LDA     REG_SYS_STATUS  ; 3A 07 04 -> load 0407 into A
+    	ANI     02h             ; E6 02    -> isolate bit 1
+    	JZ      L_MAINLOOP      ; CA 17 00 -> if bit is 0, continue at mainloop
+    	JMP     L_0006          ; C3 06 00 -> if bit is 1, continue at L_0006 (looks like a warmstart)
+
+; ------------------------------------------------------------------------------
+; Handler for character 19h
+; ------------------------------------------------------------------------------
 L_0147:
-    	XRA     A               ; AF from address 147h
+    	XRA     A               ; AF        -> A:=0
+; ------------------------------------------------------------------------------
+; Handler for character 18h
+; ------------------------------------------------------------------------------
 L_0148:
-    	STA     REG_CMD_STATE   ; 32 from address 148h
-    	JMP     L_MAINLOOP      ; C3 17 00
+    	STA     REG_CMD_STATE   ; 32 0D 04  -> store A to 040Dh
+    	JMP     L_MAINLOOP      ; C3 17 00  -> continue at mainloop
 
 ; ------------------------------------------------------------------------------
 ; based on input byte value, a handling routine address in ROM is selected and returned in HL.
@@ -387,13 +403,13 @@ L_0163:
         LDA     REG_SYS_STATE   ; 3A 03 04 -> Lädt Zustand aus RAM-Zelle 0403h
         ANI     10h             ; E6 10    -> Bit 4 maskieren
         MOV     C, A            ; 4F       -> In Register C zwischenspeichern
-        LXI     D, IO_TALK_DATABUS        ; 11 03 07 -> Richtet DE auf physische Hardwareadresse 0703h aus
+        LXI     D, IO_TALK_DATABUS ; 11 03 07 -> Richtet DE auf physische Hardwareadresse 0703h aus
         MVI     A, 04h          ; 3E 04    -> Lädt Konstante 04h in den Akkumulator
         ORA     C               ; B1       -> Logisches ODER mit Register C verknüpfen
         STAX    D               ; 12       -> Akkumulator an Hardwareadresse [DE] ausgeben
         MVI     A, 80h          ; 3E 80    -> Status-Flag 80h in den Akkumulator laden
         STA     IO_TALK_CTRL    ; 32 04 07 -> Zustand direkt im I/O-Register 0704h sichern
-        LXI     H, IO_TALK_STATUS        ; 21 01 07 -> Richtet HL auf das I/O-Statusregister 0701h aus
+        LXI     H, IO_TALK_STATUS ; 21 01 07 -> Richtet HL auf das I/O-Statusregister 0701h aus
 L_0178:
         LDA     REG_GPIB_CTRL   ; 3A 05 04 -> Lädt Kontrollwert aus RAM 0405h
     	XRA     M               ; AE from address 17bh
@@ -430,7 +446,7 @@ L_01A9:
         ; Stack aufräumen & Treiber-Rücksprung (Adresse 01A9h - 01ACh)
         ; ------------------------------------------------------------------------------
         POP     H               ; E1       -> Holt das Registerpaar HL vom Stack zurück
-        JMP     L_MAINLOOP          ; C3 17 00 -> Unbedingter Sprung zur Systemadresse 00FBh
+        JMP     L_MAINLOOP      ; C3 17 00 -> Unbedingter Sprung zur Systemadresse 00FBh
 
 ; ------------------------------------------------------------------------------
 ; Handle input from instrument
@@ -613,8 +629,9 @@ L_0263:
         MOV     M, A            ; 77       -> Modifizierten Wert zurück nach 0407h schreiben
         JMP     L_MAINLOOP      ; C3 17 00 -> Unbedingter Rücksprung zum Haupt-Polling
 
+
 ; ------------------------------------------------------------------------------
-; Fortsetzung ab Adresse 028Ah bis 029Ch
+; Handler for character 08h
 ; ------------------------------------------------------------------------------
 L_028A:
         LDA     REG_SYS_STATUS  ; 3A 07 04 -> Lädt den Gerätestatus aus dem RAM
@@ -749,6 +766,9 @@ L_031A:
         POP     H               ; E1       -> if loop count==0, restore HL pointer
         RET                     ; C9       -> back to caller
 
+; ------------------------------------------------------------------------------
+; Handler for character 60h
+; ------------------------------------------------------------------------------
 L_0324:
         LDA     REG_CMD_LOCK    ; 3A 0C 04 -> Lädt den Inhalt der RAM-Adresse 040Ch in den Akkumulator
         ORA     A               ; B7       -> Setzt die Flags (Zero/Sign) basierend auf dem Akkumulator
@@ -798,6 +818,9 @@ L_0355:
 ; ------------------------------------------------------------------------------
 ; Behandlungsroutinen für Kommandos (Adresse 036Dh bis 0389h)
 ; ------------------------------------------------------------------------------
+; ------------------------------------------------------------------------------
+; Handler for character 15h
+; ------------------------------------------------------------------------------
 L_CMD_P_HANDLER:
 L_036D:
         XRA     A               ; AF       -> Akkumulator nullen (A = 00h)
@@ -808,6 +831,9 @@ L_036D:
         MOV     M, A            ; 77       -> Modifizierten Status zurückschreiben
         JMP     L_MAINLOOP      ; C3 17 00 -> Unbedingter Rücksprung zum Haupt-Polling L_MAINLOOP
 
+; ------------------------------------------------------------------------------
+; Handler for character 05h
+; ------------------------------------------------------------------------------
 ; Dieser Zweig (ab 037Bh) verarbeitet das alternative Szenario ('q')
 L_037B:
 ;;; "Bit-Prüfung und Bedingter Abbruch"
@@ -835,17 +861,18 @@ L_037B:
 ; Format des universalen Kopierers (Routine L_FIND_HANDLER_ADDRESS / L_007B):
 ; Format: [ASCII-Zeichen] [Sprungadresse (Low/High)]
 L_ROM_TAB_DISPATCH:
-    	DB 004h, L_013C & 0FFh, L_013C >> 8   ; 04h (..)     -> jump to 013Ch ()
-    	DB 014h, L_0006 & 0FFh, L_0006 >> 8   ; 14h (..)     -> jump to 0006h ()
-        DB 015h, L_036D & 0FFh, L_036D >> 8   ; 15h (..)     -> jump to 036Dh ()
-        DB 018h, L_0148 & 0FFh, L_0148 >> 8   ; 18h (..)     -> jump to 0148h ()
-        DB 019h, L_0147 & 0FFh, L_0147 >> 8   ; 19h (..)     -> jump to 0147h ()
-        DB 008h, L_028A & 0FFh, L_028A >> 8   ; 08h (..)     -> jump to 028Ah ()
-        DB 020h, L_0100 & 0FFh, L_0100 >> 8   ; 20h (..)     -> jump to 0100h ()
-        DB 040h, L_0120 & 0FFh, L_0120 >> 8   ; 40h (..)     -> jump to 0120h ()
-        DB 005h, L_037B & 0FFh, L_037B >> 8   ; 05h (..)     -> jump to 037Bh ()
-        DB 060h, L_0324 & 0FFh, L_0324 >> 8   ; 60h (..)     -> jump to 0324h ()
-    	DB L_MAINLOOP & 0FFh, L_MAINLOOP >> 8 ; Default      -> jump to 0017h ()
+    	DB 004h, L_013C & 0FFh, L_013C >> 8   ; 04h (..)     -> jump to L_013C ()
+    	DB 014h, L_0006 & 0FFh, L_0006 >> 8   ; 14h (..)     -> jump to L_0006 ()
+        DB 015h, L_036D & 0FFh, L_036D >> 8   ; 15h (..)     -> jump to L_036D ()
+        DB 018h, L_0148 & 0FFh, L_0148 >> 8   ; 18h (..)     -> jump to L_0148 ()
+        DB 019h, L_0147 & 0FFh, L_0147 >> 8   ; 19h (..)     -> jump to L_0147 ()
+
+        DB 008h, L_028A & 0FFh, L_028A >> 8   ; 08h (..)     -> jump to L_028A ()
+        DB 020h, L_0100 & 0FFh, L_0100 >> 8   ; 20h (..)     -> jump to L_0100 ()
+        DB 040h, L_0120 & 0FFh, L_0120 >> 8   ; 40h (..)     -> jump to L_0120 ()
+        DB 005h, L_037B & 0FFh, L_037B >> 8   ; 05h (..)     -> jump to L_037B ()
+        DB 060h, L_0324 & 0FFh, L_0324 >> 8   ; 60h (..)     -> jump to L_0324 ()
+    	DB L_MAINLOOP & 0FFh, L_MAINLOOP >> 8 ; Default      -> jump to L_MAINLOOP ()
 
 ; 03B3h - 03C3h: initialization table for RAM buffer - Initialisierungs-Tabelle für den RAM-Puffer
 ; values are read by code at L_007B, to prepare buffer starting at location 041Fh
