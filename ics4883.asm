@@ -467,6 +467,8 @@ L_01A9:
 ; 10 nibbles are processed, converted by using the Talker Character Table (ROM_TLK_CHAR_TABLE) and written
 ; to 10 bytes in RAM starting at location 0430h.
 ;
+; All GPIB line handshake (NDAC, DAV, ...) is done in the code.
+;
 Note: code starting at L_01F1 is also used for sending status byte during serial poll.
 ; ------------------------------------------------------------------------------
 L_01AD:
@@ -555,6 +557,8 @@ L_022B:
         JMP     L_01D6          ; C3 D6 01 -> jump back to outer loop (maybe more chars to send)
 ; ------------------------------------------------------------------------------
 ; Handle a serial poll. The coupler is addressed as talker, and must present its status byte.
+; Called from more general talker routine at L_01AD, which can also respond to a read with data bytes.
+; L_0232 only prepares status byte and then let L_01F1 write out the code.
 ; ------------------------------------------------------------------------------
 L_0232:
         MVI     A, 0FFh         ; 3E FF    -> load 0FFh to A
