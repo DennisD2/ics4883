@@ -469,7 +469,7 @@ L_01A9:
 ;
 ; All GPIB line handshake (NDAC, DAV, ...) is done in the code.
 ;
-Note: code starting at L_01F1 is also used for sending status byte during serial poll.
+; Note: code starting at L_01F1 is also used for sending status byte during serial poll.
 ; ------------------------------------------------------------------------------
 L_01AD:
     	EI                      ; FB       -> enable interrupts
