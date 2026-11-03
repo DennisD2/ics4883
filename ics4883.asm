@@ -80,6 +80,12 @@ IO_TALK_DATA   EQU  0705h       ; Datenpuffer-Register des Talker-Interfaces
 IO_DIP_SWITCH  EQU  0706h       ; VER DIP Switch byte
 IO_HW_OUTPUT   EQU  0707h       ; Zentrales Hardware-Ausgangsregister (z. B. LEDs/Latch)
 
+; 0706h IO_DIP_SWITCH bits:
+; bit 7 ONLY
+; bit 6 TALKER
+; bit 5 LISTENER
+; bit 4-0 is GPIB ADDRESS
+
 ; ---------------------------------------------------------------------
 ; 0000h - 0016h: boot vector and initialization
 ; ---------------------------------------------------------------------
@@ -104,22 +110,22 @@ L_MAINLOOP:                     ; was: L_0017
         JNZ     L_0355          ; C2 55 03 -> if no, then handle state change in L_0355; DD: maybe a pending command is handled there
 
 L_001F:
-        LDA     IO_TALK_STATUS  ; 3A 01 07 -> Status des Talker-Interfaces einlesen
-        ANI     0C0h            ; E6 C0    -> Die obersten zwei Bits maskieren
-        CPI     80h             ; FE 80    -> Prüfen auf Status-Flag 80h
-        JZ      L_00CE          ; CA CE 00 -> Bei Treffer -> Abzweigen zur Routine L_00CE
+        LDA     IO_TALK_STATUS  ; 3A 01 07 -> load 0701h to A
+        ANI     0C0h            ; E6 C0    -> mask 2 upper bits of 0701h
+        CPI     80h             ; FE 80    -> is masked value equal to 80h (so bit7 was 1 and bit6 was 0)
+        JZ      L_00CE          ; CA CE 00 -> on equality, continue at L_00CE
 
-        CALL    L_00AD          ; CD AD 00 -> Ruft Subroutine an Adresse 00ADh auf
-        MVI     C, 0FEh         ; 0E FE    -> Lädt Konstante 0FEh in Register C
-        CALL    L_00A1          ; CD A1 00 -> Ruft Subroutine an Adresse 00A1h auf
-        LDA     IO_DIP_SWITCH   ; 3A 06 07 -> Lädt 0706h in A
-        RLC                     ; 07       -> Akkumulatorinhalt nach links rotieren
-        JMP     L_003C          ; C3 3C 00 -> Unbedingter Sprung zur Routine 003Ch
+        CALL    L_00AD          ; CD AD 00 -> calls 00ADh; DD talker handling
+        MVI     C, 0FEh         ; 0E FE    -> loads 0FEh to C (looks like a mask 1111.1110)
+        CALL    L_00A1          ; CD A1 00 -> calls 00A1h; seem to write from 0407h to 0707h
+        LDA     IO_DIP_SWITCH   ; 3A 06 07 -> Loads 0706h to A
+        RLC                     ; 07       -> rotate left, move highest bit ("ONLY" switch) to carry flag
+        JMP     L_003C          ; C3 3C 00 -> continue at L_003C, with bits 6..0 from 0706h in A; "TL43.210x"
         POP     H               ; E1       -> Registerpaar HL vom Stack holen (Stack aufräumen)
         JMP     L_00CE          ; C3 CE 00 -> Sprung zur Service-Routine L_00CE
 
 L_003C:
-        CC      L_009C          ; DC 9C 00 -> Bedingter Unterprogramm-Aufruf, wenn Carry-Flag = 1
+        CC      L_009C          ; DC 9C 00 -> if carry flag ist set ("ONLY" switch on), continue at L_009C; in A we have 0706h content shiftet left by 1
         LXI     H, REG_SYS_STATUS  ; 21 07 04 -> Register HL mit Adresse 0407h laden
     	MOV     A,M             ; 7E
     	RRC                     ; 0F
@@ -202,16 +208,19 @@ L_0094:
         RET                     ; C9       -> back to caller (boot code)
 
 ; ------------------------------------------------------------------------------
-; Bit-Manipulation & I/O-Schnittstellen-Ausgabe (Zeile 119 bis 133)
+; We enter L_009C with A filled by value of IO_DIP_SWITCH, already shifted left by one. So content is
+; TL43.210x
+; the three shifts at L_009C move lower 4 bits of GPIB address to upper nibble. bit5 is lost. Strange.
 ; ------------------------------------------------------------------------------
 L_009C:
-        RLC                     ; 07       -> shift 3 bits left
-        RLC                     ; 07       -> "
-        RLC                     ; 07       -> "
+        RLC                     ; 07       -> shift 3 bits left result is L43.210xx
+        RLC                     ; 07       -> "                           4321.0xxx
+        RLC                     ; 07       -> "                           3210.xxxx
 L_009F:
-    	MVI     C, 0F9h         ; 0E F9    -> loads mask value 0F9h (mask 11111001b) into C
+    	MVI     C, 0F9h         ; 0E F9    -> loads mask value 0F9h (mask 1111.1001b) into C
 ;
 ; L_00A1 writes value from 0407 to 0707. It applies a mask value in C
+; mask is either 0F9h (called via L_009F) or 0FDh (called by L_010E)
 ;
 L_00A1:
         LXI     H, REG_SYS_STATUS ; 21 07 04 -> HL points to 0407h
@@ -258,7 +267,7 @@ L_00CE:
         XRA     A               ; AF       -> Akkumulator löschen (A = 0)
         STA     IO_TALK_CTRLBUS   ; 32 02 07 -> Lösche das Statusregister 0702h im Talker-Interface
         CALL    L_0163          ; CD 63 01 -> Ruft Unterfunktion an Adresse 0163h auf
-        LDA     IO_DIP_SWITCH   ; 3A 06 07 -> Lädt 0607h nach A
+        LDA     IO_DIP_SWITCH   ; 3A 06 07 -> Lädt 0706h nach A
         RLC                     ; 07       -> Akkumulator nach links rotieren (Bit-Prüfung)
         JC      L_MAINLOOP          ; DA 17 00 -> Wenn Carry=1, springe hart zurück zum Schleifenstart L_MAINLOOP
         ; ------------------------------------------------------------------------------
@@ -274,7 +283,7 @@ L_00CE:
         STA     REG_CMD_LOCK    ; 32 0C 04 -> Schreibt die Null in das Kontrollregister 040Ch
         MOV     A, B            ; 78       -> Holt das originale Zeichen erneut aus Register B
         ANI     060h            ; E6 60    -> Erneute Bitmaskierung
-        JNZ     L_00F7          ; C2 F7 00 -> Wenn ungleich Null, springe vor zur Service-Routine 00F7h
+        JNZ     L_00F7          ; C2 F7 00 -> Wenn ungleich Null, springe vor zur Service-Routine L_00F7
         MOV     A, B            ; 78       -> Holt das Zeichen ein letztes Mal
 
         ; ------------------------------------------------------------------------------
@@ -283,7 +292,7 @@ L_00CE:
 L_00F7:
         LXI     H, ROM_TAB_DISPATCH ; 21 93 03 -> HL points to 0393h
         MVI     C, 0Ah          ; 0E 0A    -> loop counter C := 10
-        CALL    L_014E          ; CD 4E 01 -> Unterprogramm an Adresse 014Eh aufrufen
+        CALL    L_FIND_SEP_HANDLER_ADR ; CD 4E 01 -> Unterprogramm an Adresse 014Eh aufrufen; DD handle separator chars by determining correct handling routine address
         PCHL                    ; E9       -> Indirekter Sprung: Kopiert HL in den Program Counter!
         CALL    L_0131          ; CD 31 01 -> Compare GPIB address received with own address
         MVI     A, 02h          ; 3E 02    -> load 02 into A
@@ -338,27 +347,36 @@ L_013C:
     	STA     REG_CMD_STATE   ; 32 from address 148h
     	JMP     L_MAINLOOP          ; C3 17 00
 
-L_014E:
-        ; ------------------------------------------------------------------------------
-        ; Tabellen-Suchschleife & Register-Sicherung (Adresse 014Eh - 0162h)
-        ; ------------------------------------------------------------------------------
-        PUSH    D               ; D5       -> Sichert das Registerpaar DE auf dem Stack
-        LXI     D, 0003h        ; 11 03 00 -> Lädt Konstante 0003h in das Registerpaar DE
+
+; ------------------------------------------------------------------------------
+; based on input byte value, a handling routine address in ROM is selected and returned in HL.
+; Calling code will jump directly to the address returned by using opcode PCHL.
+;
+; iterates though a table SEPARATOR_JUMP_TABLE, searches an entry. If found, return value in HL.
+; if not found, last table entry is returned (default)
+;
+; HL points to a table
+; C seems loop count (number of table items)
+; HL contains result (2 byte value).
+; ------------------------------------------------------------------------------
+L_FIND_SEP_HANDLER_ADR:  ; was L_014E
+        PUSH    D               ; D5       -> save DE to stack
+        LXI     D, 0003h        ; 11 03 00 -> load 3h to DE
 L_0152:
-        CMP     M               ; BE       -> Vergleiche Akkumulator mit dem Speicher [HL]
-        JZ      L_015C          ; CA 5C 01 -> Wenn gleich (Zero=1), springe vor zu Adresse 015Ch
-        DAD     D               ; 19       -> Addiere Registerpaar DE zu HL (HL = HL + DE)
-        DCR     C               ; 0D       -> Schleifenzähler C um 1 verringern
-        JNZ     L_0152          ; C2 52 01 -> Wenn C noch nicht Null ist, zurück zur Schleife springe
-        DCX     H               ; 2B       -> Verringere Registerpaar HL um 1
+        CMP     M               ; BE       -> compare A with value at [HL]
+        JZ      L_015C          ; CA 5C 01 -> if A==[HL] continue at 015Ch (value found)
+        DAD     D               ; 19       -> Add DE register pair to HL (HL := HL + DE)
+        DCR     C               ; 0D       -> dec loop count
+        JNZ     L_0152          ; C2 52 01 -> if C>0, repeat loop
+        DCX     H               ; 2B       -> dec HL
 L_015C:
-        INX     H               ; 23       -> Erhöhe Registerpaar HL um 1
-        MOV     E, M            ; 5E       -> Lädt das untere Byte der Zieladresse nach E
-        INX     H               ; 23       -> Erhöhe Registerpaar HL um 1
-        MOV     D, M            ; 56       -> Lädt das obere Byte der Zieladresse nach D
-        XCHG                    ; EB       -> Tausche die Registerpaare HL und DE
-        POP     D               ; D1       -> Holt das gesicherte Registerpaar DE vom Stack zurück
-        RET                     ; C9       -> Unterprogramm beenden (Rücksprung zum Aufrufer)
+        INX     H               ; 23       -> inc HL
+        MOV     E, M            ; 5E       -> load lower byte from [HL] to E
+        INX     H               ; 23       -> inc HL
+        MOV     D, M            ; 56       -> load upper byte from [HL] to D
+        XCHG                    ; EB       -> switch reg pairs HL and DE
+        POP     D               ; D1       -> restore saved value of DE
+        RET                     ; C9       -> return to caller
 
         ; ------------------------------------------------------------------------------
         ; Schnittstellen- & Pufferverwaltungsroutine (Adresse 0163h - 01A8h)
@@ -582,24 +600,24 @@ L_0263:
         MOV     A, B            ; 78       -> Register B (04h) nach A holen
         ANI     01Fh            ; E6 1F    -> 5-Bit-Maskierung
         CMP     M               ; BE       -> Mit Speicherwert [HL] vergleichen
-        JNZ     L_MAINLOOP          ; C2 17 00 -> Bei Ungleichheit harter Sprung zurück zu L_MAINLOOP
-        LXI     H, REG_SYS_STATUS        ; 21 07 04 -> HL auf RAM-Adresse 0407h setzen
+        JNZ     L_MAINLOOP      ; C2 17 00 -> Bei Ungleichheit harter Sprung zurück zu L_MAINLOOP
+        LXI     H, REG_SYS_STATUS ; 21 07 04 -> HL auf RAM-Adresse 0407h setzen
         MOV     A, M            ; 7E       -> Wert aus 0407h lesen
         ANI     030h            ; E6 30    -> Bits 4 und 5 maskieren
-        JZ      L_MAINLOOP          ; CA 17 00 -> Wenn Null, ebenfalls zurück zu L_MAINLOOP
+        JZ      L_MAINLOOP      ; CA 17 00 -> Wenn Null, ebenfalls zurück zu L_MAINLOOP
         RRC                     ; 0F       -> Bits rotieren
         RRC                     ; 0F
         RRC                     ; 0F
         MOV     M, A            ; 77       -> Modifizierten Wert zurück nach 0407h schreiben
-        JMP     L_MAINLOOP          ; C3 17 00 -> Unbedingter Rücksprung zum Haupt-Polling
+        JMP     L_MAINLOOP      ; C3 17 00 -> Unbedingter Rücksprung zum Haupt-Polling
 
 ; ------------------------------------------------------------------------------
 ; Fortsetzung ab Adresse 028Ah bis 029Ch
 ; ------------------------------------------------------------------------------
         LDA     REG_SYS_STATUS  ; 3A 07 04 -> Lädt den Gerätestatus aus dem RAM
         ANI     02h             ; E6 02    -> Bit 1 maskieren (z. B. Remote/Local oder ein Bus-Flag)
-        JZ      L_MAINLOOP          ; CA 17 00 -> Wenn Bit 0 ist, Schleife abbrechen und zurück zu L_MAINLOOP
-        LXI     H, IO_SRAM_FLAG1        ; 21 07 06 -> HL auf Ausgangs-Datenregister ausrichten
+        JZ      L_MAINLOOP      ; CA 17 00 -> Wenn Bit 0 ist, Schleife abbrechen und zurück zu L_MAINLOOP
+        LXI     H, IO_SRAM_FLAG1 ; 21 07 06 -> HL auf Ausgangs-Datenregister ausrichten
         MOV     M, A            ; 77       -> Den maskierten Statuswert direkt dorthin schreiben
         DCX     H               ; 2B       -> HL dekrementieren auf 0606h
         LDA     03C8h           ; 3A C8 03 -> Einen Konfigurations- oder Initialisierungswert aus dem ROM laden
@@ -611,7 +629,7 @@ L_0263:
 L_029D:
         XRA     A               ; AF       -> Akkumulator nullen
         STA     REG_GPIB_CTRL   ; 32 05 04 -> Systemregister 0405h im RAM zurücksetzen
-        STA     IO_TALK_CTRLBUS   ; 32 02 07 -> Interface-Register 0702h löschen
+        STA     IO_TALK_CTRLBUS ; 32 02 07 -> Interface-Register 0702h löschen
         DI                      ; F3       -> Interrupts global sperren
 L_BUFF_LOOP:
 L_02A5:
@@ -619,7 +637,7 @@ L_02A5:
         MOV     A, B            ; 78       -> Das in Register B befindliche Zeichen nach A holen
         ANI     070h            ; E6 70    -> Die Bits 4, 5 und 6 maskieren
         CPI     030h            ; FE 30    -> Prüfen, ob das obere Halbnibble dem ASCII-Bereich '3' entspricht
-        JNZ     0305h           ; C2 05 03 -> Wenn ungleich, Sprung nach vorne zur Fehler/Auswertung an 0305h
+        JNZ     L_0305          ; C2 05 03 -> if not, do additional parsing (we may have a separator)
         LXI     H, REG_BUFF_IDX ; 21 1F 04 -> HL auf RAM-Adresse 041Fh (Zähler/Index) setzen
         MOV     A, M            ; 7E       -> Aktuellen Index-Wert laden
         CPI     00Ah            ; FE 0A    -> Prüfen, ob die Obergrenze von 10 Elementen erreicht ist
@@ -635,7 +653,6 @@ L_02BE:
         CPI     040h            ; FE 40    -> Prüfen auf das End-Of-Sequence / EOI Flag (40h)
         JNZ     L_02A5          ; C2 A5 02 -> Sprung wenn != 0
 ; ------------------------------------------------------------------------------
-; Hauptinitialisierung ab Label L_02C8 (Adresse 02C8h bis 02F8h)
 ; Nibble-Packing Routine: Der Code ab Adresse 02DBh ist ein hocheffizienter Packer. Er nimmt
 ; zwei aufeinanderfolgende Bytes, isoliert jeweils deren untere 4 Bits (ANI 00Fh), schiebt das zweite Nibble
 ; per Rotation nach oben (RLC) und fügt sie mit ORA B zu einem einzigen, kompakten Daten-Byte zusammen.
@@ -647,7 +664,7 @@ L_02C8:
         MOV     C, M            ; 4E       -> load counter value to C
         MOV     A, M            ; 7E       -> load also to A
         ORA     A               ; B7       -> is counter zero?
-        JZ      L_MAINLOOP          ; CA 17 00 -> if counter==0, jump back to main polling loop
+        JZ      L_MAINLOOP      ; CA 17 00 -> if counter==0, jump back to main polling loop
         MVI     M, 00h          ; 36 00    -> if counter>0, set M to 0
         PUSH    B               ; C5       -> push B to stack
         CALL    0311h           ; CD 11 03 -> Depending on bit 3 in 0505h, C bytes in memory at HL are inverted or not (L_CHECK_INVERT)
@@ -692,21 +709,18 @@ L_02F9:
 ; ------------------------------------------------------------------------------
 
 ; ------------------------------------------------------------------------------
-; Dynamische Fehlerbehandlung (0305h): Wenn die Daten zuvor nicht den Erwartungen entsprechen, wird hier das fehlerhafte
-; Zeichen isoliert (ANI 07Fh) und über eine separate Befehlstabelle ab ROM-Adresse 03F5h mittels deiner Suchroutine L_014E
-; ausgewertet. Der Befehl PCHL springt dann dynamisch in die passende Behandlung.
-; Puffer-Invertierung (0311h): Dieses Unterprogramm prüft ein Hardware-Statusflag an Adresse 0505h. Ist dieses
-; aktiv (CPI 08h), durchläuft der Code eine Schleife (L_031A), die den gesamten Datenstrom im RAM bitweise invertiert
-; (CMA). Dies deutet stark auf eine Pegel-Anpassung für die angeschlossene Hardware hin.
+; Handle non-data chars, i.e. separators (CR, LF, comma, 'other').
+; correct handler routine address is determined by L_FIND_SEP_HANDLER_ADR.  Opcode PCHL will directly execute then
+; the handler.
 ; ------------------------------------------------------------------------------
-L_CMD_PARSE_ERR:
+L_CMD_PARSE_SEPERATORS:
 L_0305:
-        MOV     A, B            ; 78       -> Hierher wird gesprungen, wenn ASCII-Prüfung bei 02A2h fehlschlägt
-        ANI     07Fh            ; E6 7F    -> Auf 7-Bit-ASCII maskieren
-        MVI     C, 03h          ; 0E 03    -> Schleifenzähler (3) für die Tabelle setzen
-        LXI     H, ROM_TAB_CMD_VEC    ; 21 F5 03 -> HL auf Sprungtabelle im ROM ausrichten
-        CALL    L_014E          ; CD 4E 01 -> Tabellen-Suchroutine aufrufen
-        PCHL                    ; E9       -> Indirekter Sprung zur gefundenen Routine
+        MOV     A, B            ; 78       -> copy B to A
+        ANI     07Fh            ; E6 7F    -> mask lower 7 bits (pure 7 bit ASCII)
+        MVI     C, 03h          ; 0E 03    -> number of items in table (3)
+        LXI     H, ROM_TAB_CMD_VEC ; 21 F5 03 -> HL points to table ROM_TAB_CMD_VEC
+        CALL    L_FIND_SEP_HANDLER_ADR ; CD 4E 01 -> find handler for separator
+        PCHL                    ; E9       -> execute separator
 
 ; depending on a flag value (bit 3 from address 0505h), a block in memory is inverted or not.
 ; number of bytes to invert controlled by value in C, start address in HL.
@@ -714,7 +728,7 @@ L_0305:
 ; called from 02D4h
 L_CHECK_INVERT:
 L_0311:
-        LDA     RAM_HW_CONFIG1  ; 3A 05 05 -> read byte from memory mapped HW - Byte aus dem I/O-SRAM-Status laden
+        LDA     RAM_HW_CONFIG1  ; 3A 05 05 -> load 0505h to A
         ANI     08h             ; E6 08    -> isolate bit 3
         CPI     08h             ; FE 08    -> is bit set?
         RNZ                     ; C0       -> if bit is not set, simply return
@@ -815,7 +829,7 @@ L_037B:
     	DB 005h	; 005h, from address 392h
 
 ; 0393h - 03B2h: Sprung- und Befehlstabelle für den Data Dispatcher
-; Format des universalen Kopierers (Routine L_014E / L_007B):
+; Format des universalen Kopierers (Routine L_FIND_SEP_HANDLER_ADR / L_007B):
 ; [Block-Länge] [Ziel-Adresse DE (Low/High)] [Daten...]
 ; Eine Länge von 00h bricht den Suchprozess ab.
     	DB 004h	; 004h, from address 393h
@@ -900,9 +914,10 @@ TALK_CHAR_TABLE:
     	DB 000h	; 000h, from address 3f3h
     	DB 019h	; 019h, from address 3f4h
 
-; 03F5h - 03FFh: Primäre Befehls-Sprungtabelle (wird von L_014E gescannt)
+; 03F5h - 03FFh: Primäre Befehls-Sprungtabelle (wird von L_FIND_SEP_HANDLER_ADR gescannt)
 ; Format: [ASCII-Kommando] [Sprungadresse (Low/High)]
+SEPARATOR_JUMP_TABLE:
         DB 00Dh, 0C8h, 002h    ; 0Dh (CR)     -> Springe zu 02C8h (Haupt-Init)
         DB 00Ah, 0C8h, 002h    ; 0Ah (LF)     -> Springe zu 02C8h (Haupt-Init)
         DB 02Ch, 0C8h, 002h    ; 2Ch (Komma)  -> Springe zu 02C8h (Haupt-Init)
-        DB 0A5h, 002h          ; Letzter Vektor / Endadresse im ROM-Sektor (02A5h)
+        DB 0A5h, 002h          ; Letzter Vektor / Default Wert (-> Springe zu 02A5h)
