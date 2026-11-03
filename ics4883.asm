@@ -101,7 +101,7 @@ L_MAINLOOP:                     ; was: L_0017
         DI                      ; F3
         LDA     REG_IO_STATE    ; 3A 01 04 -> load 0401h from RAM to A - Status von GPIB / I/O Interface-Chip laden
         ORA     A               ; B7       -> is it = 0 ?
-        JNZ     L_0355          ; C2 55 03 -> if no, then handle state change in L_0355
+        JNZ     L_0355          ; C2 55 03 -> if no, then handle state change in L_0355; DD: maybe a pending command is handled there
 
 L_001F:
         LDA     IO_TALK_STATUS  ; 3A 01 07 -> Status des Talker-Interfaces einlesen
@@ -128,7 +128,7 @@ L_003C:
         RRC                     ; 0F       -> Akkumulator nach rechts rotieren
         JC      L_01AD          ; DA AD 01 -> Wenn Carry=1, springe zu Adresse 01ADh
         LXI     B,01000h        ; 01 00 10 -> lade 01000h in B
-        LDA     IO_GPIB_CTRL_1   ; 3A 05 06 -> Holt das Daten-Byte vom I/O-Schnittstellenregister
+        LDA     IO_GPIB_CTRL_1  ; 3A 05 06 -> Holt das Daten-Byte vom I/O-Schnittstellenregister
     	CMA                     ; 2F       -> Akkumulator invertieren (Low-Aktive Signale)
     	RRC                     ; 0F       -> put lowest bit into carry flag
     	JNC     L_0060          ; D2 60 00 -> if no carry (lowest bit was 0) then continue at 0060h, which will return from there to main loop
@@ -414,15 +414,30 @@ L_01A9:
 
 ; ------------------------------------------------------------------------------
 ; Handle input from instrument
+; these bytes seem to have following meaning
+; 0605h also called IO_GPIB_CTRL_1
+;   bit0=1 no input data, bit0=0 we have input data at input pins. Seems to be set by IOBoard and is maybe controlled by an input pin.
+;   bit2 checked by convert_out_char,
+;
+; 0604h-0608h 5 bytes corresponding to 10 nibbles corresponding to 40 input pins
+; 0604
+; 0605
+; 0606
+; 0607
+; 0608
+;
+; 10 nibbles are processed, converted by using the Talker Character Table (ROM_TLK_CHAR_TABLE) and written
+; to 10 bytes in RAM starting at location 0430h.
 ; ------------------------------------------------------------------------------
 L_01AD:
     	EI                      ; FB       -> enable interrupts
-    	LDA     REG_CMD_STATE   ; 3A 0D 04 -> Lädt Kontroll-Flag aus RAM-Zelle 040Dh into A
-    	ORA     A               ; B7       -> is A==0 ?
+    	LDA     REG_CMD_STATE   ; 3A 0D 04 -> loads 040Dh into A
+    	ORA     A               ; B7       -> is 040Dh == 0 ?
     	JNZ     L_0232          ; C2 32 02 -> if not zero, jump to 0232h
         LXI     H, IO_GPIB_CTRL_1 ; 21 05 06 -> HL points to 0605h
 WAIT_FOR_BIT0_SET:
-; bit0 will be set externally by some interrupt-driven action (not code)
+; we do busy waiting until bit0 from 0605h is cleared
+; bit0 will be cleared externally by some interrupt-driven action (not code)
 L_01B8:
         MOV     A, M            ; 7E       -> load [HL] to A
     	RRC                     ; 0F       -> bit 0 to Carry flag
@@ -557,7 +572,7 @@ L_0263:
         ADD     L               ; 85       -> Add L to A (now A contains byte offset in table)
         MOV     L, A            ; 6F       -> L := A
         MOV     A, M            ; 7E       -> read translated char from char table
-        STAX    D               ; 12       -> store char to [DE] (0430hff)
+        STAX    D               ; 12       -> store char to [DE] (0430h ff)
         INX     D               ; 13       -> inc DE
         POP     H               ; E1       -> restore HL
         RET                     ; C9       -> return to caller
