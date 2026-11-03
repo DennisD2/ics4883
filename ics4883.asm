@@ -93,7 +93,8 @@ L_0000:
         LXI     SP, STACK_BASE  ; 31 00 05 -> set stack pointer
         CALL    L_008F          ; CD 8F 00 -> clear 64 bytes of memory from start of RAM
 ; ------------------------------------------------------------------------------
-; Looks like a warm start entry point. Is also handler for character 14h
+; Looks like a warm start entry point.
+; Is also handler for character 14h
 ; ------------------------------------------------------------------------------
 L_0006:
         LDA     ROM_CFG_FLAGS   ; 3A C4 03 -> read config value from ROM 03C4 (value there is: 6=0110)
@@ -105,6 +106,7 @@ L_0006:
 
 ; ------------------------------------------------------------------------------
 ; main IO polling loop
+; L_MAINLOOP is also Default Handler in L_ROM_TAB_DISPATCH table
 ; ------------------------------------------------------------------------------
 L_MAINLOOP:                     ; was: L_0017
         DI                      ; F3
@@ -142,20 +144,20 @@ L_003C:
     	RRC                     ; 0F       -> put lowest bit into carry flag
     	JNC     L_0060          ; D2 60 00 -> if no carry (lowest bit was 0) then continue at 0060h, which will return from there to main loop
     	CALL    L_00C7          ; CD C7 00 -> if we had carry at lowest bit, puts bit 5 of IO_TALK_DATA into carry flag
-        JC      L_SET_DATA_AVAILABLE          ; DA 6D 00 -> if carry, jump to L_SET_DATA_AVAILABLE = L_SET_DATA_AVAILABLE - Wenn Carry=1, springe zu Adresse 006Dh
+        JC      L_SET_DATA_AVAILABLE ; DA 6D 00 -> if carry, jump to L_SET_DATA_AVAILABLE = L_SET_DATA_AVAILABLE - Wenn Carry=1, springe zu Adresse 006Dh
         STA     IO_SRAM_FLAG1   ; 32 07 06 -> no carry, no data available, put A to 0607h
 
 ; ------------------------------------------------------------------------------
 ; Some cleanup at end of talker handling
 ; ------------------------------------------------------------------------------
 L_0060:
-    	LXI     H, REG_SYS_STATE  ; 21 03 04 -> HL points to 0403h
+    	LXI     H, REG_SYS_STATE ; 21 03 04 -> HL points to 0403h
     	MOV     A,M             ; 7E       -> load [0403h] to A
     	ANA     B               ; A0       -> AND A with B
     	ORA     C               ; B1       -> OR A with C
     	MOV     M,A             ; 77       -> move A to [0403h]
     	STA     IO_TALK_DATABUS ; 32 03 07 -> write result to 0703h (GPIB connector)
-    	JMP     L_MAINLOOP          ; C3 17 00 -> back to loop start
+    	JMP     L_MAINLOOP      ; C3 17 00 -> back to loop start
 
 ; ------------------------------------------------------------------------------
 ; Set GPIB Status Byte (Talker) to 41h, which means "data available"
@@ -485,16 +487,16 @@ L_01B8:
     	MVI     A, 0Fh          ; 3E 0F    -> load 0fh to A
         STA     SRAM_START      ; 32 00 04 -> Akkumulator-Inhalt direkt in RAM SRAM_START sichern
         EI                      ; FB       -> Interrupts wieder freigeben (Enable Interrupts)
-        LXI     H, RAM_ASCII_BUFF        ; 21 30 04 -> HL-Zeiger auf SRAM-Adresse 0430h laden DD: h := address of created 10 bytes
+        LXI     H, RAM_ASCII_BUFF ; 21 30 04 -> HL-Zeiger auf SRAM-Adresse 0430h laden DD: h := address of created 10 bytes
         SHLD    REG_ARRAY_PTR   ; 22 2E 04 -> Speicherinhalt von HL nach SRAM 042Eh sichern
-        LXI     H, ROM_PROT_LIMITS        ; 21 E4 03 -> HL-Zeiger auf Übersetzungstabelle im ROM ausrichten
+        LXI     H, ROM_PROT_LIMITS ; 21 E4 03 -> HL-Zeiger auf Übersetzungstabelle im ROM ausrichten
 L_01D6:
         MOV     A, M            ; 7E       -> Byte via HL laden
         INX     H               ; 23       -> HL-Zeiger um 1 erhöhen
         SHLD    REG_BUFF_PTR    ; 22 1D 04 -> Aktuellen HL-Zeiger im RAM 041Dh sichern
         CPI     19h             ; FE 19    -> Akkumulator mit Konstante 19h vergleichen
 
-        JZ      L_MAINLOOP          ; CA 17 00 -> Wenn gleich, springe weit zurück zu Adresse 0017h
+        JZ      L_MAINLOOP      ; CA 17 00 -> Wenn gleich, springe weit zurück zu Adresse 0017h
         ORA     A               ; B7       -> Flags aktualisieren (Prüfen auf Null/Vorzeichen)
         JP      L_01F0          ; F2 F0 01 -> Wenn positiv (Bit 7 = 0), springe vor zu Adresse 01F0h
         ANI     040h            ; E6 40    -> Bit 6 maskieren
@@ -510,7 +512,7 @@ L_01F1:
         LDA     REG_SYS_STATE   ; 3A 03 04 -> Zustand aus RAM-Zelle 0403h holen
         ANI     10h             ; E6 10    -> Bit 4 maskieren
         MOV     C, A            ; 4F       -> Vorheriges Ergebnis nach Register C retten
-        LXI     D,IO_TALK_DATABUS         ; 11 03 07 -> Lädt Byte von der Hardware-Adresse [DE] (0703h)
+        LXI     D,IO_TALK_DATABUS ; 11 03 07 -> Lädt Byte von der Hardware-Adresse [DE] (0703h)
         STAX    D               ; 12           -> Schreibt den Akkumulator wieder zurück nach [DE]
         LXI     H, IO_TALK_CTRLBUS       ; 21 02 07 -> HL auf Adresse 0702h ausrichten
         MOV     M,B             ; 70
@@ -537,7 +539,7 @@ L_020A:
         MOV     A, M            ; 7E
         MVI     M, 00h          ; 36 00    -> Speicherzelle mit 00h überschreiben
         ORA     A               ; B7       -> Flags aktualisieren
-        JM      L_MAINLOOP          ; FA 17 00 -> Wenn negativ (Bit 7=1), Sprung zu L_MAINLOOP
+        JM      L_MAINLOOP      ; FA 17 00 -> Wenn negativ (Bit 7=1), Sprung zu L_MAINLOOP
         JZ      L_022B          ; CA 2B 02 -> Wenn Null, Sprung zu RAM/ROM-Adresse 022Bh
         XRA     A               ; AF
         STA     IO_SRAM_FLAG1   ; 32 07 06
@@ -549,7 +551,7 @@ L_022B:
 L_0232:
         MVI     A, 0FFh         ; 3E FF
         STA     SRAM_START      ; 32 00 04
-        LXI     H, REG_BUS_STATUS        ; 21 0E 04 -> HL auf Kontrollregister setzen
+        LXI     H, REG_BUS_STATUS ; 21 0E 04 -> HL auf Kontrollregister setzen
         MOV     B, M            ; 46
         MOV     A, M            ; 7E
         ANI     0BFh            ; E6 BF    -> Bit 6 löschen (Maskierung)
@@ -614,7 +616,7 @@ L_0263:
         RET                     ; C9       -> return to caller
 
 ; Steuerzeichen Filter
-        LXI     H, ROM_CONST_CMP        ; 21 90 03 -> HL auf alternative Tabelle/String im ROM ausrichten
+        LXI     H, ROM_CONST_CMP ; 21 90 03 -> HL auf alternative Tabelle/String im ROM ausrichten
         MOV     A, B            ; 78       -> Register B (04h) nach A holen
         ANI     01Fh            ; E6 1F    -> 5-Bit-Maskierung
         CMP     M               ; BE       -> Mit Speicherwert [HL] vergleichen
@@ -651,6 +653,10 @@ L_029D:
         STA     REG_GPIB_CTRL   ; 32 05 04 -> Systemregister 0405h im RAM zurücksetzen
         STA     IO_TALK_CTRLBUS ; 32 02 07 -> Interface-Register 0702h löschen
         DI                      ; F3       -> Interrupts global sperren
+
+; ------------------------------------------------------------------------------
+; L_02A5 is also Default Handler in separator table
+; ------------------------------------------------------------------------------
 L_BUFF_LOOP:
 L_02A5:
         CALL    L_0163          ; CD 63 01 -> Aufruf der Puffer-/Schnittstellenroutine L_0163
@@ -672,6 +678,10 @@ L_02BE:
         ANI     0C0h            ; E6 C0    -> Die obersten zwei Bits maskieren
         CPI     040h            ; FE 40    -> Prüfen auf das End-Of-Sequence / EOI Flag (40h)
         JNZ     L_02A5          ; C2 A5 02 -> Sprung wenn != 0
+
+; ------------------------------------------------------------------------------
+; Handler for character 0D/CR, LF/0A, comma/2C
+; ------------------------------------------------------------------------------
 ; ------------------------------------------------------------------------------
 ; Nibble-Packing Routine: Der Code ab Adresse 02DBh ist ein hocheffizienter Packer. Er nimmt
 ; zwei aufeinanderfolgende Bytes, isoliert jeweils deren untere 4 Bits (ANI 00Fh), schiebt das zweite Nibble
@@ -925,7 +935,7 @@ TALK_CHAR_TABLE:
 ; 03F5h - 03FFh: Primäre Befehls-Sprungtabelle (wird von L_FIND_HANDLER_ADDRESS gescannt)
 ; Format: [ASCII-Kommando] [Sprungadresse (Low/High)]
 SEPARATOR_JUMP_TABLE:
-        DB 00Dh, L_02C8 & 0FFh, L_02C8 >> 8 ; 0Dh (CR)     -> jump to 02C8h (Haupt-Init)
-        DB 00Ah, L_02C8 & 0FFh, L_02C8 >> 8 ; 0Ah (LF)     -> jump to 02C8h (Haupt-Init)
-        DB 02Ch, L_02C8 & 0FFh, L_02C8 >> 8 ; 2Ch (Komma)  -> jump to 02C8h (Haupt-Init)
-        DB L_02A5 & 0FFh, L_02A5 >> 8       ; Default      -> jump to 02A5h
+        DB 00Dh, L_02C8 & 0FFh, L_02C8 >> 8 ; 0Dh (CR)     -> jump to L_02C8 (Haupt-Init)
+        DB 00Ah, L_02C8 & 0FFh, L_02C8 >> 8 ; 0Ah (LF)     -> jump to L_02C8 (Haupt-Init)
+        DB 02Ch, L_02C8 & 0FFh, L_02C8 >> 8 ; 2Ch (Komma)  -> jump to L_02C8 (Haupt-Init)
+        DB L_02A5 & 0FFh, L_02A5 >> 8       ; Default      -> jump to L_02A5
