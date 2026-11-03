@@ -292,8 +292,10 @@ L_00CE:
 L_00F7:
         LXI     H, ROM_TAB_DISPATCH ; 21 93 03 -> HL points to 0393h
         MVI     C, 0Ah          ; 0E 0A    -> loop counter C := 10
-        CALL    L_FIND_SEP_HANDLER_ADR ; CD 4E 01 -> Unterprogramm an Adresse 014Eh aufrufen; DD handle separator chars by determining correct handling routine address
-        PCHL                    ; E9       -> Indirekter Sprung: Kopiert HL in den Program Counter!
+        CALL    L_FIND_HANDLER_ADDRESS ; CD 4E 01 -> handle chars by determining correct handling routine address
+        PCHL                    ; E9       -> jump to handler
+
+L_0100:
         CALL    L_0131          ; CD 31 01 -> Compare GPIB address received with own address
         MVI     A, 02h          ; 3E 02    -> load 02 into A
         JNZ     L_010E          ; C2 0E 01 -> if value of last cmp (address compare) !=0, jump to 010Eh
@@ -360,7 +362,7 @@ L_0148:
 ; C seems loop count (number of table items)
 ; HL contains result (2 byte value).
 ; ------------------------------------------------------------------------------
-L_FIND_SEP_HANDLER_ADR:  ; was L_014E
+L_FIND_HANDLER_ADDRESS:  ; was L_014E
         PUSH    D               ; D5       -> save DE to stack
         LXI     D, 0003h        ; 11 03 00 -> load 3h to DE
 L_0152:
@@ -712,7 +714,7 @@ L_02F9:
 
 ; ------------------------------------------------------------------------------
 ; Handle non-data chars, i.e. separators (CR, LF, comma, 'other').
-; correct handler routine address is determined by L_FIND_SEP_HANDLER_ADR.  Opcode PCHL will directly execute then
+; correct handler routine address is determined by L_FIND_HANDLER_ADDRESS.  Opcode PCHL will directly execute then
 ; the handler.
 ; ------------------------------------------------------------------------------
 L_CMD_PARSE_SEPERATORS:
@@ -721,7 +723,7 @@ L_0305:
         ANI     07Fh            ; E6 7F    -> mask lower 7 bits (pure 7 bit ASCII)
         MVI     C, 03h          ; 0E 03    -> number of items in table (3)
         LXI     H, ROM_TAB_CMD_VEC ; 21 F5 03 -> HL points to table ROM_TAB_CMD_VEC
-        CALL    L_FIND_SEP_HANDLER_ADR ; CD 4E 01 -> find handler for separator
+        CALL    L_FIND_HANDLER_ADDRESS ; CD 4E 01 -> find handler for separator
         PCHL                    ; E9       -> execute separator
 
 ; depending on a flag value (bit 3 from address 0505h), a block in memory is inverted or not.
@@ -831,7 +833,7 @@ L_037B:
     	DB 005h	; 005h, from address 392h
 
 ; 0393h - 03B2h: Sprung- und Befehlstabelle für den Data Dispatcher
-; Format des universalen Kopierers (Routine L_FIND_SEP_HANDLER_ADR / L_007B):
+; Format des universalen Kopierers (Routine L_FIND_HANDLER_ADDRESS / L_007B):
 ; Format: [ASCII-Zeichen] [Sprungadresse (Low/High)]
 L_ROM_TAB_DISPATCH:
 ; Eine Länge von 00h bricht den Suchprozess ab.
@@ -841,15 +843,12 @@ L_ROM_TAB_DISPATCH:
         DB 018h, L_0148 & 0FFh, L_0148 >> 8 ; 18h (..)     -> jump to 0148h ()
 
         DB 019h, L_0147 & 0FFh, L_0147 >> 8 ; 18h (..)     -> jump to 0147h ()
-
         DB 008h, L_028A & 0FFh, L_028A >> 8 ; 08h (..)     -> jump to 028Ah ()
-    	;DB 008h	; 008h, from address 3a2h
-    	;DB 08Ah	; 08Ah, from address 3a3h
-    	;DB 002h	; 002h, from address 3a4h
 
-    	DB 020h	; 020h, from address 3a5h
-    	DB 000h	; 000h, from address 3a6h
-    	DB 001h	; 001h, from address 3a7h
+        DB 020h, L_0100 & 0FFh, L_0100 >> 8 ; 08h (..)     -> jump to 0100h ()
+    ;	DB 020h	; 020h, from address 3a5h
+    ;	DB 000h	; 000h, from address 3a6h
+    ;	DB 001h	; 001h, from address 3a7h
 
     	DB 040h	; 040h, from address 3a8h
     	DB 020h	; 020h, from address 3a9h
@@ -914,7 +913,7 @@ TALK_CHAR_TABLE:
     	DB 000h	; 000h, from address 3f3h
     	DB 019h	; 019h, from address 3f4h
 
-; 03F5h - 03FFh: Primäre Befehls-Sprungtabelle (wird von L_FIND_SEP_HANDLER_ADR gescannt)
+; 03F5h - 03FFh: Primäre Befehls-Sprungtabelle (wird von L_FIND_HANDLER_ADDRESS gescannt)
 ; Format: [ASCII-Kommando] [Sprungadresse (Low/High)]
 SEPARATOR_JUMP_TABLE:
         DB 00Dh, 0C8h, 002h    ; 0Dh (CR)     -> jump to 02C8h (Haupt-Init)
