@@ -23,14 +23,14 @@ STACK_BASE     EQU  0500h       ; start value for stack pointer
 ; ==============================================================================
 ROM_DATA_START   EQU  038Ah     ; Startbereich der Datentabellen im ROM
 ROM_CONST_CMP    EQU  0390h     ; Kontroll-Konstanten für den Zeichenvergleich
-ROM_TAB_DISPATCH EQU  0393h     ; Sprung- und Befehlstabelle für den Data Dispatcher
+GPIB_CMD_JUMPTABLE EQU  0393h     ; Sprung- und Befehlstabelle für den Data Dispatcher
 ROM_TAB_SRAM_INI EQU  03B3h     ; Initialisierungs-Tabelle für den RAM-Puffer
 ROM_CFG_FLAGS    EQU  03C4h     ; System-Konfigurations-Flags im ROM
 ROM_CFG_LIMITS   EQU  03CEh     ; Maskierungs- und Fehler-Grenzwerte
 ROM_TLK_CHAR_TABLE EQU 03D4h    ; VER Talker Character Table (tranlates HEX input values to ICS4883 chars) ('0123...')
 ROM_PROT_LIMITS  EQU  03E4h     ; Status- und Protokoll-Grenzwerte
 ROM_STR_TERMS    EQU  03EEh     ; String-Terminatoren und Kontroll-Codes (CR/LF)
-ROM_TAB_CMD_VEC  EQU  03F5h     ; Primäre Befehls-Sprungtabelle (für CR, LF, Komma)
+SEPARATOR_JUMP_TABLE  EQU  03F5h     ; Primäre Befehls-Sprungtabelle (für CR, LF, Komma)
 
 ; ==============================================================================
 ; 0400 -04FF : RAM variables
@@ -106,7 +106,7 @@ L_0006:
 
 ; ------------------------------------------------------------------------------
 ; main IO polling loop
-; L_MAINLOOP is also Default Handler in L_ROM_TAB_DISPATCH table
+; L_MAINLOOP is also Default Handler in L_GPIB_CMD_JUMPTABLE table
 ; ------------------------------------------------------------------------------
 L_MAINLOOP:                     ; was: L_0017
         DI                      ; F3
@@ -290,7 +290,7 @@ L_00CE:
         JNZ     L_00F7          ; C2 F7 00 -> if bit 5 or 6 are set, call again L_00F7 (there a handler address is determined and handler code executed)
         MOV     A, B            ; 78       -> load B to A
 L_00F7:
-        LXI     H, ROM_TAB_DISPATCH ; 21 93 03 -> Load handler jump table at 0393h
+        LXI     H, GPIB_CMD_JUMPTABLE ; 21 93 03 -> Load handler jump table at 0393h
         MVI     C, 0Ah          ; 0E 0A    -> loop counter C := 10
         CALL    L_FIND_HANDLER_ADDRESS ; CD 4E 01 -> handle chars by determining correct handling routine address
         PCHL                    ; E9       -> jump to handler found
@@ -368,7 +368,7 @@ L_0148:
 ; based on input byte value, a handling routine address in ROM is selected and returned in HL.
 ; Calling code will jump directly to the address returned by using opcode PCHL.
 ;
-; iterates though a table (L_ROM_TAB_DISPATCH, SEPARATOR_JUMP_TABLE), searches an entry. If found, return value in HL.
+; iterates though a table (L_GPIB_CMD_JUMPTABLE, L_SEPARATOR_JUMP_TABLE), searches an entry. If found, return value in HL.
 ; if not found, last table entry is returned (default)
 ;
 ; HL points to a table
@@ -555,6 +555,7 @@ L_0232:
         MOV     M, A            ; 77
         JMP     L_01F1          ; C3 F1 01 -> Sprung zu RAM/ROM-Adresse 01F1h
 
+; ------------------------------------------------------------------------------
 ; convert all 5 bytes from input IO connector
 ; convert bytes from input IO connector
 ; d is index for created output string
@@ -564,6 +565,7 @@ L_0232:
 ; it looks that two 4-bit values are in 1 byte as HI/LO nibble
 ;
 ; we load from 0604 up to 0608h (5 bytes).
+; ------------------------------------------------------------------------------
 convert_5input_bytes:
 L_0242:
         MVI     B, 05h          ; 06 05    -> set loop counter B to 5: num of bytes to convert (5 bytes = 10 nibbles)
@@ -746,7 +748,7 @@ L_0305:
         MOV     A, B            ; 78       -> copy B to A
         ANI     07Fh            ; E6 7F    -> mask lower 7 bits (pure 7 bit ASCII)
         MVI     C, 03h          ; 0E 03    -> number of items in table (3)
-        LXI     H, ROM_TAB_CMD_VEC ; 21 F5 03 -> HL points to table ROM_TAB_CMD_VEC
+        LXI     H, SEPARATOR_JUMP_TABLE ; 21 F5 03 -> HL points to table GPIB_CMD_JUMPTABLE
         CALL    L_FIND_HANDLER_ADDRESS ; CD 4E 01 -> find handler for separator
         PCHL                    ; E9       -> execute separator
 
@@ -828,7 +830,6 @@ L_0355:
 ; prevents local control; control is only possible via remote (GPIB commands)
 ; bit 3 of 0407 seems to represent "LOCAL_ENABLED"
 ; ------------------------------------------------------------------------------
-L_CMD_P_HANDLER:
 L_036D:
         XRA     A               ; AF       -> A:=0
         STA     REG_IO_STATE    ; 32 01 04 -> writes A i.e. 0 to REG_IO_STATE 0401
@@ -864,10 +865,10 @@ L_037B:
     	DB 002h	; 002h, from address 391h ROM_BUS_SIG_MASK
     	DB 005h	; 005h, from address 392h
 
-; 0393h - 03B2h: Sprung- und Befehlstabelle für den Data Dispatcher
-; Format des universalen Kopierers (Routine L_FIND_HANDLER_ADDRESS / L_007B):
-; Format: [ASCII-Zeichen] [Sprungadresse (Low/High)]
-L_ROM_TAB_DISPATCH:
+; 0393h - 03B2h: jump table for GPIB commands. Used by code at L_FIND_HANDLER_ADDRESS / L_007B
+; for a GPIB command byte, a handler address is found.
+; Format: [command byte] [handler address (Low/High)]
+L_GPIB_CMD_JUMPTABLE:
     	DB 004h, L_013C & 0FFh, L_013C >> 8 ; 04h (SDC Selected Device Clear)       -> jump to L_013C ()
     	DB 014h, L_0006 & 0FFh, L_0006 >> 8 ; 14h (DCL Device Clear)                -> jump to L_0006 ()
         DB 015h, L_036D & 0FFh, L_036D >> 8 ; 15h (LLO Local Lockout)               -> jump to L_036D ()
@@ -928,9 +929,10 @@ TALK_CHAR_TABLE:
     	DB 000h	; 000h, from address 3f3h
     	DB 019h	; 019h, from address 3f4h
 
-; 03F5h - 03FFh: Primäre Befehls-Sprungtabelle (wird von L_FIND_HANDLER_ADDRESS gescannt)
-; Format: [ASCII-Kommando] [Sprungadresse (Low/High)]
-SEPARATOR_JUMP_TABLE:
+; 03F5h - 03FFh: jump table to handle separator characters. Used by code at L_FIND_HANDLER_ADDRESS / L_007B
+; for a separator byte, a handler address is found.
+; Format: [separator byte] [handler address (Low/High)]
+L_SEPARATOR_JUMP_TABLE:
         DB 00Dh, L_02C8 & 0FFh, L_02C8 >> 8 ; 0Dh (CR)     -> jump to L_02C8 (Haupt-Init)
         DB 00Ah, L_02C8 & 0FFh, L_02C8 >> 8 ; 0Ah (LF)     -> jump to L_02C8 (Haupt-Init)
         DB 02Ch, L_02C8 & 0FFh, L_02C8 >> 8 ; 2Ch (Komma)  -> jump to L_02C8 (Haupt-Init)
