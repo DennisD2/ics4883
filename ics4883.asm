@@ -120,14 +120,14 @@ L_001F:
         CPI     80h             ; FE 80    -> is masked value equal to 80h (so bit7 was 1 and bit6 was 0)
         JZ      L_00CE          ; CA CE 00 -> on equality, continue at L_00CE (supposed Listener handling)
 
-        CALL    L_00AD          ; CD AD 00 -> calls 00ADh; DD talker handling
+        CALL    L_00AD          ; CD AD 00 -> calls 00ADh;
         MVI     C, 0FEh         ; 0E FE    -> loads 0FEh to C (looks like a mask 1111.1110) - bit 0 is in focus
         CALL    L_00A1          ; CD A1 00 -> calls 00A1h; seem to write both RAM 0407h and GPIB hardware 0707h
         LDA     IO_DIP_SWITCH   ; 3A 06 07 -> Loads 0706h to A
         RLC                     ; 07       -> rotate left, move highest bit ("ONLY" switch) to carry flag
         JMP     L_003C          ; C3 3C 00 -> continue at L_003C, with bits 6..0 from 0706h in A; "TL43.210x"
         POP     H               ; E1       -> Registerpaar HL vom Stack holen (Stack aufräumen)
-        JMP     L_00CE          ; C3 CE 00 -> Sprung zur Service-Routine L_00CE  (supposed Listener handling)
+        JMP     L_00CE          ; C3 CE 00 -> Sprung zur Service-Routine L_00CE
 
 L_003C:
         CC      L_009C          ; DC 9C 00 -> if carry flag ist set ("ONLY" switch on), continue at L_009C; in A we have 0706h content shiftet left by 1
@@ -137,8 +137,8 @@ L_003C:
     	RRC                     ; 0F
         JC      L_029D          ; DA 9D 02 -> Wenn Carry=1, springe zu Adresse 029Dh
         RRC                     ; 0F       -> Akkumulator nach rechts rotieren
-        JC      L_01AD          ; DA AD 01 -> Wenn Carry=1, springe zu Adresse 01ADh
-        LXI     B,01000h        ; 01 00 10 -> lade 01000h in B
+        JC      L_01AD          ; DA AD 01 -> Wenn Carry=1, springe zu Adresse 01ADh - talker handling
+        LXI     B,01000h        ; 01 00 10 -> lade 01000h in BC
         LDA     IO_GPIB_CTRL_1  ; 3A 05 06 -> Holt das Daten-Byte vom I/O-Schnittstellenregister
     	CMA                     ; 2F       -> Akkumulator invertieren (Low-Aktive Signale)
     	RRC                     ; 0F       -> put lowest bit into carry flag
