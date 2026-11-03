@@ -343,6 +343,7 @@ L_013C:
     	ANI     02h             ; E6 02 from address 13fh
     	JZ      L_MAINLOOP      ; CA 17 00 from address 141h
     	JMP     L_0006          ; C3 06 00 from address 144h
+L_0147:
     	XRA     A               ; AF from address 147h
 L_0148:
     	STA     REG_CMD_STATE   ; 32 from address 148h
@@ -614,6 +615,7 @@ L_0263:
 ; ------------------------------------------------------------------------------
 ; Fortsetzung ab Adresse 028Ah bis 029Ch
 ; ------------------------------------------------------------------------------
+L_028A:
         LDA     REG_SYS_STATUS  ; 3A 07 04 -> Lädt den Gerätestatus aus dem RAM
         ANI     02h             ; E6 02    -> Bit 1 maskieren (z. B. Remote/Local oder ein Bus-Flag)
         JZ      L_MAINLOOP      ; CA 17 00 -> Wenn Bit 0 ist, Schleife abbrechen und zurück zu L_MAINLOOP
@@ -833,18 +835,17 @@ L_037B:
 ; Format: [ASCII-Zeichen] [Sprungadresse (Low/High)]
 L_ROM_TAB_DISPATCH:
 ; Eine Länge von 00h bricht den Suchprozess ab.
-    	DB 004h, 03Ch, 001h    ; 04h (..)     -> jump to zu 013Ch ()
-    	DB 014h, 006h, 000h    ; 14h (..)     -> jump to zu 0060h ()
-        DB 015h, 06Dh, 003h    ; 15h (..)     -> jump to zu 036Dh ()
-        DB 018h, 048h, 001h    ; 18h (..)     -> jump to zu 0148h ()
+    	DB 004h, L_013C & 0FFh, L_013C >> 8 ; 04h (..)     -> jump to 013Ch ()
+    	DB 014h, L_0006 & 0FFh, L_0006 >> 8 ; 14h (..)     -> jump to 0006h ()
+        DB 015h, L_036D & 0FFh, L_036D >> 8 ; 15h (..)     -> jump to 036Dh ()
+        DB 018h, L_0148 & 0FFh, L_0148 >> 8 ; 18h (..)     -> jump to 0148h ()
 
-    	DB 019h	; 019h, from address 39fh
-    	DB 047h	; 047h, from address 3a0h
-    	DB 001h	; 001h, from address 3a1h
+        DB 019h, L_0147 & 0FFh, L_0147 >> 8 ; 18h (..)     -> jump to 0147h ()
 
-    	DB 008h	; 008h, from address 3a2h
-    	DB 08Ah	; 08Ah, from address 3a3h
-    	DB 002h	; 002h, from address 3a4h
+        DB 008h, L_028A & 0FFh, L_028A >> 8 ; 08h (..)     -> jump to 028Ah ()
+    	;DB 008h	; 008h, from address 3a2h
+    	;DB 08Ah	; 08Ah, from address 3a3h
+    	;DB 002h	; 002h, from address 3a4h
 
     	DB 020h	; 020h, from address 3a5h
     	DB 000h	; 000h, from address 3a6h
