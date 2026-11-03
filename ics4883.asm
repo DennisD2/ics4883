@@ -870,7 +870,6 @@ L_ROM_TAB_DISPATCH:
         DB 015h, L_036D & 0FFh, L_036D >> 8   ; 15h (..)     -> jump to L_036D ()
         DB 018h, L_0148 & 0FFh, L_0148 >> 8   ; 18h (..)     -> jump to L_0148 ()
         DB 019h, L_0147 & 0FFh, L_0147 >> 8   ; 19h (..)     -> jump to L_0147 ()
-
         DB 008h, L_028A & 0FFh, L_028A >> 8   ; 08h (..)     -> jump to L_028A ()
         DB 020h, L_0100 & 0FFh, L_0100 >> 8   ; 20h (..)     -> jump to L_0100 ()
         DB 040h, L_0120 & 0FFh, L_0120 >> 8   ; 40h (..)     -> jump to L_0120 ()
