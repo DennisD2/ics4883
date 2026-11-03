@@ -224,12 +224,11 @@ L_009C:
 L_009F:
     	MVI     C, 0F9h         ; 0E F9    -> loads mask value 0F9h (mask 1111.1001b) into C
 ;
-; L_00A1 writes value from 0407 to 0707. It applies a mask value in C
+; L_00A1 updates systen state register RAM 0407h and also writes changes out to hardware register 0707h.
+; It applies a mask value in C
 ; mask is either 0F9h (called via L_009F) or 0FDh (called by L_010E)
-;
 ; A - new bits to set
 ; C - mask, which bits of old value should stay (1<=> stay, 0 don't stay)
-;
 L_00A1:
         LXI     H, REG_SYS_STATUS ; 21 07 04 -> HL points to 0407h
         MOV     B, A            ; 47       -> copy A to B
