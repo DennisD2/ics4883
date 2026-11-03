@@ -316,8 +316,7 @@ L_010E:
     	CALL    L_00A1          ; CD A1 00 -> L_00A1 writes value from RAM 0407h to 0707h (maybe GPIB talker write)
         JMP     L_MAINLOOP          ; C3 17 00 -> jump back to main loop
 
-; the following lines until the JMP L_MAINLOOP is not addressed by any code.
-;
+L_0120:
         CALL    L_0131          ; CD 31 01 -> Unterfunktion an Adresse 0131h aufrufen
         MVI     A, 04h          ; 3E 04    -> Konstante 04h in den Akkumulator laden
         JZ      L_0108          ; CA 08 01 -> Wenn Zero-Flag gesetzt, springe zu Adresse 0104h
@@ -355,7 +354,7 @@ L_0148:
 ; based on input byte value, a handling routine address in ROM is selected and returned in HL.
 ; Calling code will jump directly to the address returned by using opcode PCHL.
 ;
-; iterates though a table SEPARATOR_JUMP_TABLE, searches an entry. If found, return value in HL.
+; iterates though a table (L_ROM_TAB_DISPATCH, SEPARATOR_JUMP_TABLE), searches an entry. If found, return value in HL.
 ; if not found, last table entry is returned (default)
 ;
 ; HL points to a table
@@ -841,22 +840,11 @@ L_ROM_TAB_DISPATCH:
     	DB 014h, L_0006 & 0FFh, L_0006 >> 8 ; 14h (..)     -> jump to 0006h ()
         DB 015h, L_036D & 0FFh, L_036D >> 8 ; 15h (..)     -> jump to 036Dh ()
         DB 018h, L_0148 & 0FFh, L_0148 >> 8 ; 18h (..)     -> jump to 0148h ()
-
         DB 019h, L_0147 & 0FFh, L_0147 >> 8 ; 18h (..)     -> jump to 0147h ()
         DB 008h, L_028A & 0FFh, L_028A >> 8 ; 08h (..)     -> jump to 028Ah ()
-
         DB 020h, L_0100 & 0FFh, L_0100 >> 8 ; 08h (..)     -> jump to 0100h ()
-    ;	DB 020h	; 020h, from address 3a5h
-    ;	DB 000h	; 000h, from address 3a6h
-    ;	DB 001h	; 001h, from address 3a7h
-
-    	DB 040h	; 040h, from address 3a8h
-    	DB 020h	; 020h, from address 3a9h
-    	DB 001h	; 001h, from address 3aah
-
-    	DB 005h	; 005h, from address 3abh
-    	DB 07Bh	; 07Bh, from address 3ach
-    	DB 003h	; 003h, from address 3adh
+        DB 040h, L_0120 & 0FFh, L_0120 >> 8 ; 08h (..)     -> jump to 0120h ()
+        DB 005h, L_037B & 0FFh, L_037B >> 8 ; 08h (..)     -> jump to 037Bh ()
 
     	DB 060h	; 060h, from address 3aeh
     	DB 024h	; 024h, from address 3afh
@@ -916,7 +904,7 @@ TALK_CHAR_TABLE:
 ; 03F5h - 03FFh: Primäre Befehls-Sprungtabelle (wird von L_FIND_HANDLER_ADDRESS gescannt)
 ; Format: [ASCII-Kommando] [Sprungadresse (Low/High)]
 SEPARATOR_JUMP_TABLE:
-        DB 00Dh, 0C8h, 002h    ; 0Dh (CR)     -> jump to 02C8h (Haupt-Init)
-        DB 00Ah, 0C8h, 002h    ; 0Ah (LF)     -> jump to 02C8h (Haupt-Init)
-        DB 02Ch, 0C8h, 002h    ; 2Ch (Komma)  -> jump to 02C8h (Haupt-Init)
-        DB 0A5h, 002h          ; Default      -> jump to 02A5h
+        DB 00Dh, L_02C8 & 0FFh, L_02C8 >> 8 ; 0Dh (CR)     -> jump to 02C8h (Haupt-Init)
+        DB 00Ah, L_02C8 & 0FFh, L_02C8 >> 8 ; 0Ah (LF)     -> jump to 02C8h (Haupt-Init)
+        DB 02Ch, L_02C8 & 0FFh, L_02C8 >> 8 ; 2Ch (Komma)  -> jump to 02C8h (Haupt-Init)
+        DB L_02A5 & 0FFh, L_02A5 >> 8       ; Default      -> jump to 02A5h
