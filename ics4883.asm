@@ -449,7 +449,8 @@ L_01A9:
         JMP     L_MAINLOOP      ; C3 17 00 -> jump to mainloop
 
 ; ------------------------------------------------------------------------------
-; Handle input from instrument
+; Talker code
+; Handle input from instrument and write to GPIB bus
 ; these bytes seem to have following meaning
 ; 0605h also called IO_GPIB_CTRL_1
 ;   bit0=1 no input data, bit0=0 we have input data at input pins. Seems to be set by IOBoard and is maybe controlled by an input pin.
@@ -465,6 +466,8 @@ L_01A9:
 ;
 ; 10 nibbles are processed, converted by using the Talker Character Table (ROM_TLK_CHAR_TABLE) and written
 ; to 10 bytes in RAM starting at location 0430h.
+;
+Note: code starting at L_01F1 is also used for sending status byte during serial poll.
 ; ------------------------------------------------------------------------------
 L_01AD:
     	EI                      ; FB       -> enable interrupts
@@ -495,7 +498,7 @@ L_01D6:
         SHLD    REG_BUFF_PTR    ; 22 1D 04 -> Aktuellen HL-Zeiger im RAM 041Dh sichern
         CPI     19h             ; FE 19    -> Akkumulator mit Konstante 19h vergleichen
 
-        JZ      L_MAINLOOP      ; CA 17 00 -> Wenn gleich, springe weit zurück zu Adresse 0017h
+        JZ      L_MAINLOOP      ; CA 17 00 -> if A==19, jump to mainloop
         ORA     A               ; B7       -> Flags aktualisieren (Prüfen auf Null/Vorzeichen)
         JP      L_01F0          ; F2 F0 01 -> Wenn positiv (Bit 7 = 0), springe vor zu Adresse 01F0h
         ANI     040h            ; E6 40    -> Bit 6 maskieren
@@ -508,45 +511,48 @@ L_01D6:
 L_01F0:
         MOV     B, A            ; 47       -> Byte in Register B sichern
 L_01F1:
-        LDA     REG_SYS_STATE   ; 3A 03 04 -> Zustand aus RAM-Zelle 0403h holen
-        ANI     10h             ; E6 10    -> Bit 4 maskieren
-        MOV     C, A            ; 4F       -> Vorheriges Ergebnis nach Register C retten
-        LXI     D,IO_TALK_DATABUS ; 11 03 07 -> Lädt Byte von der Hardware-Adresse [DE] (0703h)
-        STAX    D               ; 12           -> Schreibt den Akkumulator wieder zurück nach [DE]
-        LXI     H, IO_TALK_CTRLBUS       ; 21 02 07 -> HL auf Adresse 0702h ausrichten
-        MOV     M,B             ; 70
-        DCX     H               ; 2B       -> HL um 1 verringern (zeigt nun auf 0701h)
+        LDA     REG_SYS_STATE   ; 3A 03 04 -> load [0403h] to A
+        ANI     10h             ; E6 10    -> isolate bit 4
+        MOV     C, A            ; 4F       -> save to C
+        LXI     D,IO_TALK_DATABUS ; 11 03 07 -> loads byte from [DE] - Lädt Byte von der Hardware-Adresse [DE] (0703h)
+        STAX    D               ; 12       -> write A to [DE]
+        LXI     H, IO_TALK_CTRLBUS ; 21 02 07 -> HL points to 0702h
+        MOV     M,B             ; 70       -> write B to [HL]
+        DCX     H               ; 2B       -> HL-- (now 0701h)
+; loop waits for 0701h, bit 1 becomes 0 (NDAC / NRFD)
 L_0200:
-        MOV     A, M            ; 7E       -> Status-Byte aus 0701h einlesen
-        RRC                     ; 0F       -> Nach rechts rotieren
-        RRC                     ; 0F       -> Nochmals nach rechts rotieren
-        JC      L_0200          ; DA 00 02 -> Wenn Carry=1, Fehler/Abzweig zu L_0002
-        MVI     A, 01h          ; 3E 01    -> Konstante 01h laden
-        ORA     C               ; B1       -> Mit Maske in Register C verknüpfen
-        STAX    D               ; 12       -> An Hardware ausgeben
+        MOV     A, M            ; 7E       -> load from 0701h to A
+        RRC                     ; 0F       -> rotate right
+        RRC                     ; 0F       -> rotate right
+        JC      L_0200          ; DA 00 02 -> if carry=1, loop back at L_0200
+        MVI     A, 01h          ; 3E 01    -> load 01h to A (DAV signal)
+        ORA     C               ; B1       -> OR A with C
+        STAX    D               ; 12       -> write A to [DE]
+; byte is written out, DAV was set. Now wait for ack from controller.
+; loop waits for 0701h, bit 2 becomes 0 ()
 L_020A:
-        MOV     A, M            ; 7E       -> Erneut Status lesen
+        MOV     A, M            ; 7E       -> load from 0701h to A
+        RRC                     ; 0F       --> shift right 3x
         RRC                     ; 0F
         RRC                     ; 0F
-        RRC                     ; 0F
-        JC      L_020A          ; DA 0A 02 -> Wenn Carry=1, Sprung zu RAM/ROM-Adresse 020Ah
-        DI                      ; F3       -> Interrupts sperren
-        XRA     A               ; AF       -> Akkumulator nullen
-        STAX    D               ; 12
-        STA     REG_SYS_STATE   ; 32 03 04 -> Systemzustand in RAM 0403h löschen
-        LXI     H, SRAM_START   ; 21 00 04 -> HL auf RAM-Start SRAM_START setzen
-        MOV     A, M            ; 7E
-        MVI     M, 00h          ; 36 00    -> Speicherzelle mit 00h überschreiben
-        ORA     A               ; B7       -> Flags aktualisieren
-        JM      L_MAINLOOP      ; FA 17 00 -> Wenn negativ (Bit 7=1), Sprung zu L_MAINLOOP
-        JZ      L_022B          ; CA 2B 02 -> Wenn Null, Sprung zu RAM/ROM-Adresse 022Bh
-        XRA     A               ; AF
-        STA     IO_SRAM_FLAG1   ; 32 07 06
-        STA     REG_BUS_STATUS  ; 32 0E 04
+        JC      L_020A          ; DA 0A 02 -> if carry==1 loop back to L_020A
+        DI                      ; F3       -> disable interrupts
+        XRA     A               ; AF       -> A:=0
+        STAX    D               ; 12       -> [DE] := A i.e. 0 (DAV becomes inactive)
+        STA     REG_SYS_STATE   ; 32 03 04 -> clear REG_SYS_STATE (becomes 0)
+        LXI     H, SRAM_START   ; 21 00 04 -> HL points to SRAM_START
+        MOV     A, M            ; 7E       -> load [HL] to A (HL points to SRAM_START)
+        MVI     M, 00h          ; 36 00    -> [HL] := 0
+        ORA     A               ; B7       -> (update CPU flags)
+        JM      L_MAINLOOP      ; FA 17 00 -> if A<0 (bit 7=1), jump to L_MAINLOOP
+        JZ      L_022B          ; CA 2B 02 -> if A==0, jump to L_022B
+        XRA     A               ; AF       -> A:=0
+        STA     IO_SRAM_FLAG1   ; 32 07 06 -> clear IO_SRAM_FLAG1
+        STA     REG_BUS_STATUS  ; 32 0E 04 -> clear REG_BUS_STATUS
 L_022B:
-        EI                      ; FB       -> Interrupts wieder freigeben
-        LHLD    REG_BUFF_PTR    ; 2A 1D 04
-        JMP     L_01D6          ; C3 D6 01 -> Sprung zu RAM/ROM-Adresse 01D6h
+        EI                      ; FB       -> enable interrupts
+        LHLD    REG_BUFF_PTR    ; 2A 1D 04 -> HL := 041D
+        JMP     L_01D6          ; C3 D6 01 -> jump back to outer loop (maybe more chars to send)
 ; ------------------------------------------------------------------------------
 ; Handle a serial poll. The coupler is addressed as talker, and must present its status byte.
 ; ------------------------------------------------------------------------------
