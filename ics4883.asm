@@ -456,6 +456,7 @@ L_01A9:
 ; 0606
 ; 0607
 ; 0608
+; BUT somehow in 0605h we also have non-data-pins, looking like handshake signals. Or internal signals between IOBoard and mainboard. Needs more analysis.
 ;
 ; 10 nibbles are processed, converted by using the Talker Character Table (ROM_TLK_CHAR_TABLE) and written
 ; to 10 bytes in RAM starting at location 0430h.
