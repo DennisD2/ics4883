@@ -833,10 +833,10 @@ L_037B:
 ; Format: [ASCII-Zeichen] [Sprungadresse (Low/High)]
 L_ROM_TAB_DISPATCH:
 ; Eine Länge von 00h bricht den Suchprozess ab.
-    	DB 004h, 03Ch, 001h    ; 04h (..)     -> Springe zu 013Ch ()
-    	DB 014h, 006h, 000h    ; 14h (..)     -> Springe zu 0060h ()
-        DB 015h, 06Dh, 003h    ; 15h (..)     -> Springe zu 036Dh ()
-        DB 018h, 048h, 001h    ; 18h (..)     -> Springe zu 0148h ()
+    	DB 004h, 03Ch, 001h    ; 04h (..)     -> jump to zu 013Ch ()
+    	DB 014h, 006h, 000h    ; 14h (..)     -> jump to zu 0060h ()
+        DB 015h, 06Dh, 003h    ; 15h (..)     -> jump to zu 036Dh ()
+        DB 018h, 048h, 001h    ; 18h (..)     -> jump to zu 0148h ()
 
     	DB 019h	; 019h, from address 39fh
     	DB 047h	; 047h, from address 3a0h
@@ -916,7 +916,7 @@ TALK_CHAR_TABLE:
 ; 03F5h - 03FFh: Primäre Befehls-Sprungtabelle (wird von L_FIND_SEP_HANDLER_ADR gescannt)
 ; Format: [ASCII-Kommando] [Sprungadresse (Low/High)]
 SEPARATOR_JUMP_TABLE:
-        DB 00Dh, 0C8h, 002h    ; 0Dh (CR)     -> Springe zu 02C8h (Haupt-Init)
-        DB 00Ah, 0C8h, 002h    ; 0Ah (LF)     -> Springe zu 02C8h (Haupt-Init)
-        DB 02Ch, 0C8h, 002h    ; 2Ch (Komma)  -> Springe zu 02C8h (Haupt-Init)
-        DB 0A5h, 002h          ; Letzter Vektor / Default Wert (-> Springe zu 02A5h)
+        DB 00Dh, 0C8h, 002h    ; 0Dh (CR)     -> jump to 02C8h (Haupt-Init)
+        DB 00Ah, 0C8h, 002h    ; 0Ah (LF)     -> jump to 02C8h (Haupt-Init)
+        DB 02Ch, 0C8h, 002h    ; 2Ch (Komma)  -> jump to 02C8h (Haupt-Init)
+        DB 0A5h, 002h          ; Default      -> jump to 02A5h
