@@ -23,14 +23,14 @@ STACK_BASE     EQU  0500h       ; start value for stack pointer
 ; ==============================================================================
 ROM_DATA_START   EQU  038Ah     ; Startbereich der Datentabellen im ROM
 ROM_CONST_CMP    EQU  0390h     ; Kontroll-Konstanten für den Zeichenvergleich
-GPIB_CMD_JUMPTABLE EQU  0393h     ; Sprung- und Befehlstabelle für den Data Dispatcher
+GPIB_CMD_JUMPTABLE EQU  0393h   ; VER jump table for GPIB commands
 ROM_TAB_SRAM_INI EQU  03B3h     ; Initialisierungs-Tabelle für den RAM-Puffer
 ROM_CFG_FLAGS    EQU  03C4h     ; System-Konfigurations-Flags im ROM
 ROM_CFG_LIMITS   EQU  03CEh     ; Maskierungs- und Fehler-Grenzwerte
 ROM_TLK_CHAR_TABLE EQU 03D4h    ; VER Talker Character Table (tranlates HEX input values to ICS4883 chars) ('0123...')
 ROM_PROT_LIMITS  EQU  03E4h     ; Status- und Protokoll-Grenzwerte
 ROM_STR_TERMS    EQU  03EEh     ; String-Terminatoren und Kontroll-Codes (CR/LF)
-SEPARATOR_JUMP_TABLE  EQU  03F5h     ; Primäre Befehls-Sprungtabelle (für CR, LF, Komma)
+SEPARATOR_JUMP_TABLE  EQU  03F5h  ; VER jump table for separator bytes ( CR, LF, comma)
 
 ; ==============================================================================
 ; 0400 -04FF : RAM variables
