@@ -65,7 +65,7 @@ RAM_HW_CONFIG2 EQU  0506h       ; configuration byte (created by L_0006 during b
 ; Hardware Input Section and Hardware Output Section
 ; ==============================================================================
 IO_HW_INPUT    EQU  0604h       ; Primäres Hardware-Eingangsregister (Datenstrom)
-IO_GPIB_CTRL_1  EQU  0605h      ; DIP-Schalter für Bus-Adresse & Modus (Hardware-Eingabe)
+IO_GPIB_CTRL_1  EQU  0605h      ; Control byte related to GPIB connector
 IO_SRAM_FLAG1  EQU  0607h       ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung)
 
 ; ==============================================================================
