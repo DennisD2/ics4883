@@ -271,12 +271,12 @@ L_00CE:
         STA     REG_GPIB_CTRL   ; 32 05 04 -> write A to RAM location 0405
         XRA     A               ; AF       -> A:=0
         STA     IO_TALK_CTRLBUS ; 32 02 07 -> write A which is 0 to 0702h
-        CALL    L_0163          ; CD 63 01 -> call L_0163 DD seems to write to instrument
+        CALL    L_0163          ; CD 63 01 -> call L_0163 DD seems to read a byte from GPIB, result in B
         LDA     IO_DIP_SWITCH   ; 3A 06 07 -> load 0706h to A
         RLC                     ; 07       -> check ONLY bit of dip switch
         JC      L_MAINLOOP      ; DA 17 00 -> if ONLY=1, then carry=1, we are finished and jump to L_MAINLOOP
         MOV     A, B            ; 78       -> load B to A
-        ANI     07Fh            ; E6 7F    -> mask to 7 bits (maybe ASCII char)
+        ANI     07Fh            ; E6 7F    -> mask to 7 bits (only 7 bits are used)
         MOV     B,A             ; 47       -> save to B
         ANI     060h            ; E6 60    -> isolate bits 6 and 5
         CPI     060h            ; FE 60    -> Check against 0110.0000
