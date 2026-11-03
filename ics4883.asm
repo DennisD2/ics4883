@@ -511,50 +511,55 @@ L_0232:
 ; b is num of bytes to convert (5)
 ; h,l point to memory location for input byte (is decremented in a loop)
 ; it looks that two 4-bit values are in 1 byte as HI/LO nibble
+;
+: we load from 0604 up to 0608h (5 bytes).
 convert_5input_bytes:
 L_0242:
-        MVI     B, 05h          ; 06 05    -> Schleifenzähler (5) in Register B laden DD: num of bytes to convert
+        MVI     B, 05h          ; 06 05    -> set loop counter B to 5: num of bytes to convert (5 bytes = 10 nibbles)
 L_0244:
-        MOV     A, M            ; 7E       -> Byte über HL-Zeiger (0604h) laden
-        RRC                     ; 0F       -> Bit-Verschiebungen / Rotation DD:  rotate right, 4 times; LO/HI nibble exchange
+        MOV     A, M            ; 7E       -> load byte from HL (0604h) to A
+        RRC                     ; 0F       -> isolate HI nibble by rotating 2x
         RRC                     ; 0F
         RRC                     ; 0F
         RRC                     ; 0F
-        CALL    L_0256          ; CD 56 02 -> Unterfunktion an ROM-Adresse 0256h aufrufen DD: HI nibble is converted call convert_out_char
-        MOV     A, M            ; 7E       -> Dasselbe Byte nochmals laden
-        CALL    L_0256          ; CD 56 02 -> Unterfunktion an ROM-Adresse 0256h aufrufen DD: LO nibble is converted
-        DCX     H               ; 2B       -> HL-Zeiger dekrementieren
-        DCR     B               ; 05       -> Schleifenzähler verringern DD: decrease num. of bytes to convert
-        JNZ     L_0244          ; C2 44 02 -> Schleife wiederholen, wenn Register B ungleich Null
-        RET                     ; C9       -> Unterprogramm beenden
+        CALL    L_0256          ; CD 56 02 -> convert HI nibble by call convert_out_char
+        MOV     A, M            ; 7E       -> load byte again to A
+        CALL    L_0256          ; CD 56 02 -> convert LO nibble by call convert_out_char
+        DCX     H               ; 2B       -> dec HL
+        DCR     B               ; 05       -> dec loop count
+        JNZ     L_0244          ; C2 44 02 -> if loop count > 0, repeat loop for next byte
+        RET                     ; C9       -> return to caller
 
-; Diese Funktion ist eine Konvertierungs- und Filter-Routine für Datenzeichen
-; (ASCII/Hex), die von den I/O-Schnittstellen des Geräts eingelesen wurden.
+; ------------------------------------------------------------------------------
+; convert hex value read from instrument via conversion table ROM_TLK_CHAR_TABLE
+; lookup, store it (0x26c)  to somewhere
+; (in RAM or register?), increment index in d, and keep h in original state
+;
 ; Sie entscheidet anhand eines Hardware-Statusbits, ob ein Datenwert invertiert
 ; und über eine Zeichentabelle im ROM übersetzt wird, oder ob es sich um ein
 ; Steuersignal handelt, das das System beeinflusst.
+;
+; ------------------------------------------------------------------------------
 convert_out_char:
-; convert value in a via conversion table lookup, store it (0x26c)  to somewhere
-; (in RAM or register?), increment index in d, and keep h in original state
 L_0256:
-        MOV     C, A            ; 4F       -> Akkumulator in Register C sichern
-        LDA     IO_GPIB_CTRL_1   ; 3A 05 06 -> Status/Datenbyte aus I/O-SRAM laden
-        ANI     04h             ; E6 04    -> Bit 2 isolieren DD: check bit 2 (maybe "do we have valid data?)"
-        CPI     04h             ; FE 04    -> Mit 04h vergleichen
-        MOV     A, C            ; 79       -> Gesichertes Byte zurück nach A holen
-        JZ      L_0263          ; CA 63 02 -> Wenn Vergleich gleich (Zero=1), Sprung zu 0263h
-        CMA                     ; 2F       -> Akkumulator invertieren
+        MOV     C, A            ; 4F       -> save A to C
+        LDA     IO_GPIB_CTRL_1  ; 3A 05 06 -> read byte from 0605h
+        ANI     04h             ; E6 04    -> isolate bit 2 to check bit 2 (maybe "do we have valid data?)"
+        CPI     04h             ; FE 04    -> is bit 2 set?
+        MOV     A, C            ; 79       -> restore A from C
+        JZ      L_0263          ; CA 63 02 -> if not set(?) jump to 0263h
+        CMA                     ; 2F       -> bit invert A
 L_0263:
-        ANI     0Fh             ; E6 0F    -> Die unteren 4 Bits maskieren
-        PUSH    H               ; E5       -> HL-Registerpaar auf dem Stack sichern
-        LXI     H, ROM_TLK_CHAR_TABLE ; 21 D4 03 -> HL auf Übersetzungstabelle im ROM ausrichten
-        ADD     L               ; 85       -> Offset zu L addieren
-        MOV     L, A            ; 6F       -> Ergebnis zurück in L (indirekte Adressierung)
-        MOV     A, M            ; 7E       -> Übersetztes Zeichen aus der ROM-Tabelle holen
-        STAX    D               ; 12       -> Zeichen an Zieladresse [DE] (0430hff) wegsichern
-        INX     D               ; 13       -> Zielzeiger erhöhen
-        POP     H               ; E1       -> HL vom Stack wiederherstellen
-        RET                     ; C9       -> Unterprogramm beenden
+        ANI     0Fh             ; E6 0F    -> mask lower 4 bit in A
+        PUSH    H               ; E5       -> save HL
+        LXI     H, ROM_TLK_CHAR_TABLE ; 21 D4 03 -> HL points to ROM table
+        ADD     L               ; 85       -> Add L to A (now A contains byte offset in table)
+        MOV     L, A            ; 6F       -> L := A
+        MOV     A, M            ; 7E       -> read translated char from char table
+        STAX    D               ; 12       -> store char to [DE] (0430hff)
+        INX     D               ; 13       -> inc DE
+        POP     H               ; E1       -> restore HL
+        RET                     ; C9       -> return to caller
 
 ; Steuerzeichen Filter
         LXI     H, ROM_CONST_CMP        ; 21 90 03 -> HL auf alternative Tabelle/String im ROM ausrichten
