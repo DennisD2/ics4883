@@ -835,23 +835,17 @@ L_037B:
 ; Format des universalen Kopierers (Routine L_FIND_HANDLER_ADDRESS / L_007B):
 ; Format: [ASCII-Zeichen] [Sprungadresse (Low/High)]
 L_ROM_TAB_DISPATCH:
-; Eine Länge von 00h bricht den Suchprozess ab.
-    	DB 004h, L_013C & 0FFh, L_013C >> 8 ; 04h (..)     -> jump to 013Ch ()
-    	DB 014h, L_0006 & 0FFh, L_0006 >> 8 ; 14h (..)     -> jump to 0006h ()
-        DB 015h, L_036D & 0FFh, L_036D >> 8 ; 15h (..)     -> jump to 036Dh ()
-        DB 018h, L_0148 & 0FFh, L_0148 >> 8 ; 18h (..)     -> jump to 0148h ()
-        DB 019h, L_0147 & 0FFh, L_0147 >> 8 ; 18h (..)     -> jump to 0147h ()
-        DB 008h, L_028A & 0FFh, L_028A >> 8 ; 08h (..)     -> jump to 028Ah ()
-        DB 020h, L_0100 & 0FFh, L_0100 >> 8 ; 08h (..)     -> jump to 0100h ()
-        DB 040h, L_0120 & 0FFh, L_0120 >> 8 ; 08h (..)     -> jump to 0120h ()
-        DB 005h, L_037B & 0FFh, L_037B >> 8 ; 08h (..)     -> jump to 037Bh ()
-
-    	DB 060h	; 060h, from address 3aeh
-    	DB 024h	; 024h, from address 3afh
-    	DB 003h	; 003h, from address 3b0h
-
-    	DB 017h	; 017h, from address 3b1h
-    	DB 000h	; 000h, from address 3b2h
+    	DB 004h, L_013C & 0FFh, L_013C >> 8   ; 04h (..)     -> jump to 013Ch ()
+    	DB 014h, L_0006 & 0FFh, L_0006 >> 8   ; 14h (..)     -> jump to 0006h ()
+        DB 015h, L_036D & 0FFh, L_036D >> 8   ; 15h (..)     -> jump to 036Dh ()
+        DB 018h, L_0148 & 0FFh, L_0148 >> 8   ; 18h (..)     -> jump to 0148h ()
+        DB 019h, L_0147 & 0FFh, L_0147 >> 8   ; 19h (..)     -> jump to 0147h ()
+        DB 008h, L_028A & 0FFh, L_028A >> 8   ; 08h (..)     -> jump to 028Ah ()
+        DB 020h, L_0100 & 0FFh, L_0100 >> 8   ; 20h (..)     -> jump to 0100h ()
+        DB 040h, L_0120 & 0FFh, L_0120 >> 8   ; 40h (..)     -> jump to 0120h ()
+        DB 005h, L_037B & 0FFh, L_037B >> 8   ; 05h (..)     -> jump to 037Bh ()
+        DB 060h, L_0324 & 0FFh, L_0324 >> 8   ; 60h (..)     -> jump to 0324h ()
+    	DB L_MAINLOOP & 0FFh, L_MAINLOOP >> 8 ; Default      -> jump to 0017h ()
 
 ; 03B3h - 03C3h: initialization table for RAM buffer - Initialisierungs-Tabelle für den RAM-Puffer
 ; values are read by code at L_007B, to prepare buffer starting at location 041Fh
