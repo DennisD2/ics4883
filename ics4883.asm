@@ -121,8 +121,8 @@ L_001F:
         JZ      L_00CE          ; CA CE 00 -> on equality, continue at L_00CE (supposed Listener handling)
 
         CALL    L_00AD          ; CD AD 00 -> calls 00ADh; DD talker handling
-        MVI     C, 0FEh         ; 0E FE    -> loads 0FEh to C (looks like a mask 1111.1110)
-        CALL    L_00A1          ; CD A1 00 -> calls 00A1h; seem to write from 0407h to 0707h
+        MVI     C, 0FEh         ; 0E FE    -> loads 0FEh to C (looks like a mask 1111.1110) - bit 0 is in focus
+        CALL    L_00A1          ; CD A1 00 -> calls 00A1h; seem to write both RAM 0407h and GPIB hardware 0707h
         LDA     IO_DIP_SWITCH   ; 3A 06 07 -> Loads 0706h to A
         RLC                     ; 07       -> rotate left, move highest bit ("ONLY" switch) to carry flag
         JMP     L_003C          ; C3 3C 00 -> continue at L_003C, with bits 6..0 from 0706h in A; "TL43.210x"
@@ -227,13 +227,16 @@ L_009F:
 ; L_00A1 writes value from 0407 to 0707. It applies a mask value in C
 ; mask is either 0F9h (called via L_009F) or 0FDh (called by L_010E)
 ;
+; A - new bits to set
+; C - mask, which bits of old value should stay (1<=> stay, 0 don't stay)
+;
 L_00A1:
         LXI     H, REG_SYS_STATUS ; 21 07 04 -> HL points to 0407h
         MOV     B, A            ; 47       -> copy A to B
         MOV     A, M            ; 7E       -> load [HL] (0407h) into A
-        ANA     C               ; A1       -> AND with C (apply mask)
-        ORA     B               ; B0       -> OR with B (Bits zusammenführen) (B contains A unchanged...)
-        MOV     M, A            ; 77       -> write result to [HL] (0407h)
+        ANA     C               ; A1       -> AND with C (apply mask) , means switch of bits to be new defined
+        ORA     B               ; B0       -> OR with B, means all new bits are set correctly after that
+        MOV     M, A            ; 77       -> write new value to [HL] (0407h)
         MVI     H, 07h          ; 26 07    -> set H of HL to 07h (HL points now to 0707h)
         MOV     M, A            ; 77       -> write A to 0707h
         RET                     ; C9       -> back to caller
