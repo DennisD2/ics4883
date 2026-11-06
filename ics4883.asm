@@ -755,7 +755,7 @@ L_02F3:
 L_02F9:
         MOV     B, A            ; 47       -> save A in B
         XRI     03h             ; EE 03    -> mask A with 0000.0011
-        MOV     M, A            ; 77       -> write new A to memory mapped register [0506h]
+        MOV     M, A            ; 77       -> write new A to memory mapped register [0506h] or, when called via label, 0606h ?!
         PUSH    H               ; E5       -> is this a timing op?
         PUSH    H               ; E5       ->
         POP     H               ; E1       ->
