@@ -34,3 +34,15 @@ to the file are correct disassemblations.
 
 ### Directory "doc"
 Has some more info on instrument coupler.
+
+
+## Notes etc.
+* 8080 Opcodes: A CMP or CPI is doing internally a subtraction. So, if a value is compared to another one, and they
+  are equal, flag Z results to 0. 
+  Example
+  ```shell
+  LDA 080h
+  CPI 080h ; Z=1 now
+  JZ AAA   ; test will be true, and jump will be done
+  ```
+* ...

@@ -579,13 +579,15 @@ L_0232:
 ; h,l point to memory location for input byte (is decremented in a loop)
 ; it looks that two 4-bit values are in 1 byte as HI/LO nibble
 ;
-; we load from 0604 up to 0608h (5 bytes).
+; we load from 0604 down to 0600h (5 bytes). The address values 4,3,2,1,0 will
+; create Yn signals at U63 in following order: Y4-Y3-Y2-Y1-Y0. This will enable
+; two 74LS03 Quad-NAND-chips on IO board to read in 8 bits at once (2 4 bit nibbles).
 ; ------------------------------------------------------------------------------
 convert_5input_bytes:
 L_0242:
         MVI     B, 05h          ; 06 05    -> set loop counter B to 5: num of bytes to convert (5 bytes = 10 nibbles)
 L_0244:
-        MOV     A, M            ; 7E       -> load byte from HL (0604h) to A
+        MOV     A, M            ; 7E       -> load byte from HL (starting with 0604h) to A
         RRC                     ; 0F       -> isolate HI nibble by rotating 2x
         RRC                     ; 0F
         RRC                     ; 0F
