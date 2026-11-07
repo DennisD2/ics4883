@@ -493,7 +493,7 @@ L_01AD:
     	JNZ     L_0232          ; C2 32 02 -> if in serial poll, jump to 0232h
         LXI     H, IO_TALK_CTRL_1 ; 21 05 06 -> HL points to 0605h
 WAIT_FOR_BIT0_SET:
-; we do busy waiting until bit0 from 0605h is cleared
+; we do busy waiting until bit0 from 0605h is cleared (this might be: J2_Pin2)
 ; bit0 will be cleared externally by some interrupt-driven action (not code)
 L_01B8:
         MOV     A, M            ; 7E       -> load [HL] to A
@@ -620,6 +620,8 @@ L_0244:
 ; lookup, store it (0x26c)  to somewhere
 ; (in RAM or register?), increment index in d, and keep h in original state
 ;
+; one bit (bit 2 from 0605) decides if data is inverted before conversion.
+;
 ; Sie entscheidet anhand eines Hardware-Statusbits, ob ein Datenwert invertiert
 ; und über eine Zeichentabelle im ROM übersetzt wird, oder ob es sich um ein
 ; Steuersignal handelt, das das System beeinflusst.
@@ -629,10 +631,10 @@ convert_out_char:
 L_0256:
         MOV     C, A            ; 4F       -> save A to C
         LDA     IO_TALK_CTRL_1  ; 3A 05 06 -> read byte from 0605h
-        ANI     04h             ; E6 04    -> isolate bit 2 to check bit 2 (maybe "do we have valid data?)"
+        ANI     04h             ; E6 04    -> isolate bit 2 to check bit 2 (maybe "DO_INVERT_DATA_READ)"
         CPI     04h             ; FE 04    -> is bit 2 set?
         MOV     A, C            ; 79       -> restore A from C
-        JZ      L_0263          ; CA 63 02 -> if not set(?) jump to 0263h
+        JZ      L_0263          ; CA 63 02 -> if not set(?) jump to 0263h, i.e. do no bit invert A
         CMA                     ; 2F       -> bit invert A
 L_0263:
         ANI     0Fh             ; E6 0F    -> mask lower 4 bit in A
@@ -646,7 +648,9 @@ L_0263:
         POP     H               ; E1       -> restore HL
         RET                     ; C9       -> return to caller
 
+; WHO CALLS THIS CODE???
 ; Steuerzeichen Filter
+L_0270_UNUSED:
         LXI     H, ROM_CONST_CMP ; 21 90 03 -> HL auf alternative Tabelle/String im ROM ausrichten
         MOV     A, B            ; 78       -> Register B (04h) nach A holen
         ANI     01Fh            ; E6 1F    -> 5-Bit-Maskierung
