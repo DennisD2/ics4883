@@ -9,15 +9,9 @@
 ; 0000 - 03FF : ROM
 ; 0400 - 04FF : RAM and STACK
 ; 0500 - 05FF : Input and Output registers (needs more detailing)
-; 0600 - 06FF : Input and Output registers (needs more detailing)
-;   0600 8 bits corresponding to digit1 and digit2
-;   0601 8 bits corresponding to digit3 and digit4
-;   0602 8 bits corresponding to digit5 and digit6
-;   0603 8 bits corresponding to digit7 and digit8
-;   0604 8 bits corresponding to digit9 and digit10
-;   0605 8 bits corresponding to some handshake pins pin 47 and pin 48 (bit 2, ...)
-;   0607 controls pins 49 and 50 (?)
-; 0700 - 07FF : GPIB connector control
+; 0600 - 06FF : Talker registers (Input from Instrument) - 0600-0607 controlled by U63 74LS138
+; 0700 - 07FF : GPIB connector control, chips on mainboard
+
 ; 0800 and above - unused
 
 SRAM_START     EQU  0400h       ; start of RAM space
@@ -68,8 +62,15 @@ RAM_HW_CONFIG1 EQU  0505h       ; Hardware-Konfigurationsbyte 1 (z. B. Pegelsteu
 RAM_HW_CONFIG2 EQU  0506h       ; configuration byte (created by L_0006 during boot; value is 1010)
 
 ; ==============================================================================
-; 0600 - 06FF : HARDWARE-MAPPED I/O REGISTERS (Eingabe & Ausgabe)
-; Hardware Input Section and Hardware Output Section
+; 0600 - 06FF : HARDWARE-MAPPED I/O REGISTERS (Mostly Input)
+; Hardware Input Section (and maybe also a little Hardware Output Section)
+;   600 8 bits input pins digit1 and digit2
+;   601 8 bits input pins digit3 and digit4
+;   602 8 bits input pins digit5 and digit6
+;   603 8 bits input pins digit7 and digit8
+;   604 8 bits input pins digit9 and digit10
+;   605 control input handshake pins pin 47 and pin 48 (bit 2, ...) via U74
+;   606 controls output handshake pins 49 and 50 via U64
 ; ==============================================================================
 IO_TALK_REG_DATA EQU  0604h     ; VER Data byte address related to Talker section. 0604h down to 0600h contain 5 bytes = 10 nibbles correspond to 40 data pins J2
 IO_TALK_CTRL_1   EQU  0605h     ; VER Control byte related to Talker section, contains bit for handshake pins
@@ -78,6 +79,14 @@ IO_SRAM_FLAG1    EQU  0607h     ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung
 ; ==============================================================================
 ; 0700 - 07FF : HARDWARE-MAPPED I/O REGISTERS (Eingabe & Ausgabe)
 ; GPIB connector control (no special chip used, just 74xx chips)
+;   700
+;   701
+;   702
+;   703
+;   704
+;   705
+;   706 DIP switch
+;   707
 ; ==============================================================================
 IO_TALK_STATUS EQU  0701h       ; Status des Talker-Interfaces (Eingang/Ausgang)
 IO_TALK_CTRLBUS  EQU  0702h     ; Synchronisationsregister 02h für Talker-Schnittstelle
@@ -85,7 +94,6 @@ IO_TALK_DATABUS  EQU  0703h     ; Synchronisationsregister 03h für Talker-Schni
 IO_TALK_CTRL   EQU  0704h       ; Kontrollregister für IEEE-488 Buschip
 IO_TALK_DATA   EQU  0705h       ; Datenpuffer-Register des Talker-Interfaces
 IO_DIP_SWITCH  EQU  0706h       ; VER DIP Switch byte
-IO_HW_OUTPUT   EQU  0707h       ; Zentrales Hardware-Ausgangsregister (z. B. LEDs/Latch)
 
 ; 0706h IO_DIP_SWITCH bits:
 ; bit 7 ONLY
