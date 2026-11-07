@@ -622,10 +622,6 @@ L_0244:
 ;
 ; one bit (bit 2 from 0605) decides if data is inverted before conversion.
 ;
-; Sie entscheidet anhand eines Hardware-Statusbits, ob ein Datenwert invertiert
-; und über eine Zeichentabelle im ROM übersetzt wird, oder ob es sich um ein
-; Steuersignal handelt, das das System beeinflusst.
-;
 ; ------------------------------------------------------------------------------
 convert_out_char:
 L_0256:
