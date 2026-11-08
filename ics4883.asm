@@ -128,7 +128,7 @@ L_0006:
         STA     IO_LST_CONFIG2  ; 32 06 05 -> put result to RAM 0506, Listerner hardware control byte
         LXI     H, ROM_TAB_SRAM_INI ; 21 B3 03 -> put pointer to ROM table to H
         CALL    L_007B          ; CD 7B 00 -> copy ROM tables to RAM/memory mapped regs
-        JMP     L_02C8          ; C3 C8 02 -> Further init code; at its end, main IO polling loop L_MAINLOOP is jumped to.
+        JMP     L_02C8          ; C3 C8 02 -> jump into Listener handling code, if nothing is incoming, this continues to main loop
 
 ; ------------------------------------------------------------------------------
 ; main IO polling loop
@@ -749,6 +749,7 @@ L_02BE:
 ; Bit 3 in 0505 decides if values read are inverted or not
 ; Bit 0 and 1 of IO_LST_CONFIG2 0506h are flipped after loop is finished.
 ; ------------------------------------------------------------------------------
+LISTENER_PROCESSING:
 L_02C8:
         LXI     H, REG_BUFF_IDX ; 21 1F 04 -> set HL to REG_BUFF_IDX 041Fh (counter value)
         MOV     C, M            ; 4E       -> load counter value to C
