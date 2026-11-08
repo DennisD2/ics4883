@@ -85,6 +85,7 @@ IO_TALK_CTRL_2  EQU  0607h     ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung)
 ;   703
 ;   704
 ;   705
+;       705 bit 5 maybe "SRQ INHIBIT" front panel switch
 ;   706 DIP switch
 ;   707 Front panel LEDs (only writes, no reads on that address; so assumed LED only)
 ; ==============================================================================
@@ -273,7 +274,7 @@ L_00C5:
     	RET                     ; C9
 
 L_00C7:
-    	LDA     GPIB_DATA       ; 3A 07 05 -> load 0507h to A
+    	LDA     GPIB_DATA       ; 3A 05 07 -> load 0705h to A; maybe "SRQ INHIBIT" front panel switch
         RLC                     ; 07       -> put bit 5 to carry flag by rotating 3x
         RLC                     ; 07       ->
         RLC                     ; 07       ->
