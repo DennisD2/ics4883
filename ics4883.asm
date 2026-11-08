@@ -21,26 +21,26 @@ STACK_BASE     EQU  0500h       ; start value for stack pointer (last valid stac
 ; ==============================================================================
 ; 0400 -04FF : RAM variables
 ; ==============================================================================
-REG_BUFFER_STS EQU  0400h       ; Puffer-Status / Aktivitäts-Flag
-REG_IO_STATE   EQU  0401h       ; Letztes empfangenes oder gesendetes E/A-Zeichen
-REG_MODE_SEL   EQU  0402h       ; Modus-Selektor (wird durch 'p'/'q' geschaltet)
-REG_SYS_STATE  EQU  0403h       ; Globaler Systemzustand (Handshake / I/O)
-REG_BCD_DATA   EQU  0404h       ; Speicher für validierte BCD-Ziffern
-REG_GPIB_CTRL  EQU  0405h       ; GPIB Kontroll-Flag (z. B. 80h für Reset/Status)
-REG_SYS_STATUS EQU  0407h       ; Zentrales Statusregister (Remote/Local, Bit 3 LEDs)
+VAR_BUFFER_STS EQU  0400h       ; Puffer-Status / Aktivitäts-Flag
+VAR_IO_STATE   EQU  0401h       ; Letztes empfangenes oder gesendetes E/A-Zeichen
+VAR_MODE_SEL   EQU  0402h       ; Modus-Selektor (wird durch 'p'/'q' geschaltet)
+VAR_SYS_STATE  EQU  0403h       ; Globaler Systemzustand (Handshake / I/O)
+VAR_BCD_DATA   EQU  0404h       ; Speicher für validierte BCD-Ziffern
+VAR_GPIB_CTRL  EQU  0405h       ; GPIB Kontroll-Flag (z. B. 80h für Reset/Status)
+VAR_SYS_STATUS EQU  0407h       ; Zentrales Statusregister (Remote/Local, Bit 3 LEDs)
 ; bit 0
 ; 407 bit 1 used to decide warmstart or mainloop after gpib command SDC
 ; bit 2
 ; bit 3 1=only local , bit3 = 0 remote
-REG_INIT_FLAG  EQU  0408h       ; Initialisierungs- und Reset-Steuerflag
-REG_PENDING_CMD EQU  040Bh      ; Zwischenspeicher für anstehende Handshake-Befehle
-REG_CMD_LOCK   EQU  040Ch       ; Sperrregister für eingehende Bus-Befehle
-REG_CMD_SERIALPOLL  EQU  040Dh  ; VER control register for serial poll handling
-REG_BUS_STATUS EQU  040Eh       ; VER GPIB status register (Talker, is 41h if data available)
-REG_EOS_FLAG   EQU  040Fh       ; End-Of-Sequence / EOI Status-Register
-REG_BUFF_PTR   EQU  041Dh       ; Letzter Tabellenzeiger / Puffer-Pointer
-REG_BUFF_IDX   EQU  041Fh       ; Index-Zähler für den Zeichenpuffer (Max 10)
-REG_ARRAY_PTR  EQU  042Eh       ; Zeiger auf das aktuelle Zeichen im indizierten Array
+VAR_INIT_FLAG  EQU  0408h       ; Initialisierungs- und Reset-Steuerflag
+VAR_PENDING_CMD EQU  040Bh      ; Zwischenspeicher für anstehende Handshake-Befehle
+VAR_CMD_LOCK   EQU  040Ch       ; Sperrregister für eingehende Bus-Befehle
+VAR_CMD_SERIALPOLL  EQU  040Dh  ; VER control register for serial poll handling
+VAR_BUS_STATUS EQU  040Eh       ; VER GPIB status register (Talker, is 41h if data available)
+VAR_EOS_FLAG   EQU  040Fh       ; End-Of-Sequence / EOI Status-Register
+VAR_BUFF_PTR   EQU  041Dh       ; Letzter Tabellenzeiger / Puffer-Pointer
+VAR_BUFF_IDX   EQU  041Fh       ; Index-Zähler für den Zeichenpuffer (Max 10)
+VAR_ARRAY_PTR  EQU  042Eh       ; Zeiger auf das aktuelle Zeichen im indizierten Array
 RAM_ASCII_BUFF EQU  0430h       ; Startadresse für den übersetzten ASCII-Datenpuffer
 
 ; ==============================================================================
@@ -123,7 +123,7 @@ L_0006:
 ; ------------------------------------------------------------------------------
 L_MAINLOOP:                     ; was: L_0017
         DI                      ; F3
-        LDA     REG_IO_STATE    ; 3A 01 04 -> load 0401h from RAM to A - Status von GPIB / I/O Interface-Chip laden
+        LDA     VAR_IO_STATE    ; 3A 01 04 -> load 0401h from RAM to A - Status von GPIB / I/O Interface-Chip laden
         ORA     A               ; B7       -> is it = 0 ?
         JNZ     L_0355          ; C2 55 03 -> if no, then handle state change in L_0355; DD: maybe a pending command is handled there
 
@@ -144,7 +144,7 @@ L_001F:
 
 L_003C:
         CC      L_009C          ; DC 9C 00 -> if carry flag ist set ("ONLY" switch on), continue at L_009C; in A we have 0706h content shiftet left by 1
-        LXI     H, REG_SYS_STATUS  ; 21 07 04 -> Register HL mit Adresse 0407h laden
+        LXI     H, VAR_SYS_STATUS  ; 21 07 04 -> Register HL mit Adresse 0407h laden
     	MOV     A,M             ; 7E
     	RRC                     ; 0F
     	RRC                     ; 0F
@@ -164,7 +164,7 @@ L_003C:
 ; Some cleanup at end of talker handling
 ; ------------------------------------------------------------------------------
 L_0060:
-    	LXI     H, REG_SYS_STATE ; 21 03 04 -> HL points to 0403h
+    	LXI     H, VAR_SYS_STATE ; 21 03 04 -> HL points to 0403h
     	MOV     A,M             ; 7E       -> load [0403h] to A
     	ANA     B               ; A0       -> AND A with B
     	ORA     C               ; B1       -> OR A with C
@@ -176,7 +176,7 @@ L_0060:
 ; Set GPIB Status Byte (Talker) to 41h, which means "data available"
 ; ------------------------------------------------------------------------------
 L_SET_DATA_AVAILABLE:           ; was L_006D
-        LXI     H, REG_BUS_STATUS ; 21 0E 04 -> HL points to 040Eh (GPIB status reg)
+        LXI     H, VAR_BUS_STATUS ; 21 0E 04 -> HL points to 040Eh (GPIB status reg)
         MOV     A, M            ; 7E       -> load GPIB status reg to A
         RRC                     ; 0F       -> check if lowest bit is set
         JC      L_0060          ; DA 60 00 -> if yes, handle that at 0060h (will not return here, but go to main loop)
@@ -243,7 +243,7 @@ L_009F:
 ; A - new bits to set
 ; C - mask, which bits of old value should stay (1<=> stay, 0 don't stay)
 L_00A1:
-        LXI     H, REG_SYS_STATUS ; 21 07 04 -> HL points to 0407h
+        LXI     H, VAR_SYS_STATUS ; 21 07 04 -> HL points to 0407h
         MOV     B, A            ; 47       -> copy A to B
         MOV     A, M            ; 7E       -> load [HL] (0407h) into A
         ANA     C               ; A1       -> AND with C (apply mask) , means switch of bits to be new defined
@@ -283,7 +283,7 @@ L_00C7:
 ; ------------------------------------------------------------------------------
 L_00CE:
         MVI     A, 80h          ; 3E 80    -> load 80h to A
-        STA     REG_GPIB_CTRL   ; 32 05 04 -> write A to RAM location 0405
+        STA     VAR_GPIB_CTRL   ; 32 05 04 -> write A to RAM location 0405
         XRA     A               ; AF       -> A:=0
         STA     GPIB_CTRLBUS ; 32 02 07 -> write A which is 0 to 0702h
         CALL    L_0163          ; CD 63 01 -> call L_0163 DD seems to read a byte from GPIB, result in B
@@ -297,7 +297,7 @@ L_00CE:
         CPI     060h            ; FE 60    -> Check against 0110.0000
         JZ      L_00F7          ; CA F7 00 -> if equality (bits 5 and 6 are set) continue at 00F7h (there a handler address is determined and handler code executed)
         XRA     A               ; AF       -> A := 0
-        STA     REG_CMD_LOCK    ; 32 0C 04 -> writes A, which is 0, to 040Ch, i.e. clear REG_CMD_LOCK
+        STA     VAR_CMD_LOCK    ; 32 0C 04 -> writes A, which is 0, to 040Ch, i.e. clear VAR_CMD_LOCK
         MOV     A, B            ; 78       -> load B to A
         ANI     060h            ; E6 60    -> isolate bits 6 and 5
         JNZ     L_00F7          ; C2 F7 00 -> if bit 5 or 6 are set, call again L_00F7 (there a handler address is determined and handler code executed)
@@ -328,7 +328,7 @@ L_010E:
         CPI     03Fh            ; FE 3F    -> is command UNL Universal Unlisten (3Fh / '?')?
         JNZ     L_MAINLOOP      ; C2 17 00 -> if not an UNL, jump to main polling loop L_MAINLOOP
     	XRA     A               ; AF       -> XOR A mit A <=> A:=0
-    	STA     REG_BUFF_IDX    ; 32 1F 04 -> write 0 to 041F; clear incoming character data buffer
+    	STA     VAR_BUFF_IDX    ; 32 1F 04 -> write 0 to 041F; clear incoming character data buffer
     	MVI     C, 0FDh         ; 0E FD    -> loads 0FDh into C (output mask?)
     	CALL    L_00A1          ; CD A1 00 -> L_00A1 writes value from RAM 0407h to 0707h(front panel LEDs)
         JMP     L_MAINLOOP      ; C3 17 00 -> jump back to main loop
@@ -360,7 +360,7 @@ L_0131:
 ; Handler for GPIB command 04h - SDC Selected Device Clear
 ; ------------------------------------------------------------------------------
 L_013C:
-    	LDA     REG_SYS_STATUS  ; 3A 07 04 -> load 0407 into A
+    	LDA     VAR_SYS_STATUS  ; 3A 07 04 -> load 0407 into A
     	ANI     02h             ; E6 02    -> isolate bit 1
     	JZ      L_MAINLOOP      ; CA 17 00 -> if bit is 0, continue at mainloop (looks like nothing to do then)
     	JMP     L_0006          ; C3 06 00 -> if bit is 1, continue at L_0006 (looks like a warmstart)
@@ -372,11 +372,11 @@ L_0147:
     	XRA     A               ; AF        -> A:=0
 ; ------------------------------------------------------------------------------
 ; Handler for GPIB command 18h - SPE - Serial Poll Enable
-; writes A value into register REG_CMD_SERIALPOLL
+; writes A value into register VAR_CMD_SERIALPOLL
 ; A is 0, for SPD command, and !=0 for serial poll start SPE
 ; ------------------------------------------------------------------------------
 L_0148:
-    	STA     REG_CMD_SERIALPOLL ; 32 0D 04  -> store A to 040Dh (in serial poll start case, A is something != 0)
+    	STA     VAR_CMD_SERIALPOLL ; 32 0D 04  -> store A to 040Dh (in serial poll start case, A is something != 0)
     	JMP     L_MAINLOOP      ; C3 17 00  -> continue at mainloop
 
 ; ------------------------------------------------------------------------------
@@ -415,14 +415,14 @@ L_015C:
 ; I guess its complexity comes from the fact, that all GPIB bit handling (DAV, NDAC, ...)
 ; is done by bit manupulation via IO registers 070xh .
 ;
-; L_0163 waits for bit0 = 1 in REG_GPIB_CTRL
+; L_0163 waits for bit0 = 1 in VAR_GPIB_CTRL
 ; HL points to 0701 GPIB_STATUS
 ; DE points to 0703 GPIB_DATABUS
 ; several bytes are written to [DE], i.e. GPIB_DATABUS. I count 4 bytes, "STAX D"
 ; ------------------------------------------------------------------------------
 READ_BYTE_FROM_GPIB:
 L_0163:
-        LDA     REG_SYS_STATE   ; 3A 03 04 -> load 0403h to A
+        LDA     VAR_SYS_STATE   ; 3A 03 04 -> load 0403h to A
         ANI     10h             ; E6 10    -> and with bit 4, isolate bit 4
         MOV     C, A            ; 4F       -> copy A to C
         LXI     D, GPIB_DATABUS ; 11 03 07 -> DE points to 0703h
@@ -432,22 +432,22 @@ L_0163:
         MVI     A, 80h          ; 3E 80    -> load 80h  to A
         STA     GPIB_CTRL    ; 32 04 07 -> write A to 0704h
         LXI     H, GPIB_STATUS ; 21 01 07 ->HL points to 0701h
-WAIT_FOR_BIT0_REG_GPIB_CTRL:
+WAIT_FOR_BIT0_VAR_GPIB_CTRL:
 L_0178:
-        LDA     REG_GPIB_CTRL   ; 3A 05 04 -> load RAM 0405h to A
+        LDA     VAR_GPIB_CTRL   ; 3A 05 04 -> load RAM 0405h to A
     	XRA     M               ; AE       -> XOR A with [HL], i.e. [0405h]
     	JM      L_01A9          ; FA A9 01 -> if sign flag==1, continue at 01A9h (do nothing)
         MOV     A, M            ; 7E       -> read from [HL], which is 0701h
         ANI     01h             ; E6 01    -> and with bit 0, isolate bit 0
         JZ      L_0178          ; CA 78 01 -> if bit0==0, jump back to 0178h (we are waiting for bit0 becoming 1)
-        LDA     REG_GPIB_CTRL   ; 3A 05 04 -> load RAM 0405h to A
+        LDA     VAR_GPIB_CTRL   ; 3A 05 04 -> load RAM 0405h to A
     	XRA     M               ; AE       -> XOR A with [HL], i.e. [0405h]
     	JM      L_01A9          ; FA A9 01 -> if sign flag==1, continue at 01A9h (do nothing)
         MVI     A, 06h          ; 3E 06    -> sign flag is 0, load 06h to A
         ORA     C               ; B1       -> OR with C: now bit 4 from 0403h is set in A
         STAX    D               ; 12       -> write A to [DE] ausgeben
         MOV     A, M            ; 7E       -> read from [HL], which is 0701h
-        STA     REG_EOS_FLAG    ; 32 0F 04 -> save A to RAM 040Fh
+        STA     VAR_EOS_FLAG    ; 32 0F 04 -> save A to RAM 040Fh
         DCX     H               ; 2B       -> HL-- (now 0700h)
         MOV     B, M            ; 46       -> read from [HL], which is 0700h, to B
         INX     H               ; 23       -> HL++ (now again 0701h)
@@ -461,7 +461,7 @@ L_019B:
         MVI     A, 06h          ; 3E 06    -> load 06h to A
         ORA     C               ; B1       -> OR with C: now bit 4 from 0403h is set in A
         STAX    D               ; 12       -> write A to [DE]
-        STA     REG_SYS_STATE   ; 32 03 04 -> write A back to RAM 0403h
+        STA     VAR_SYS_STATE   ; 32 03 04 -> write A back to RAM 0403h
         RET                     ; C9       -> return to caller
 L_01A9:
         POP     H               ; E1       -> restore HL
@@ -492,7 +492,7 @@ L_01A9:
 ; ------------------------------------------------------------------------------
 L_01AD:
     	EI                      ; FB       -> enable interrupts
-    	LDA     REG_CMD_SERIALPOLL   ; 3A 0D 04 -> loads 040Dh into A
+    	LDA     VAR_CMD_SERIALPOLL   ; 3A 0D 04 -> loads 040Dh into A
     	ORA     A               ; B7       -> is 040Dh == 0 ? this means: are we in a serial poll process?
     	JNZ     L_0232          ; C2 32 02 -> if in serial poll, jump to 0232h
         LXI     H, GPIB_CTRL_1 ; 21 05 06 -> HL points to 0605h
@@ -511,12 +511,12 @@ L_01B8:
         STA     SRAM_START      ; 32 00 04 -> Akkumulator-Inhalt direkt in RAM SRAM_START sichern
         EI                      ; FB       -> Interrupts wieder freigeben (Enable Interrupts)
         LXI     H, RAM_ASCII_BUFF ; 21 30 04 -> HL-Zeiger auf SRAM-Adresse 0430h laden DD: h := address of created 10 bytes
-        SHLD    REG_ARRAY_PTR   ; 22 2E 04 -> Speicherinhalt von HL nach SRAM 042Eh sichern
+        SHLD    VAR_ARRAY_PTR   ; 22 2E 04 -> Speicherinhalt von HL nach SRAM 042Eh sichern
         LXI     H, L_03E4       ; 21 E4 03 -> HL-Zeiger auf Übersetzungstabelle im ROM ausrichten
 L_01D6:
         MOV     A, M            ; 7E       -> Byte via HL laden
         INX     H               ; 23       -> HL-Zeiger um 1 erhöhen
-        SHLD    REG_BUFF_PTR    ; 22 1D 04 -> Aktuellen HL-Zeiger im RAM 041Dh sichern
+        SHLD    VAR_BUFF_PTR    ; 22 1D 04 -> Aktuellen HL-Zeiger im RAM 041Dh sichern
         CPI     19h             ; FE 19    -> Akkumulator mit Konstante 19h vergleichen
 
         JZ      L_MAINLOOP      ; CA 17 00 -> if A==19, jump to mainloop
@@ -525,14 +525,14 @@ L_01D6:
         ANI     040h            ; E6 40    -> Bit 6 maskieren
         ORA     C               ; B1       -> Logisches ODER mit Register C verknüpfen
         MOV     C, A            ; 4F       -> In Register C sichern (AS-Syntax für MOV C,A)
-        LHLD    REG_ARRAY_PTR   ; 2A 2E 04 -> HL-Registerinhalt im SRAM 042Ah sichern
+        LHLD    VAR_ARRAY_PTR   ; 2A 2E 04 -> HL-Registerinhalt im SRAM 042Ah sichern
         MOV     A, M            ; 7E       -> Byte erneut via HL laden
         INX     H               ; 23       -> HL-Zeiger um 1 erhöhen
-        SHLD    REG_ARRAY_PTR   ; 22 2E 04 -> HL-Registerinhalt im SRAM 042Eh sichern
+        SHLD    VAR_ARRAY_PTR   ; 22 2E 04 -> HL-Registerinhalt im SRAM 042Eh sichern
 L_01F0:
         MOV     B, A            ; 47       -> Byte in Register B sichern
 L_01F1:
-        LDA     REG_SYS_STATE   ; 3A 03 04 -> load [0403h] to A
+        LDA     VAR_SYS_STATE   ; 3A 03 04 -> load [0403h] to A
         ANI     10h             ; E6 10    -> isolate bit 4
         MOV     C, A            ; 4F       -> save to C
         LXI     D,GPIB_DATABUS ; 11 03 07 -> loads byte from [DE] - Lädt Byte von der Hardware-Adresse [DE] (0703h)
@@ -560,7 +560,7 @@ L_020A:
         DI                      ; F3       -> disable interrupts
         XRA     A               ; AF       -> A:=0
         STAX    D               ; 12       -> [DE] := A i.e. 0 (DAV becomes inactive)
-        STA     REG_SYS_STATE   ; 32 03 04 -> clear REG_SYS_STATE (becomes 0)
+        STA     VAR_SYS_STATE   ; 32 03 04 -> clear VAR_SYS_STATE (becomes 0)
         LXI     H, SRAM_START   ; 21 00 04 -> HL points to SRAM_START
         MOV     A, M            ; 7E       -> load [HL] to A (HL points to SRAM_START)
         MVI     M, 00h          ; 36 00    -> [HL] := 0
@@ -569,10 +569,10 @@ L_020A:
         JZ      L_022B          ; CA 2B 02 -> if A==0, jump to L_022B
         XRA     A               ; AF       -> A:=0
         STA     IO_SRAM_FLAG1   ; 32 07 06 -> clear IO_SRAM_FLAG1
-        STA     REG_BUS_STATUS  ; 32 0E 04 -> clear REG_BUS_STATUS
+        STA     VAR_BUS_STATUS  ; 32 0E 04 -> clear VAR_BUS_STATUS
 L_022B:
         EI                      ; FB       -> enable interrupts
-        LHLD    REG_BUFF_PTR    ; 2A 1D 04 -> HL := 041D
+        LHLD    VAR_BUFF_PTR    ; 2A 1D 04 -> HL := 041D
         JMP     L_01D6          ; C3 D6 01 -> jump back to outer loop (maybe more chars to send)
 ; ------------------------------------------------------------------------------
 ; Handle a serial poll. The coupler is addressed as talker, and must present its status byte.
@@ -582,11 +582,11 @@ L_022B:
 L_0232:
         MVI     A, 0FFh         ; 3E FF    -> load 0FFh to A
         STA     SRAM_START      ; 32 00 04 -> write A to SRAM_START
-        LXI     H, REG_BUS_STATUS ; 21 0E 04 -> HL points to GPIB status byte of coupler
+        LXI     H, VAR_BUS_STATUS ; 21 0E 04 -> HL points to GPIB status byte of coupler
         MOV     B, M            ; 46       -> load status byte to B
         MOV     A, M            ; 7E       -> and load it to A
         ANI     0BFh            ; E6 BF    -> clear bit 6 in A (mask 1011.1111)
-        MOV     M, A            ; 77       -> write A back to REG_BUS_STATUS
+        MOV     M, A            ; 77       -> write A back to VAR_BUS_STATUS
         JMP     L_01F1          ; C3 F1 01 -> Sprung zu RAM/ROM-Adresse 01F1h
 
 ; ------------------------------------------------------------------------------
@@ -656,7 +656,7 @@ L_0270_UNUSED:
         ANI     01Fh            ; E6 1F    -> 5-Bit-Maskierung
         CMP     M               ; BE       -> Mit Speicherwert [HL] vergleichen
         JNZ     L_MAINLOOP      ; C2 17 00 -> Bei Ungleichheit harter Sprung zurück zu L_MAINLOOP
-        LXI     H, REG_SYS_STATUS ; 21 07 04 -> HL auf RAM-Adresse 0407h setzen
+        LXI     H, VAR_SYS_STATUS ; 21 07 04 -> HL auf RAM-Adresse 0407h setzen
         MOV     A, M            ; 7E       -> Wert aus 0407h lesen
         ANI     030h            ; E6 30    -> Bits 4 und 5 maskieren
         JZ      L_MAINLOOP      ; CA 17 00 -> Wenn Null, ebenfalls zurück zu L_MAINLOOP
@@ -677,7 +677,7 @@ L_0270_UNUSED:
 ;
 ; ------------------------------------------------------------------------------
 L_028A:
-        LDA     REG_SYS_STATUS  ; 3A 07 04 -> Lädt den Gerätestatus aus dem RAM
+        LDA     VAR_SYS_STATUS  ; 3A 07 04 -> Lädt den Gerätestatus aus dem RAM
         ANI     02h             ; E6 02    -> Bit 1 maskieren (z. B. Remote/Local oder ein Bus-Flag)
         JZ      L_MAINLOOP      ; CA 17 00 -> Wenn Bit1==0, Schleife abbrechen und zurück zu L_MAINLOOP
         LXI     H, IO_SRAM_FLAG1 ; 21 07 06 -> HL auf register ausrichten
@@ -691,7 +691,7 @@ L_028A:
 ; Protokoll-Validierung: Am Ende wird über das RAM-Register 040Fh ausgewertet, ob der Bus ein Übertragungsende signalisiert (CPI 040h).
 L_029D:
         XRA     A               ; AF       -> Akkumulator nullen
-        STA     REG_GPIB_CTRL   ; 32 05 04 -> Systemregister 0405h im RAM zurücksetzen
+        STA     VAR_GPIB_CTRL   ; 32 05 04 -> Systemregister 0405h im RAM zurücksetzen
         STA     GPIB_CTRLBUS ; 32 02 07 -> Interface-Register 0702h löschen
         DI                      ; F3       -> Interrupts global sperren
 
@@ -703,7 +703,7 @@ L_029D:
 ;
 ; Open questions:
 ; - There is some offset 0x20 added to [HL] before storing the char received at [HL]. Why? What does that mean?
-; - REG_BUFF_IDX is considered to be a byte count in range 0..10, which is used to be added to a real memory address.
+; - VAR_BUFF_IDX is considered to be a byte count in range 0..10, which is used to be added to a real memory address.
 ;   but here, it is used like a real memory address, see line "MOV M,B". I do not understand this.
 ; ------------------------------------------------------------------------------
 L_READ_INTO_BUFF_LOOP:
@@ -713,8 +713,8 @@ L_02A5:
         ANI     070h            ; E6 70    -> mask with 0111.0000. Bits 4,5,6.
         CPI     030h            ; FE 30    -> compare with 0011.0000. Checks if bits 4 and 5 are set and 6 is cleared.
         JNZ     L_0305          ; C2 05 03 -> if not, do additional parsing (we may have a separator)
-        LXI     H, REG_BUFF_IDX ; 21 1F 04 -> HL := REG_BUFF_IDX,
-        MOV     A, M            ; 7E       -> A := [HL] i.e. [REG_BUFF_IDX], number of characters read in buffer
+        LXI     H, VAR_BUFF_IDX ; 21 1F 04 -> HL := VAR_BUFF_IDX,
+        MOV     A, M            ; 7E       -> A := [HL] i.e. [VAR_BUFF_IDX], number of characters read in buffer
         CPI     00Ah            ; FE 0A    -> is index == 10? (we cannot handle more than 10 chars)
         JNC     L_02BE          ; D2 BE 02 -> if index >= 10, continue at L_02BE
         INR     M               ; 34       -> index < 10, we increment [HL], i.e. number of characters read in buffer
@@ -723,7 +723,7 @@ L_02A5:
         MOV     M, B            ; 70       -> [HL] := B. B is character received.
 L_BUFF_OVERFLOW:
 L_02BE:
-        LDA     REG_EOS_FLAG    ; 3A 0F 04 -> A := [040Fh]
+        LDA     VAR_EOS_FLAG    ; 3A 0F 04 -> A := [040Fh]
         ANI     0C0h            ; E6 C0    -> mask with 1100.0000, bits 7 and 6
         CPI     040h            ; FE 40    -> compare with 0100.0000 EOI Flag (40h), i.e. were bits 7 and 6 "01"?
         JNZ     L_02A5          ; C2 A5 02 -> no equality, i.e. not EOI, so repeat loop
@@ -743,7 +743,7 @@ L_02BE:
 ; are processed. It is allowed to process less than 10 characters, and number of chars is not required
 ; to be multiples of 2.
 ;
-; REG_BUFF_IDX: number of characters to process
+; VAR_BUFF_IDX: number of characters to process
 ; C is used as loop count (character-wise counting)
 ; B = ?
 ; IO_LST_DATA address where received characters to write to J2 connector are stored
@@ -753,12 +753,12 @@ L_02BE:
 ; ------------------------------------------------------------------------------
 LISTENER_PROCESSING:
 L_02C8:
-        LXI     H, REG_BUFF_IDX ; 21 1F 04 -> set HL to REG_BUFF_IDX 041Fh (counter value)
+        LXI     H, VAR_BUFF_IDX ; 21 1F 04 -> set HL to VAR_BUFF_IDX 041Fh (counter value)
         MOV     C, M            ; 4E       -> load counter value to C
         MOV     A, M            ; 7E       -> load also to A
         ORA     A               ; B7       -> is counter zero?
         JZ      L_MAINLOOP      ; CA 17 00 -> if counter==0, nothing to do, jump back to main polling loop
-        MVI     M, 00h          ; 36 00    -> if counter>0, set M to 0, clear [HL], [REG_BUFF_IDX]
+        MVI     M, 00h          ; 36 00    -> if counter>0, set M to 0, clear [HL], [VAR_BUFF_IDX]
         PUSH    B               ; C5       -> push B to stack
         CALL    L_0311          ; CD 11 03 -> Depending on bit 3 in 0505h, C bytes in memory at HL are inverted or not (L_CHECK_INVERT)
         POP     B               ; C1       -> restore BC
@@ -841,18 +841,18 @@ L_031A:
 ; Handler for GPIB command 60h - PPE Parallel Poll Enable
 ; ------------------------------------------------------------------------------
 L_0324:
-        LDA     REG_CMD_LOCK    ; 3A 0C 04 -> Lädt den Inhalt der RAM-Adresse 040Ch in den Akkumulator
+        LDA     VAR_CMD_LOCK    ; 3A 0C 04 -> Lädt den Inhalt der RAM-Adresse 040Ch in den Akkumulator
         ORA     A               ; B7       -> Setzt die Flags (Zero/Sign) basierend auf dem Akkumulator
         JZ      L_MAINLOOP      ; CA 17 00 -> Wenn der Wert Null ist, Sprung zurück zum Haupt-Polling L_MAINLOOP
         MOV     A, B            ; 78       -> Holt den Wert aus Register B zurück nach A
         CPI     070h            ; FE 70    -> Prüfen, ob das Zeichen im Akkumulator 70h entspricht (70h = 'p')
     	JZ      L_036D          ; CA 6D 03 -> Wenn ja, Sprung nach vorne zu Adresse 036Dh
-        STA     REG_IO_STATE    ; 32 01 04 -> Speichert den Akkumulator in RAM-Adresse REG_IO_STATE
+        STA     VAR_IO_STATE    ; 32 01 04 -> Speichert den Akkumulator in RAM-Adresse VAR_IO_STATE
         ANI     007h            ; E6 07    -> Maskiert die unteren 3 Bits (Bit 0-2) des Akkumulators
         MOV     C, A            ; 4F       -> Das maskierte Ergebnis nach Register C retten
         MOV     A, B            ; 78       -> Holt das originale Zeichen aus Register B zurück nach A
         ANI     008h            ; E6 08    -> Bit 3 des Akkumulators isolieren
-        LDA     REG_SYS_STATUS  ; 3A 07 04 -> Systemstatus aus RAM 0407h laden
+        LDA     VAR_SYS_STATUS  ; 3A 07 04 -> Systemstatus aus RAM 0407h laden
         JZ      L_0342          ; CA 42 03 -> Wenn Ergebnis von ANI Null war, Sprung nach 0342h
         XRI     001h            ; EE 01    -> Akkumulator mit 01h XOR-verknüpfen
 L_BIT3_ZERO:
@@ -865,24 +865,24 @@ L_0346:
         RLC                     ; 07       -> Akkumulator nach links rotieren
         DCR     C               ; 0D       -> Register C um 1 verringern
     	JNZ     L_0346          ; C2 46 03 -> Wenn nicht Null, Sprung nach 0346h
-        STA     REG_PENDING_CMD ; 32 0B 04 -> Akkumulator in RAM-Zelle 040Bh sichern
-        LXI     H, REG_SYS_STATUS ; 21 07 04 -> HL auf RAM-Adresse 0407h ausrichten
+        STA     VAR_PENDING_CMD ; 32 0B 04 -> Akkumulator in RAM-Zelle 040Bh sichern
+        LXI     H, VAR_SYS_STATUS ; 21 07 04 -> HL auf RAM-Adresse 0407h ausrichten
         MOV     A, M            ; 7E       -> Wert laden
         ORI     008h            ; F6 08    -> Bit 3 gezielt setzen
         MOV     M, A            ; 77       -> Aktualisierten Wert zurückschreiben
 ; 0704h, 0703h are set to 0.
-; value of [040B] REG_PENDING_CMD is written to 0702h GPIB_CTRLBUS
-; value of [0407] REG_SYS_STATUS is written to 0707h (LED control)
+; value of [040B] VAR_PENDING_CMD is written to 0702h GPIB_CTRLBUS
+; value of [0407] VAR_SYS_STATUS is written to 0707h (LED control)
 L_0355:
         LXI     H, GPIB_CTRL ; 21 04 07 -> HL points to 0704h (GPIB connector related)
         MVI     M, 00h          ; 36 00    -> clear [0704h]
         LXI     H, GPIB_CTRLBUS ; 21 02 07 -> HL points to 0702h
-        LDA     REG_PENDING_CMD ; 3A 0B 04 -> load content of RAM 040Bh to A
+        LDA     VAR_PENDING_CMD ; 3A 0B 04 -> load content of RAM 040Bh to A
         MOV     M, A            ; 77       -> copy A to [0702h]
         INX     H               ; 23       -> inc HL (now 0703h)
         MVI     M, 00h          ; 36 00    -> clear [0703h]
         MVI     L, 07h          ; 2E 07    -> set lower byte of HL to 07h (HL now is 0707h), which is LED control
-        LDA     REG_SYS_STATUS  ; 3A 07 04 -> load content of RAM 0407h to A
+        LDA     VAR_SYS_STATUS  ; 3A 07 04 -> load content of RAM 0407h to A
         MOV     M, A            ; 77       -> copy A to [0707h], switches on/off LEDs
         JMP     L_001F          ; C3 1F 00 -> continue at L_001F inside main polling loop
 
@@ -893,8 +893,8 @@ L_0355:
 ; ------------------------------------------------------------------------------
 L_036D:
         XRA     A               ; AF       -> A:=0
-        STA     REG_IO_STATE    ; 32 01 04 -> writes A i.e. 0 to REG_IO_STATE 0401
-        LXI     H, REG_SYS_STATUS ; 21 07 04 -> HL points to 0407h
+        STA     VAR_IO_STATE    ; 32 01 04 -> writes A i.e. 0 to VAR_IO_STATE 0401
+        LXI     H, VAR_SYS_STATUS ; 21 07 04 -> HL points to 0407h
         MOV     A, M            ; 7E       -> load [HL] to A
         ANI     0F7h            ; E6 F7    -> clear bit 3 (mask 1111 0111)
         MOV     M, A            ; 77       -> write back new value to [HL] i.e. 0407h
@@ -906,11 +906,11 @@ L_036D:
 ; bit 1 in 0407 seems to represent "REMOTE_ENABLED"
 ; ------------------------------------------------------------------------------
 L_037B:
-        LDA     REG_SYS_STATUS  ; 3A 07 04 -> load status byte from RAM 0407h
+        LDA     VAR_SYS_STATUS  ; 3A 07 04 -> load status byte from RAM 0407h
         ANI     002h            ; E6 02    -> isolate bit 1
         JZ      L_MAINLOOP      ; CA 17 00 -> if bit 1==0, continue in L_MAINLOOP (nothing to do it seems)
         MOV     A, B            ; 78       -> copy B to A (B seems to contain command character 05h)
-        STA     REG_CMD_LOCK    ; 32 0C 04 -> write A to 040Ch
+        STA     VAR_CMD_LOCK    ; 32 0C 04 -> write A to 040Ch
         JMP     L_MAINLOOP      ; C3 17 00 -> start over in mainloop
 
 ; ------------------------------------------------------------------------------
