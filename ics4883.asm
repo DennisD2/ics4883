@@ -62,13 +62,14 @@ RAM_ASCII_BUFF EQU  0430h       ; Startadresse für den übersetzten ASCII-Daten
 ;   503 8 bit output pins
 ;   504 8 bit output pins
 ;   505
+;       Bit 3 in 0505 decides if values read are inverted or not
 ;   506
 ;   507
 ; Hardware Input Section and Hardware Output Section
 ; ==============================================================================
-IO_LST_DATA    EQU  0500h       ; start of data registers fort reading from instrument
-RAM_HW_CONFIG1 EQU  0505h       ; Hardware-Konfigurationsbyte 1 (z. B. Pegelsteuerung)
-RAM_HW_CONFIG2 EQU  0506h       ; configuration byte (created by L_0006 during boot; value is 1010)
+IO_LST_DATA    EQU  0500h       ; VER start of data registers fort reading from instrument
+IO_LST_CONFIG1 EQU  0505h       ; VER control byte for Listener hardware
+IO_LST_CONFIG2 EQU  0506h       ; VER control byte for Listener hardware (created by L_0006 during boot; value is 1010)
 
 ; ==============================================================================
 ; 0600 - 06FF :  Memory mapped IO registers for Talker section (Input, Read from instrument)
@@ -124,7 +125,7 @@ L_0000:
 L_0006:
         LDA     ROM_CFG_FLAGS   ; 3A C4 03 -> read config value from ROM 03C4 (value there is: 6=0110)
         XRI     0Ch             ; EE 0C    -> XOR with C=1100 (result: 1010)
-        STA     RAM_HW_CONFIG2  ; 32 06 05 -> put result to RAM 0506
+        STA     IO_LST_CONFIG2  ; 32 06 05 -> put result to RAM 0506, Listerner hardware control byte
         LXI     H, ROM_TAB_SRAM_INI ; 21 B3 03 -> put pointer to ROM table to H
         CALL    L_007B          ; CD 7B 00 -> copy ROM tables to RAM/memory mapped regs
         JMP     L_02C8          ; C3 C8 02 -> Further init code; at its end, main IO polling loop L_MAINLOOP is jumped to.
@@ -273,7 +274,7 @@ L_00AD:
         CMP     M               ; BE       -> Vergleiche das Ergebnis mit dem Wert im ROM [HL]
         JNZ     L_00C5          ; C2 C5 00 -> Wenn ungleich, springe vor zu Adresse 00C5h
         INX     H               ; 23       -> HL-Zeiger auf das nächste Tabellenbyte erhöhen
-        LDA     RAM_HW_CONFIG1  ; 3A 05 05 -> weiteres I/O-Datenbyte einlesen
+        LDA     IO_LST_CONFIG1  ; 3A 05 05 -> Listener control byte einlesen
         CMA                     ; 2F       -> Invertieren
         ANI     07h             ; E6 07    -> Die untersten 3 Bits maskieren
         CMP     M               ; BE       -> Mit dem nächsten Tabellenwert im ROM vergleichen
@@ -340,7 +341,7 @@ L_010E:
         CPI     03Fh            ; FE 3F    -> is command UNL Universal Unlisten (3Fh / '?')?
         JNZ     L_MAINLOOP      ; C2 17 00 -> if not an UNL, jump to main polling loop L_MAINLOOP
     	XRA     A               ; AF       -> XOR A mit A <=> A:=0
-    	STA     REG_BUFF_IDX    ; 32 1F 04 -> write 0 to 041F
+    	STA     REG_BUFF_IDX    ; 32 1F 04 -> write 0 to 041F; clear incoming character data buffer
     	MVI     C, 0FDh         ; 0E FD    -> loads 0FDh into C (output mask?)
     	CALL    L_00A1          ; CD A1 00 -> L_00A1 writes value from RAM 0407h to 0707h (maybe GPIB talker write)
         JMP     L_MAINLOOP      ; C3 17 00 -> jump back to main loop
@@ -701,6 +702,7 @@ L_029D:
 
 ; ------------------------------------------------------------------------------
 ; L_02A5 is also Default Handler in separator table
+; Adds a character to incoming character buffer (incoming from GPIB)
 ; ------------------------------------------------------------------------------
 L_BUFF_LOOP:
 L_02A5:
@@ -734,53 +736,57 @@ L_02BE:
 ; Handler for characters received via GPIB bus for  0D/CR, LF/0A, comma/2C
 ; which are considered 'special' by ICS4883 (i.e. these are separators)
 ;
+; inside loop L_PACK_LOOP, we take two characters received by GPIB, put lower+upper nibble in a
+; single byte. This byte is written to output registers 0500h-0504h. Up to 10 input characters
+; are processed. It is allowed to process less than 10 characters, and number of chars is not required
+; to be multiples of 2.
 ;
-; Nibble-Packing Routine: Der Code ab Adresse 02DBh ist ein hocheffizienter Packer. Er nimmt
-; zwei aufeinanderfolgende Bytes, isoliert jeweils deren untere 4 Bits (ANI 00Fh), schiebt das zweite Nibble
-; per Rotation nach oben (RLC) und fügt sie mit ORA B zu einem einzigen, kompakten Daten-Byte zusammen.
-; SRAM-Transfer: Diese gepackten Daten werden sequenziell direkt in den System-SRAM ab Adresse IO_LST_DATA
-; übertragen (STAX D).
+; REG_BUFF_IDX: number of characters to process
+; C is used as loop count (character-wise counting)
+; B = ?
+; IO_LST_DATA address where received characters to write to J2 connector are stored
 ;
-; C: number of characters to write to
+; Bit 3 in 0505 decides if values read are inverted or not
+; Bit 0 and 1 of IO_LST_CONFIG2 0506h are flipped after loop is finished.
 ; ------------------------------------------------------------------------------
 L_02C8:
-        LXI     H, REG_BUFF_IDX ; 21 1F 04 -> set HL to RAM address 041Fh (counter value)
+        LXI     H, REG_BUFF_IDX ; 21 1F 04 -> set HL to REG_BUFF_IDX 041Fh (counter value)
         MOV     C, M            ; 4E       -> load counter value to C
         MOV     A, M            ; 7E       -> load also to A
         ORA     A               ; B7       -> is counter zero?
-        JZ      L_MAINLOOP      ; CA 17 00 -> if counter==0, jump back to main polling loop
-        MVI     M, 00h          ; 36 00    -> if counter>0, set M to 0
+        JZ      L_MAINLOOP      ; CA 17 00 -> if counter==0, nothing to do, jump back to main polling loop
+        MVI     M, 00h          ; 36 00    -> if counter>0, set M to 0, clear [HL], [REG_BUFF_IDX]
         PUSH    B               ; C5       -> push B to stack
-        CALL    0311h           ; CD 11 03 -> Depending on bit 3 in 0505h, C bytes in memory at HL are inverted or not (L_CHECK_INVERT)
+        CALL    L_0311          ; CD 11 03 -> Depending on bit 3 in 0505h, C bytes in memory at HL are inverted or not (L_CHECK_INVERT)
         POP     B               ; C1       -> restore BC
         LXI     D, IO_LST_DATA   ; 11 00 05 -> DE points to IO_LST_DATA
 L_PACK_LOOP:
 L_02DB:
-        INX     H               ; 23       -> inc HL
-        MOV     A, M            ; 7E       -> read byte from [HL]
-        ANI     00Fh            ; E6 0F    -> mask lower nibble
+        INX     H               ; 23       -> inc HL (points to next source character)
+        MOV     A, M            ; 7E       -> read byte from [HL], read character
+        ANI     00Fh            ; E6 0F    -> mask lower nibble, we ignore upper nibble in incoming chars
         MOV     B, A            ; 47       -> save in B
-        DCR     C               ; 0D       -> dec loop count
-        JM      L_02F3          ; FA F3 02 -> if <0 continue at L_02F3
-        INX     H               ; 23       -> inc HL
-        MOV     A, M            ; 7E       -> read byte from [HL]
+        DCR     C               ; 0D       -> dec loop count, reflects that we've processed 1 char more
+        JM      L_02F3          ; FA F3 02 -> if <0 continue at L_02F3 loop counter below zero
+        INX     H               ; 23       -> inc HL, loop counter still>0
+        MOV     A, M            ; 7E       -> read byte from [HL], we read next byte from [HL]
         ANI     00Fh            ; E6 0F    -> mask lower nibble
-        RLC                     ; 07       -> rotate (4 times) left
+        RLC                     ; 07       -> rotate (4 times) left; move lower nibble to upper nibble location
         RLC                     ; 07
         RLC                     ; 07
-        RLC                     ; 07       ; ... now (lower) nibble is in upper nibble
+        RLC                     ; 07       ; ... now (lower) nibble is in upper nibble location
         ORA     B               ; B0       -> add nibble saved before to have complete byte with two nibbles
-        DCR     C               ; 0D       -> dec loop count
-        STAX    D               ; 12       -> write completed byte to target address in RAM [DE]
-        INX     D               ; 13       -> inc target address pointer
+        DCR     C               ; 0D       -> dec loop count, reflects that we've processed 1 char more
+        STAX    D               ; 12       -> write completed byte to target address [DE], at output register IO_LST_DATA and behind
+        INX     D               ; 13       -> inc target address pointer, next register to write to in loop
         JNZ     L_02DB          ; C2 DB 02 -> if loop count is larger 0, repeat loop
 L_PACK_DONE:
 L_02F3:
-        LXI     H, RAM_HW_CONFIG2 ; 21 06 05 -> HL points to 0506h
+        LXI     H, IO_LST_CONFIG2 ; 21 06 05 -> HL points to 0506h
         LDA     ROM_CFG_FLAGS   ; 3A C4 03 -> load [03C4h] into A
 L_02F9:
         MOV     B, A            ; 47       -> save A in B
-        XRI     03h             ; EE 03    -> mask A with 0000.0011
+        XRI     03h             ; EE 03    -> lowest two bits are flipped (reversed), e.g. ..01 becomes ..10 .
         MOV     M, A            ; 77       -> write new A to memory mapped register [0506h] or, when called via label, 0606h ?!
         PUSH    H               ; E5       -> is this a timing op?
         PUSH    H               ; E5       ->
@@ -788,9 +794,7 @@ L_02F9:
         POP     H               ; E1       ->
         MOV     M, B            ; 70        -> A value, that was saved in B, back to M (so first masked A, then A is written to M, which looks like a strobe signal is generated)
         JMP     L_MAINLOOP      ; C3 17 00 -> back to main polling loop
-; ------------------------------------------------------------------------------
-; line above is end of boot code; everything else is done in main polling loop L_MAINLOOP
-; ------------------------------------------------------------------------------
+
 
 ; ------------------------------------------------------------------------------
 ; Handle non-data chars, i.e. separators (CR, LF, comma, 'other').
@@ -812,7 +816,7 @@ L_0305:
 ; called from 02D4h
 L_CHECK_INVERT:
 L_0311:
-        LDA     RAM_HW_CONFIG1  ; 3A 05 05 -> load 0505h to A
+        LDA     IO_LST_CONFIG1  ; 3A 05 05 -> load 0505h to A
         ANI     08h             ; E6 08    -> isolate bit 3
         CPI     08h             ; FE 08    -> is bit set?
         RNZ                     ; C0       -> if bit is not set, simply return
