@@ -22,8 +22,6 @@ STACK_BASE     EQU  0500h       ; start value for stack pointer (last valid stac
 ; ==============================================================================
 ; 0000 - 03FF : ROM constants and table addresses
 ; ==============================================================================
-ROM_CFG_FLAGS    EQU  03C4h     ; System-Konfigurations-Flags im ROM
-ROM_CFG_LIMITS   EQU  03CEh     ; Maskierungs- und Fehler-Grenzwerte
 ROM_TLK_CHAR_TABLE EQU 03D4h    ; VER Talker Character Table (tranlates HEX input values to ICS4883 chars) ('0123...')
 ROM_PROT_LIMITS  EQU  03E4h     ; Status- und Protokoll-Grenzwerte
 ROM_STR_TERMS    EQU  03EEh     ; String-Terminatoren und Kontroll-Codes (CR/LF)
@@ -119,7 +117,7 @@ L_0000:
 ; Is also Handler for GPIB command 14h - DCL Device Clear
 ; ------------------------------------------------------------------------------
 L_0006:
-        LDA     ROM_CFG_FLAGS   ; 3A C4 03 -> read config value from ROM 03C4 (value there is: 6=0110)
+        LDA     L_03C4          ; 3A C4 03 -> read config value from ROM 03C4 (value there is: 6=0110)
         XRI     0Ch             ; EE 0C    -> XOR with C=1100 (result: 1010)
         STA     IO_LST_CONFIG2  ; 32 06 05 -> put result to RAM 0506, Listerner hardware control byte
         LXI     H, L_03B3       ; 21 B3 03 -> put pointer to ROM table to H
@@ -793,7 +791,7 @@ L_02DB:
 L_PACK_DONE:
 L_02F3:
         LXI     H, IO_LST_CONFIG2 ; 21 06 05 -> HL points to 0506h
-        LDA     ROM_CFG_FLAGS   ; 3A C4 03 -> load [03C4h] into A
+        LDA     L_03C4          ; 3A C4 03 -> load [03C4h] into A
 L_02F9:
         MOV     B, A            ; 47       -> save A in B
         XRI     03h             ; EE 03    -> lowest two bits are flipped (reversed), e.g. ..01 becomes ..10 .
@@ -966,6 +964,7 @@ L_03B3:
 
 ; 03C4h - 03CDh: system config values
 ; 6,2,6,6,2,0,6,2,7,0
+L_03C4:
     	DB 006h, 002h, 006h, 006h, 002h, 000h, 006h, 002h, 007h, 000h
 
 ; 03CEh - 03D3h: Maskierungs- und Fehler-Grenzwerte
