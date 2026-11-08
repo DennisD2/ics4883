@@ -10,7 +10,7 @@
 ; 0400 - 04FF : RAM and STACK
 ; 0500 - 05FF : Listener registers - 0500-0507h controlled by U34 74LS138
 ; 0600 - 06FF : Talker registers (Input from Instrument) - 0600-0607 controlled by U63 74LS138
-; 0700 - 07FF : GPIB connector control, chips on mainboard
+; 0700 - 07FF : GPIB connector control, chips on mainboard - 0700-0707 controlled by U17 74LS138
 ; 0800 and above - unused
 
 SRAM_START     EQU  0400h       ; start of RAM space
