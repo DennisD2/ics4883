@@ -423,11 +423,16 @@ L_015C:
         RET                     ; C9       -> return to caller
 
 ; ------------------------------------------------------------------------------
+; Code assumed to read in one byte from GPIB. Byte result in B.
+; I guess its complexity comes from the fact, that all GPIB bit handling (DAV, NDAC, ...)
+; is done by bit manupulation via IO registers 070xh .
+;
 ; L_0163 waits for bit0 = 1 in REG_GPIB_CTRL
 ; HL points to 0701 IO_TALK_STATUS
 ; DE points to 0703 IO_TALK_DATABUS
 ; several bytes are written to [DE], i.e. IO_TALK_DATABUS. I count 4 bytes, "STAX D"
 ; ------------------------------------------------------------------------------
+READ_BYTE_FROM_GPIB:
 L_0163:
         LDA     REG_SYS_STATE   ; 3A 03 04 -> load 0403h to A
         ANI     10h             ; E6 10    -> and with bit 4, isolate bit 4
@@ -702,29 +707,36 @@ L_029D:
 
 ; ------------------------------------------------------------------------------
 ; L_02A5 is also Default Handler in separator table
-; Adds a character to incoming character buffer (incoming from GPIB)
+; characters are read from GPIB (using L_0163) and added to end of character buffer which
+; is located at ??? (should be IO_LST_DATA, but where is this set?).
+; Adds character to incoming character buffer (incoming from GPIB)
+;
+; Open questions:
+; - There is some offset 0x20 added to [HL] before storing the char received at [HL]. Why? What does that mean?
+; - REG_BUFF_IDX is considered to be a byte count in range 0..10, which is used to be added to a real memory address.
+;   but here, it is used like a real memory address, see line "MOV M,B". I do not understand this.
 ; ------------------------------------------------------------------------------
-L_BUFF_LOOP:
+L_READ_INTO_BUFF_LOOP:
 L_02A5:
-        CALL    L_0163          ; CD 63 01 -> Aufruf der Puffer-/Schnittstellenroutine L_0163
-        MOV     A, B            ; 78       -> Das in Register B befindliche Zeichen nach A holen
-        ANI     070h            ; E6 70    -> Die Bits 4, 5 und 6 maskieren
-        CPI     030h            ; FE 30    -> Prüfen, ob das obere Halbnibble dem ASCII-Bereich '3' entspricht
+        CALL    L_0163          ; CD 63 01 -> Read in 1 byte from GPIB via L_0163, byte is in B after call
+        MOV     A, B            ; 78       -> copy B to A
+        ANI     070h            ; E6 70    -> mask with 0111.0000. Bits 4,5,6.
+        CPI     030h            ; FE 30    -> compare with 0011.0000. Checks if bits 4 and 5 are set and 6 is cleared.
         JNZ     L_0305          ; C2 05 03 -> if not, do additional parsing (we may have a separator)
-        LXI     H, REG_BUFF_IDX ; 21 1F 04 -> HL auf RAM-Adresse 041Fh (Zähler/Index) setzen
-        MOV     A, M            ; 7E       -> Aktuellen Index-Wert laden
-        CPI     00Ah            ; FE 0A    -> Prüfen, ob die Obergrenze von 10 Elementen erreicht ist
-        JNC     L_02BE          ; D2 BE 02 -> Wenn der Index >= 10 ist, direkt vor zu 02BEh springen
-        INR     M               ; 34       -> Ansonsten den Index im RAM [HL] um 1 erhöhen
-        ADI     020h            ; C6 20    -> Offset 20h zum Akkumulator addieren
-        MOV     L, A            ; 6F       -> Berechneten Offset nach Register L übertragen
-        MOV     M, B            ; 70       -> Das originale Zeichen aus B an die berechnete RAM-Adresse schreiben
+        LXI     H, REG_BUFF_IDX ; 21 1F 04 -> HL := REG_BUFF_IDX,
+        MOV     A, M            ; 7E       -> A := [HL] i.e. [REG_BUFF_IDX], number of characters read in buffer
+        CPI     00Ah            ; FE 0A    -> is index == 10? (we cannot handle more than 10 chars)
+        JNC     L_02BE          ; D2 BE 02 -> if index >= 10, continue at L_02BE
+        INR     M               ; 34       -> index < 10, we increment [HL], i.e. number of characters read in buffer
+        ADI     020h            ; C6 20    -> Add 020h to A; 020h is some offset in buffer
+        MOV     L, A            ; 6F       -> L := A, now HL points to old_HL+1+020h
+        MOV     M, B            ; 70       -> [HL] := B. B is character received.
 L_BUFF_OVERFLOW:
 L_02BE:
-        LDA     REG_EOS_FLAG    ; 3A 0F 04 -> Empfangenes Datenbyte aus RAM 040Fh holen
-        ANI     0C0h            ; E6 C0    -> Die obersten zwei Bits maskieren
-        CPI     040h            ; FE 40    -> Prüfen auf das End-Of-Sequence / EOI Flag (40h)
-        JNZ     L_02A5          ; C2 A5 02 -> Sprung wenn != 0
+        LDA     REG_EOS_FLAG    ; 3A 0F 04 -> A := [040Fh]
+        ANI     0C0h            ; E6 C0    -> mask with 1100.0000, bits 7 and 6
+        CPI     040h            ; FE 40    -> compare with 0100.0000 EOI Flag (40h), i.e. were bits 7 and 6 "01"?
+        JNZ     L_02A5          ; C2 A5 02 -> no equality, i.e. not EOI, so repeat loop
 
 ; ------------------------------------------------------------------------------
 ; Listener code
@@ -992,7 +1004,7 @@ TALK_CHAR_TABLE:
 ; for a separator byte, a handler address is defined.
 ; Format: [separator byte] [handler address (Low/High)]
 L_SEPARATOR_JUMP_TABLE:
-        DB 00Dh, L_02C8 & 0FFh, L_02C8 >> 8 ; 0Dh (CR)     -> jump to L_02C8 (Haupt-Init)
-        DB 00Ah, L_02C8 & 0FFh, L_02C8 >> 8 ; 0Ah (LF)     -> jump to L_02C8 (Haupt-Init)
-        DB 02Ch, L_02C8 & 0FFh, L_02C8 >> 8 ; 2Ch (Komma)  -> jump to L_02C8 (Haupt-Init)
+        DB 00Dh, L_02C8 & 0FFh, L_02C8 >> 8 ; 0Dh (CR)     -> jump to L_02C8 (Listener processing)
+        DB 00Ah, L_02C8 & 0FFh, L_02C8 >> 8 ; 0Ah (LF)     -> jump to L_02C8 (Listener processing)
+        DB 02Ch, L_02C8 & 0FFh, L_02C8 >> 8 ; 2Ch (Komma)  -> jump to L_02C8 (Listener processing)
         DB L_02A5 & 0FFh, L_02A5 >> 8       ; Default      -> jump to L_02A5
