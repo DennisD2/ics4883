@@ -54,7 +54,6 @@ RAM_ASCII_BUFF EQU  0430h       ; Startadresse für den übersetzten ASCII-Daten
 ;       Bit 3 in 0505 decides if values read are inverted or not
 ;   506
 ;   507
-; Hardware Input Section and Hardware Output Section
 ; ==============================================================================
 IO_LST_DATA    EQU  0500h       ; VER start of data registers fort reading from instrument
 IO_LST_CONFIG1 EQU  0505h       ; VER control byte for Listener hardware
@@ -62,7 +61,6 @@ IO_LST_CONFIG2 EQU  0506h       ; VER control byte for Listener hardware (create
 
 ; ==============================================================================
 ; 0600 - 06FF :  Memory mapped IO registers for Talker section (Input, Read from instrument)
-; Hardware Input Section (and maybe also a little Hardware Output Section)
 ;   600 8 bits input pins digit1 and digit2
 ;   601 8 bits input pins digit3 and digit4
 ;   602 8 bits input pins digit5 and digit6
@@ -73,7 +71,7 @@ IO_LST_CONFIG2 EQU  0506h       ; VER control byte for Listener hardware (create
 ;   607 control
 ; ==============================================================================
 IO_TALK_REG_DATA EQU  0604h     ; VER Data byte address related to Talker section. 0604h down to 0600h contain 5 bytes = 10 nibbles correspond to 40 data pins J2
-IO_TALK_CTRL_1   EQU  0605h     ; VER Control byte related to Talker section, contains bit for handshake pins
+GPIB_CTRL_1   EQU  0605h     ; VER Control byte related to Talker section, contains bit for handshake pins
 IO_SRAM_FLAG1    EQU  0607h     ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung)
 
 ; ==============================================================================
@@ -88,14 +86,14 @@ IO_SRAM_FLAG1    EQU  0607h     ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung
 ;   706 DIP switch
 ;   707 Front panel LEDs (only writes, no reads on that address; so assumed LED only)
 ; ==============================================================================
-IO_TALK_STATUS EQU  0701h       ; Status des Talker-Interfaces (Eingang/Ausgang)
-IO_TALK_CTRLBUS  EQU  0702h     ; Synchronisationsregister 02h für Talker-Schnittstelle
-IO_TALK_DATABUS  EQU  0703h     ; Synchronisationsregister 03h für Talker-Schnittstelle
-IO_TALK_CTRL   EQU  0704h       ; Kontrollregister für IEEE-488 Buschip
-IO_TALK_DATA   EQU  0705h       ; Datenpuffer-Register des Talker-Interfaces
-IO_DIP_SWITCH  EQU  0706h       ; VER DIP Switch byte
+GPIB_STATUS EQU  0701h       ; Status des Talker-Interfaces (Eingang/Ausgang)
+GPIB_CTRLBUS  EQU  0702h     ; Synchronisationsregister 02h für Talker-Schnittstelle
+GPIB_DATABUS  EQU  0703h     ; Synchronisationsregister 03h für Talker-Schnittstelle
+GPIB_CTRL   EQU  0704h       ; Kontrollregister für IEEE-488 Buschip
+GPIB_DATA   EQU  0705h       ; Datenpuffer-Register des Talker-Interfaces
+DIP_SWITCH  EQU  0706h       ; VER DIP Switch byte
 
-; 0706h IO_DIP_SWITCH bits:
+; 0706h DIP_SWITCH bits:
 ; bit 7 ONLY
 ; bit 6 TALKER
 ; bit 5 LISTENER
@@ -130,7 +128,7 @@ L_MAINLOOP:                     ; was: L_0017
         JNZ     L_0355          ; C2 55 03 -> if no, then handle state change in L_0355; DD: maybe a pending command is handled there
 
 L_001F:
-        LDA     IO_TALK_STATUS  ; 3A 01 07 -> load 0701h to A
+        LDA     GPIB_STATUS  ; 3A 01 07 -> load 0701h to A
         ANI     0C0h            ; E6 C0    -> mask 2 upper bits of 0701h
         CPI     80h             ; FE 80    -> is masked value equal to 80h (so bit7 was 1 and bit6 was 0)
         JZ      L_00CE          ; CA CE 00 -> on equality, continue at L_00CE (supposed Listener handling)
@@ -138,7 +136,7 @@ L_001F:
         CALL    L_00AD          ; CD AD 00 -> calls 00ADh;
         MVI     C, 0FEh         ; 0E FE    -> loads 0FEh to C (looks like a mask 1111.1110) - bit 0 is in focus
         CALL    L_00A1          ; CD A1 00 -> calls 00A1h; seem to write both RAM 0407h and GPIB hardware 0707h (=front panel LEDs)
-        LDA     IO_DIP_SWITCH   ; 3A 06 07 -> Loads 0706h to A
+        LDA     DIP_SWITCH   ; 3A 06 07 -> Loads 0706h to A
         RLC                     ; 07       -> rotate left, move highest bit ("ONLY" switch) to carry flag
         JMP     L_003C          ; C3 3C 00 -> continue at L_003C, with bits 6..0 from 0706h in A; "TL43.210x"
         POP     H               ; E1       -> Registerpaar HL vom Stack holen (Stack aufräumen)
@@ -154,11 +152,11 @@ L_003C:
         RRC                     ; 0F       -> Akkumulator nach rechts rotieren
         JC      L_01AD          ; DA AD 01 -> Wenn Carry=1, springe zu Adresse 01ADh - talker handling
         LXI     B,01000h        ; 01 00 10 -> lade 01000h in BC
-        LDA     IO_TALK_CTRL_1  ; 3A 05 06 -> Holt das control byte
+        LDA     GPIB_CTRL_1  ; 3A 05 06 -> Holt das control byte
     	CMA                     ; 2F       -> Akkumulator invertieren (Low-Aktive Signale)
     	RRC                     ; 0F       -> put lowest bit into carry flag
     	JNC     L_0060          ; D2 60 00 -> if no carry (lowest bit was 0) then continue at 0060h, which will return from there to main loop
-    	CALL    L_00C7          ; CD C7 00 -> if we had carry at lowest bit, puts bit 5 of IO_TALK_DATA into carry flag
+    	CALL    L_00C7          ; CD C7 00 -> if we had carry at lowest bit, puts bit 5 of GPIB_DATA into carry flag
         JC      L_SET_DATA_AVAILABLE ; DA 6D 00 -> if carry, jump to L_SET_DATA_AVAILABLE = 006Dh - Wenn Carry=1, springe zu Adresse 006Dh
         STA     IO_SRAM_FLAG1   ; 32 07 06 -> no carry, no data available, put A to 0607h
 
@@ -171,7 +169,7 @@ L_0060:
     	ANA     B               ; A0       -> AND A with B
     	ORA     C               ; B1       -> OR A with C
     	MOV     M,A             ; 77       -> move A to [0403h]
-    	STA     IO_TALK_DATABUS ; 32 03 07 -> write result to 0703h (GPIB connector)
+    	STA     GPIB_DATABUS ; 32 03 07 -> write result to 0703h (GPIB connector)
     	JMP     L_MAINLOOP      ; C3 17 00 -> back to loop start
 
 ; ------------------------------------------------------------------------------
@@ -228,7 +226,7 @@ L_0094:
         RET                     ; C9       -> back to caller (boot code)
 
 ; ------------------------------------------------------------------------------
-; We enter L_009C with A filled by value of IO_DIP_SWITCH, already shifted left by one. So content is
+; We enter L_009C with A filled by value of DIP_SWITCH, already shifted left by one. So content is
 ; TL43.210x
 ; the three shifts at L_009C move lower 4 bits of GPIB address to upper nibble. bit5 is lost. Strange.
 ; ------------------------------------------------------------------------------
@@ -257,7 +255,7 @@ L_00A1:
 
 L_00AD:
         LXI     H, 0391h        ; 21 91 03 -> HL-Zeiger auf ROM-Tabelle/String 0391h ausrichten
-    	LDA     IO_TALK_CTRL_1  ; 3A 05 06 -> Holt das aktuelle I/O-Datenbyte vom Talker
+    	LDA     GPIB_CTRL_1  ; 3A 05 06 -> Holt das aktuelle I/O-Datenbyte vom Talker
         CMA                     ; 2F       -> Akkumulator invertieren (Low-Aktiv Pegel)
         ANI     02h             ; E6 02    -> Bit 1 maskieren (Prüfung eines bestimmten Bus-Signals)
         CMP     M               ; BE       -> Vergleiche das Ergebnis mit dem Wert im ROM [HL]
@@ -274,7 +272,7 @@ L_00C5:
     	RET                     ; C9
 
 L_00C7:
-    	LDA     IO_TALK_DATA    ; 3A 07 05 -> load 0507h to A
+    	LDA     GPIB_DATA    ; 3A 07 05 -> load 0507h to A
         RLC                     ; 07       -> put bit 5 to carry flag by rotating 3x
         RLC                     ; 07       ->
         RLC                     ; 07       ->
@@ -287,9 +285,9 @@ L_00CE:
         MVI     A, 80h          ; 3E 80    -> load 80h to A
         STA     REG_GPIB_CTRL   ; 32 05 04 -> write A to RAM location 0405
         XRA     A               ; AF       -> A:=0
-        STA     IO_TALK_CTRLBUS ; 32 02 07 -> write A which is 0 to 0702h
+        STA     GPIB_CTRLBUS ; 32 02 07 -> write A which is 0 to 0702h
         CALL    L_0163          ; CD 63 01 -> call L_0163 DD seems to read a byte from GPIB, result in B
-        LDA     IO_DIP_SWITCH   ; 3A 06 07 -> load 0706h to A
+        LDA     DIP_SWITCH   ; 3A 06 07 -> load 0706h to A
         RLC                     ; 07       -> check ONLY bit of dip switch
         JC      L_MAINLOOP      ; DA 17 00 -> if ONLY=1, then carry=1, we are finished and jump to L_MAINLOOP
         MOV     A, B            ; 78       -> load B to A
@@ -350,7 +348,7 @@ L_0120:
 ; Comparison if GPIB address just received with address set at dip switch
 L_GPIB_ADDRESS_CMP:
 L_0131:
-    	LDA     IO_DIP_SWITCH   ; 3A 06 07 -> loads 0706h into A
+    	LDA     DIP_SWITCH   ; 3A 06 07 -> loads 0706h into A
     	ANI     01Fh            ; E6       -> mask with 1F, so lower 5 bits (GPIB address)
         MOV     C, A            ; 4F       -> save in C
     	MOV     A,B             ; 78       -> load B to A
@@ -418,22 +416,22 @@ L_015C:
 ; is done by bit manupulation via IO registers 070xh .
 ;
 ; L_0163 waits for bit0 = 1 in REG_GPIB_CTRL
-; HL points to 0701 IO_TALK_STATUS
-; DE points to 0703 IO_TALK_DATABUS
-; several bytes are written to [DE], i.e. IO_TALK_DATABUS. I count 4 bytes, "STAX D"
+; HL points to 0701 GPIB_STATUS
+; DE points to 0703 GPIB_DATABUS
+; several bytes are written to [DE], i.e. GPIB_DATABUS. I count 4 bytes, "STAX D"
 ; ------------------------------------------------------------------------------
 READ_BYTE_FROM_GPIB:
 L_0163:
         LDA     REG_SYS_STATE   ; 3A 03 04 -> load 0403h to A
         ANI     10h             ; E6 10    -> and with bit 4, isolate bit 4
         MOV     C, A            ; 4F       -> copy A to C
-        LXI     D, IO_TALK_DATABUS ; 11 03 07 -> DE points to 0703h
+        LXI     D, GPIB_DATABUS ; 11 03 07 -> DE points to 0703h
         MVI     A, 04h          ; 3E 04    -> load 04h to A
         ORA     C               ; B1       -> OR with C: now bit 4 from 0403h is set in A
         STAX    D               ; 12       -> write A to [DE] ausgeben
         MVI     A, 80h          ; 3E 80    -> load 80h  to A
-        STA     IO_TALK_CTRL    ; 32 04 07 -> write A to 0704h
-        LXI     H, IO_TALK_STATUS ; 21 01 07 ->HL points to 0701h
+        STA     GPIB_CTRL    ; 32 04 07 -> write A to 0704h
+        LXI     H, GPIB_STATUS ; 21 01 07 ->HL points to 0701h
 WAIT_FOR_BIT0_REG_GPIB_CTRL:
 L_0178:
         LDA     REG_GPIB_CTRL   ; 3A 05 04 -> load RAM 0405h to A
@@ -473,7 +471,7 @@ L_01A9:
 ; Talker code
 ; Handle input from instrument and write to GPIB bus
 ; these bytes seem to have following meaning
-; 0605h also called IO_TALK_CTRL_1
+; 0605h also called GPIB_CTRL_1
 ;   bit0=1 no input data, bit0=0 we have input data at input pins. Seems to be set by IOBoard and is maybe controlled by an input pin.
 ;   bit2 checked by convert_out_char,
 ;
@@ -497,7 +495,7 @@ L_01AD:
     	LDA     REG_CMD_SERIALPOLL   ; 3A 0D 04 -> loads 040Dh into A
     	ORA     A               ; B7       -> is 040Dh == 0 ? this means: are we in a serial poll process?
     	JNZ     L_0232          ; C2 32 02 -> if in serial poll, jump to 0232h
-        LXI     H, IO_TALK_CTRL_1 ; 21 05 06 -> HL points to 0605h
+        LXI     H, GPIB_CTRL_1 ; 21 05 06 -> HL points to 0605h
 WAIT_FOR_BIT0_SET:
 ; we do busy waiting until bit0 from 0605h is cleared (this might be: J2_Pin2)
 ; bit0 will be cleared externally by some interrupt-driven action (not code)
@@ -537,9 +535,9 @@ L_01F1:
         LDA     REG_SYS_STATE   ; 3A 03 04 -> load [0403h] to A
         ANI     10h             ; E6 10    -> isolate bit 4
         MOV     C, A            ; 4F       -> save to C
-        LXI     D,IO_TALK_DATABUS ; 11 03 07 -> loads byte from [DE] - Lädt Byte von der Hardware-Adresse [DE] (0703h)
+        LXI     D,GPIB_DATABUS ; 11 03 07 -> loads byte from [DE] - Lädt Byte von der Hardware-Adresse [DE] (0703h)
         STAX    D               ; 12       -> write A to [DE]
-        LXI     H, IO_TALK_CTRLBUS ; 21 02 07 -> HL points to 0702h
+        LXI     H, GPIB_CTRLBUS ; 21 02 07 -> HL points to 0702h
         MOV     M,B             ; 70       -> write B to [HL]
         DCX     H               ; 2B       -> HL-- (now 0701h)
 ; loop waits for 0701h, bit 1 becomes 0 (NDAC / NRFD)
@@ -632,7 +630,7 @@ L_0244:
 convert_out_char:
 L_0256:
         MOV     C, A            ; 4F       -> save A to C
-        LDA     IO_TALK_CTRL_1  ; 3A 05 06 -> read byte from 0605h
+        LDA     GPIB_CTRL_1  ; 3A 05 06 -> read byte from 0605h
         ANI     04h             ; E6 04    -> isolate bit 2 to check bit 2 (maybe "DO_INVERT_DATA_READ)"
         CPI     04h             ; FE 04    -> is bit 2 set?
         MOV     A, C            ; 79       -> restore A from C
@@ -694,7 +692,7 @@ L_028A:
 L_029D:
         XRA     A               ; AF       -> Akkumulator nullen
         STA     REG_GPIB_CTRL   ; 32 05 04 -> Systemregister 0405h im RAM zurücksetzen
-        STA     IO_TALK_CTRLBUS ; 32 02 07 -> Interface-Register 0702h löschen
+        STA     GPIB_CTRLBUS ; 32 02 07 -> Interface-Register 0702h löschen
         DI                      ; F3       -> Interrupts global sperren
 
 ; ------------------------------------------------------------------------------
@@ -873,12 +871,12 @@ L_0346:
         ORI     008h            ; F6 08    -> Bit 3 gezielt setzen
         MOV     M, A            ; 77       -> Aktualisierten Wert zurückschreiben
 ; 0704h, 0703h are set to 0.
-; value of [040B] REG_PENDING_CMD is written to 0702h IO_TALK_CTRLBUS
+; value of [040B] REG_PENDING_CMD is written to 0702h GPIB_CTRLBUS
 ; value of [0407] REG_SYS_STATUS is written to 0707h (LED control)
 L_0355:
-        LXI     H, IO_TALK_CTRL ; 21 04 07 -> HL points to 0704h (GPIB connector related)
+        LXI     H, GPIB_CTRL ; 21 04 07 -> HL points to 0704h (GPIB connector related)
         MVI     M, 00h          ; 36 00    -> clear [0704h]
-        LXI     H, IO_TALK_CTRLBUS ; 21 02 07 -> HL points to 0702h
+        LXI     H, GPIB_CTRLBUS ; 21 02 07 -> HL points to 0702h
         LDA     REG_PENDING_CMD ; 3A 0B 04 -> load content of RAM 040Bh to A
         MOV     M, A            ; 77       -> copy A to [0702h]
         INX     H               ; 23       -> inc HL (now 0703h)
