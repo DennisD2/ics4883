@@ -68,7 +68,8 @@ IO_LST_CTRL_2   EQU  0506h       ; VER control byte for Listener hardware (creat
 ;   602 8 bits input pins digit5 and digit6
 ;   603 8 bits input pins digit7 and digit8
 ;   604 8 bits input pins digit9 and digit10
-;   605 control input handshake pins pin 47 and pin 48 (bit 2, ...) via U74
+;   605 control input handshake pins pin 47 and pin 48 (bit 1, bit 2, ...) via U74
+;       Bit 1 is checked in L_00AD
 ;   606 controls output handshake pins 49 and 50 via U64
 ;   607 control
 ; ==============================================================================
@@ -135,14 +136,14 @@ L_001F:
         CPI     80h             ; FE 80    -> is masked value equal to 80h (so bit7 was 1 and bit6 was 0)
         JZ      L_00CE          ; CA CE 00 -> on equality, continue at L_00CE (supposed Listener handling)
 
-        CALL    L_00AD          ; CD AD 00 -> calls 00ADh;
+        CALL    L_00AD          ; CD AD 00 -> calls 00ADh; checks talker and listener status bytes
         MVI     C, 0FEh         ; 0E FE    -> loads 0FEh to C (looks like a mask 1111.1110) - bit 0 is in focus
         CALL    L_00A1          ; CD A1 00 -> calls 00A1h; seem to write both RAM 0407h and GPIB hardware 0707h (=front panel LEDs)
         LDA     DIP_SWITCH   ; 3A 06 07 -> Loads 0706h to A
         RLC                     ; 07       -> rotate left, move highest bit ("ONLY" switch) to carry flag
         JMP     L_003C          ; C3 3C 00 -> continue at L_003C, with bits 6..0 from 0706h in A; "TL43.210x"
-        POP     H               ; E1       -> Registerpaar HL vom Stack holen (Stack aufräumen)
-        JMP     L_00CE          ; C3 CE 00 -> Sprung zur Service-Routine L_00CE
+        POP     H               ; E1       -> pop HL (cleans stack)
+        JMP     L_00CE          ; C3 CE 00 -> continue at L_00CE
 
 L_003C:
         CC      L_009C          ; DC 9C 00 -> if carry flag ist set ("ONLY" switch on), continue at L_009C; in A we have 0706h content shiftet left by 1
@@ -154,17 +155,18 @@ L_003C:
         RRC                     ; 0F       -> Akkumulator nach rechts rotieren
         JC      L_01AD          ; DA AD 01 -> Wenn Carry=1, springe zu Adresse 01ADh - talker handling
         LXI     B,01000h        ; 01 00 10 -> lade 01000h in BC
-        LDA     IO_TALK_CTRL_1  ; 3A 05 06 -> Holt das control byte
-    	CMA                     ; 2F       -> Akkumulator invertieren (Low-Aktive Signale)
-    	RRC                     ; 0F       -> put lowest bit into carry flag
+        LDA     IO_TALK_CTRL_1  ; 3A 05 06 -> load talker control byte
+    	CMA                     ; 2F       -> invert (low active signals)
+    	RRC                     ; 0F       -> put lowest bit from control byte into carry flag
     	JNC     L_0060          ; D2 60 00 -> if no carry (lowest bit was 0) then continue at 0060h, which will return from there to main loop
-    	CALL    L_00C7          ; CD C7 00 -> if we had carry at lowest bit, puts bit 5 of GPIB_DATA into carry flag
-        JC      L_SET_DATA_AVAILABLE ; DA 6D 00 -> if carry, jump to L_SET_DATA_AVAILABLE = 006Dh - Wenn Carry=1, springe zu Adresse 006Dh
+    	CALL    L_00C7          ; CD C7 00 -> if we had carry at lowest bit, puts bit 5 of GPIB_DATA in Carry. This is maybe "SRQ INHIBIT" switch.
+        JC      L_SET_DATA_AVAILABLE ; DA 6D 00 -> if carry, jump to L_SET_DATA_AVAILABLE = 006Dh ; we update status register
         STA     IO_TALK_CTRL_2   ; 32 07 06 -> no carry, no data available, put A to 0607h
-
-; ------------------------------------------------------------------------------
-; Some cleanup at end of talker handling
-; ------------------------------------------------------------------------------
+        ; ------------------------------------------------------------------------------
+        ; Reads byte from 0403 VAR_SYS_STATE, uses B anc C values to do bitwise update and writes resulting byte to 0703 GPIB_DATABUS
+        ; B - bit mask
+        ; C - bit value to OR with
+        ; ------------------------------------------------------------------------------
 L_0060:
     	LXI     H, VAR_SYS_STATE ; 21 03 04 -> HL points to 0403h
     	MOV     A,M             ; 7E       -> load [0403h] to A
@@ -213,7 +215,7 @@ L_0084:
         JMP     L_007B          ; C3 7B 00 -> if C==0, block is finished. go to outer loop to read next table entry
 
 ; ------------------------------------------------------------------------------
-; ram initialization
+; RAM initialization
 ; Called from boot code
 ; fills 64 bytes ab SRAM_START mit 0 bytes
 ; ------------------------------------------------------------------------------
@@ -255,23 +257,29 @@ L_00A1:
         MOV     M, A            ; 77       -> write A to 0707h
         RET                     ; C9       -> back to caller
 
+; compares talker handshake byte with value in ROM (location 0391h = 02h)
+; if not equal, return 0 in A
+; after that, compare listener control byte in ROM (location 0392h = 02h)
+; if equal, return 1 in A
+;  return 0 in A
+; it seems that the result is ignored by all callers.
 L_00AD:
-        LXI     H, 0391h        ; 21 91 03 -> HL-Zeiger auf ROM-Tabelle/String 0391h ausrichten
-    	LDA     IO_TALK_CTRL_1  ; 3A 05 06 -> Holt das aktuelle I/O-Datenbyte vom Talker
-        CMA                     ; 2F       -> Akkumulator invertieren (Low-Aktiv Pegel)
-        ANI     02h             ; E6 02    -> Bit 1 maskieren (Prüfung eines bestimmten Bus-Signals)
-        CMP     M               ; BE       -> Vergleiche das Ergebnis mit dem Wert im ROM [HL]
-        JNZ     L_00C5          ; C2 C5 00 -> Wenn ungleich, springe vor zu Adresse 00C5h
-        INX     H               ; 23       -> HL-Zeiger auf das nächste Tabellenbyte erhöhen
-        LDA     IO_LST_CTRL_1   ; 3A 05 05 -> Listener control byte einlesen
-        CMA                     ; 2F       -> Invertieren
-        ANI     07h             ; E6 07    -> Die untersten 3 Bits maskieren
-        CMP     M               ; BE       -> Mit dem nächsten Tabellenwert im ROM vergleichen
-        MVI     A, 01h          ; 3E 01    -> Lade Konstante 01h in den Akkumulator
-        RZ                      ; C8       -> Bedingter Rücksprung, wenn der Vergleich gleich war (Zero-Flag = 1)
+        LXI     H, L_0391       ; 21 91 03 -> HL points to 0391h
+    	LDA     IO_TALK_CTRL_1  ; 3A 05 06 -> load talker handshake byte 0605h to A
+        CMA                     ; 2F       -> invert A
+        ANI     02h             ; E6 02    -> and with 0000.0010, so we check bit 1
+        CMP     M               ; BE       -> compare with value addressed by [HL], so [0391], which is 02h
+        JNZ     L_00C5          ; C2 C5 00 -> if not equal, continue at 00C5h
+        INX     H               ; 23       -> it is equal, inc HL
+        LDA     IO_LST_CTRL_1   ; 3A 05 05 -> load listener control byte 0505 to A
+        CMA                     ; 2F       -> invert A
+        ANI     07h             ; E6 07    -> and with 0000.0111, so we check bit 0,1,2
+        CMP     M               ; BE       -> compare with value addressed by [HL], so [0392], which is 02h again
+        MVI     A, 01h          ; 3E 01    -> A := 1
+        RZ                      ; C8       -> return if last CMP was equal (Zero-Flag == 1)
 L_00C5:
-        XRA     A               ; AF       -> Akkumulator löschen (A = 0)
-    	RET                     ; C9
+        XRA     A               ; AF       -> A := 0
+    	RET                     ; C9       -> return to caller
 
 L_00C7:
     	LDA     GPIB_DATA       ; 3A 05 07 -> load 0705h to A; maybe "SRQ INHIBIT" front panel switch
@@ -281,29 +289,35 @@ L_00C7:
     	RET                     ; C9       -> return to caller
 
 ; ------------------------------------------------------------------------------
-; Supposed Listener handling main entry point
+; Handle incoming GPIB data
+; Byte read from GPIB is stripped to 7 bits.
+; Then it is checked if both bits 5 and 6 are set. if yes, the byte seems to be a GPIB command and its handler is executed (via  L_00F7)
+; if bits are not set, VAR_CMD_LOCK is set to 0. This means maybe "we are not processing a GPIB command byte".
+; again bit 5 and 6 are checked and L_00F7 is called if bits are set (this is strange).
+; finally we enter L_00F7 without any condition. From there a handler is executed and we return to mainloop.
+; note that L_00F7 is doing a PCHL, which means we will never return here but end in mainloop after handlers were executed.
 ; ------------------------------------------------------------------------------
 L_00CE:
         MVI     A, 80h          ; 3E 80    -> load 80h to A
-        STA     VAR_GPIB_CTRL   ; 32 05 04 -> write A to RAM location 0405
+        STA     VAR_GPIB_CTRL   ; 32 05 04 -> write A, which is 080h, to RAM location 0405
         XRA     A               ; AF       -> A:=0
         STA     GPIB_CTRLBUS    ; 32 02 07 -> write A which is 0 to 0702h
-        CALL    L_0163          ; CD 63 01 -> call L_0163 DD seems to read a byte from GPIB, result in B
+        CALL    L_0163          ; CD 63 01 -> call L_0163, seems to read a byte from GPIB, result in B
         LDA     DIP_SWITCH      ; 3A 06 07 -> load 0706h to A
-        RLC                     ; 07       -> check ONLY bit of dip switch
+        RLC                     ; 07       -> check "ONLY" bit of dip switch
         JC      L_MAINLOOP      ; DA 17 00 -> if ONLY=1, then carry=1, we are finished and jump to L_MAINLOOP
-        MOV     A, B            ; 78       -> load B to A
+        MOV     A, B            ; 78       -> load B to A, B is byte read from GPIB bus
         ANI     07Fh            ; E6 7F    -> mask to 7 bits (only 7 bits are used)
-        MOV     B,A             ; 47       -> save to B
+        MOV     B,A             ; 47       -> save to B (B contains now byte from GPIB bus, 7 bits)
         ANI     060h            ; E6 60    -> isolate bits 6 and 5
         CPI     060h            ; FE 60    -> Check against 0110.0000
-        JZ      L_00F7          ; CA F7 00 -> if equality (bits 5 and 6 are set) continue at 00F7h (there a handler address is determined and handler code executed)
-        XRA     A               ; AF       -> A := 0
+        JZ      L_00F7          ; CA F7 00 -> if equality (bits 5 and 6 are set) continue at 00F7h (there a handler address is determined and handler code executed and returned to mainloop)
+        XRA     A               ; AF       -> bits are not equal, A := 0
         STA     VAR_CMD_LOCK    ; 32 0C 04 -> writes A, which is 0, to 040Ch, i.e. clear VAR_CMD_LOCK
-        MOV     A, B            ; 78       -> load B to A
+        MOV     A, B            ; 78       -> load B to A, B = the byte read from GPIB
         ANI     060h            ; E6 60    -> isolate bits 6 and 5
-        JNZ     L_00F7          ; C2 F7 00 -> if bit 5 or 6 are set, call again L_00F7 (there a handler address is determined and handler code executed)
-        MOV     A, B            ; 78       -> load B to A
+        JNZ     L_00F7          ; C2 F7 00 -> if bit 5 or 6 are set, continue again L_00F7 (there a handler address is determined and handler code executed and returned to mainloop)
+        MOV     A, B            ; 78       -> bits are not equal, load B to A, B = the byte read from GPIB
 L_00F7:
         LXI     H, L_GPIB_CMD_JUMPTABLE ; 21 93 03 -> Load handler jump table at 0393h
         MVI     C, 0Ah          ; 0E 0A    -> loop counter C := 10
@@ -415,7 +429,7 @@ L_015C:
 ; Code assumed to read in one byte from GPIB. Byte result in B.
 ;
 ; I guess its complexity comes from the fact, that all GPIB bit handling (DAV, NDAC, ...)
-; is done by bit manupulation via IO registers 070xh .
+; is done by bit manipulation via IO registers 070xh .
 ;
 ; L_0163 waits for bit0 = 1 in VAR_GPIB_CTRL
 ; HL points to 0701 GPIB_STATUS
@@ -431,9 +445,9 @@ L_0163:
         MVI     A, 04h          ; 3E 04    -> load 04h to A
         ORA     C               ; B1       -> OR with C: now bit 4 from 0403h is set in A
         STAX    D               ; 12       -> write A to [DE] ausgeben
-        MVI     A, 80h          ; 3E 80    -> load 80h  to A
-        STA     GPIB_CTRL    ; 32 04 07 -> write A to 0704h
-        LXI     H, GPIB_STATUS ; 21 01 07 ->HL points to 0701h
+        MVI     A, 80h          ; 3E 80    -> load 80h  to A 1000.0000
+        STA     GPIB_CTRL       ; 32 04 07 -> write A to 0704h; is this NDAC?
+        LXI     H, GPIB_STATUS ; 21 01 07  -> HL points to 0701h
 WAIT_FOR_BIT0_VAR_GPIB_CTRL:
 L_0178:
         LDA     VAR_GPIB_CTRL   ; 3A 05 04 -> load RAM 0405h to A
@@ -930,6 +944,7 @@ L_037B:
 L_0390:
 ; 0390h: single byte constants used for comparison
     	DB 000h	; 000h, from address 390h
+L_0391:
     	DB 002h	; 002h, from address 391h ROM_BUS_SIG_MASK
     	DB 005h	; 005h, from address 392h
 
