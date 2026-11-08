@@ -36,12 +36,14 @@ VAR_INIT_FLAG  EQU  0408h       ; Initialisierungs- und Reset-Steuerflag
 VAR_PENDING_CMD EQU  040Bh      ; Zwischenspeicher für anstehende Handshake-Befehle
 VAR_CMD_LOCK   EQU  040Ch       ; Sperrregister für eingehende Bus-Befehle
 VAR_CMD_SERIALPOLL  EQU  040Dh  ; VER control register for serial poll handling
-VAR_BUS_STATUS EQU  040Eh       ; VER GPIB status register (Talker, is 41h if data available)
+VAR_DATA_AVAILABLE EQU  040Eh   ; VER variable for 'data available' status (Talker, is 41h if data available)
 VAR_EOS_FLAG   EQU  040Fh       ; End-Of-Sequence / EOI Status-Register
 VAR_BUFF_PTR   EQU  041Dh       ; Letzter Tabellenzeiger / Puffer-Pointer
 VAR_BUFF_IDX   EQU  041Fh       ; Index-Zähler für den Zeichenpuffer (Max 10)
 VAR_ARRAY_PTR  EQU  042Eh       ; Zeiger auf das aktuelle Zeichen im indizierten Array
 VAR_ASCII_BUFF EQU  0430h       ; Startadresse für den übersetzten ASCII-Datenpuffer
+
+STATUS_DATA_AVAILABLE   EQU     041h ; status byte value
 
 ; ==============================================================================
 ; 0500 - 05FF : Memory mapped IO registers for Listener section (Output, Write to instrument)
@@ -175,11 +177,11 @@ L_0060:
 ; Set GPIB Status Byte (Talker) to 41h, which means "data available"
 ; ------------------------------------------------------------------------------
 L_SET_DATA_AVAILABLE:           ; was L_006D
-        LXI     H, VAR_BUS_STATUS ; 21 0E 04 -> HL points to 040Eh (GPIB status reg)
+        LXI     H, VAR_DATA_AVAILABLE ; 21 0E 04 -> HL points to 040Eh (GPIB status reg)
         MOV     A, M            ; 7E       -> load GPIB status reg to A
         RRC                     ; 0F       -> check if lowest bit is set
         JC      L_0060          ; DA 60 00 -> if yes, handle that at 0060h (will not return here, but go to main loop)
-        MVI     M, 41h          ; 36 41    -> put 41h (ASCII 'A') to 040Eh, means "data available"
+        MVI     M, STATUS_DATA_AVAILABLE ; 36 41    -> put 41h (ASCII 'A') to 040Eh, means "data available"
         MOV     C, B            ; 48       -> copy B to C
         JMP     L_0060          ; C3 60 00 -> continue at 0060h, which will return from there to main loop
 
@@ -568,7 +570,7 @@ L_020A:
         JZ      L_022B          ; CA 2B 02 -> if A==0, jump to L_022B
         XRA     A               ; AF       -> A:=0
         STA     IO_TALK_CTRL_2   ; 32 07 06 -> clear IO_TALK_CTRL_2
-        STA     VAR_BUS_STATUS  ; 32 0E 04 -> clear VAR_BUS_STATUS
+        STA     VAR_DATA_AVAILABLE  ; 32 0E 04 -> clear VAR_DATA_AVAILABLE
 L_022B:
         EI                      ; FB       -> enable interrupts
         LHLD    VAR_BUFF_PTR    ; 2A 1D 04 -> HL := 041D
@@ -581,12 +583,12 @@ L_022B:
 L_0232:
         MVI     A, 0FFh         ; 3E FF    -> load 0FFh to A
         STA     SRAM_START      ; 32 00 04 -> write A to SRAM_START
-        LXI     H, VAR_BUS_STATUS ; 21 0E 04 -> HL points to GPIB status byte of coupler
+        LXI     H, VAR_DATA_AVAILABLE ; 21 0E 04 -> HL points to GPIB status byte of coupler
         MOV     B, M            ; 46       -> load status byte to B
         MOV     A, M            ; 7E       -> and load it to A
         ANI     0BFh            ; E6 BF    -> clear bit 6 in A (mask 1011.1111)
-        MOV     M, A            ; 77       -> write A back to VAR_BUS_STATUS
-        JMP     L_01F1          ; C3 F1 01 -> Sprung zu RAM/ROM-Adresse 01F1h
+        MOV     M, A            ; 77       -> write A back to VAR_DATA_AVAILABLE
+        JMP     L_01F1          ; C3 F1 01 -> continue at 01F1h
 
 ; ------------------------------------------------------------------------------
 ; convert all 5 bytes from input IO connector
