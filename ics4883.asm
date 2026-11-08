@@ -15,7 +15,7 @@
 ; 0800 and above - unused
 
 SRAM_START     EQU  0400h       ; start of RAM space
-STACK_BASE     EQU  0500h       ; start value for stack pointer
+STACK_BASE     EQU  0500h       ; start value for stack pointer (last valid stack memory address + 1)
 
 ; "VER" at EQU comments means "verified", I am sure that the name of EQU fits to reality
 
@@ -55,14 +55,23 @@ REG_ARRAY_PTR  EQU  042Eh       ; Zeiger auf das aktuelle Zeichen im indizierten
 RAM_ASCII_BUFF EQU  0430h       ; Startadresse für den übersetzten ASCII-Datenpuffer
 
 ; ==============================================================================
-; 0500 - 05FF : HARDWARE-MAPPED I/O REGISTERS (Eingabe & Ausgabe) and Configuration RAM
+; 0500 - 05FF : Memory mapped IO registers for Listener section (Output, Write to instrument)
+;   500 8 bit output pins
+;   501 8 bit output pins
+;   502 8 bit output pins
+;   503 8 bit output pins
+;   504 8 bit output pins
+;   505
+;   506
+;   507
 ; Hardware Input Section and Hardware Output Section
 ; ==============================================================================
+IO_LST_DATA    EQU  0500h       ; start of data registers fort reading from instrument
 RAM_HW_CONFIG1 EQU  0505h       ; Hardware-Konfigurationsbyte 1 (z. B. Pegelsteuerung)
 RAM_HW_CONFIG2 EQU  0506h       ; configuration byte (created by L_0006 during boot; value is 1010)
 
 ; ==============================================================================
-; 0600 - 06FF : HARDWARE-MAPPED I/O REGISTERS (Mostly Input)
+; 0600 - 06FF :  Memory mapped IO registers for Talker section (Input, Read from instrument)
 ; Hardware Input Section (and maybe also a little Hardware Output Section)
 ;   600 8 bits input pins digit1 and digit2
 ;   601 8 bits input pins digit3 and digit4
@@ -71,14 +80,15 @@ RAM_HW_CONFIG2 EQU  0506h       ; configuration byte (created by L_0006 during b
 ;   604 8 bits input pins digit9 and digit10
 ;   605 control input handshake pins pin 47 and pin 48 (bit 2, ...) via U74
 ;   606 controls output handshake pins 49 and 50 via U64
+;   607 control
 ; ==============================================================================
 IO_TALK_REG_DATA EQU  0604h     ; VER Data byte address related to Talker section. 0604h down to 0600h contain 5 bytes = 10 nibbles correspond to 40 data pins J2
 IO_TALK_CTRL_1   EQU  0605h     ; VER Control byte related to Talker section, contains bit for handshake pins
 IO_SRAM_FLAG1    EQU  0607h     ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung)
 
 ; ==============================================================================
-; 0700 - 07FF : HARDWARE-MAPPED I/O REGISTERS (Eingabe & Ausgabe)
-; GPIB connector control (no special chip used, just 74xx chips)
+; 0700 - 07FF :   Memory mapped IO registers for GPIB connector, DIP Switch and front panel LEDs+switches
+; GPIB connector control uses no special chip, just 74xx chips)
 ;   700
 ;   701
 ;   702
@@ -715,15 +725,23 @@ L_02BE:
         JNZ     L_02A5          ; C2 A5 02 -> Sprung wenn != 0
 
 ; ------------------------------------------------------------------------------
+; Listener code
+; ------------------------------------------------------------------------------
+; This code is called after characters were received from GPIB bus, and a separator was
+; received. In that case, received characters are packed to bytes which are written to
+; output connector J2. These bytes will set/clear bits at that connector.
+;
 ; Handler for characters received via GPIB bus for  0D/CR, LF/0A, comma/2C
 ; which are considered 'special' by ICS4883 (i.e. these are separators)
-; ------------------------------------------------------------------------------
-; ------------------------------------------------------------------------------
+;
+;
 ; Nibble-Packing Routine: Der Code ab Adresse 02DBh ist ein hocheffizienter Packer. Er nimmt
 ; zwei aufeinanderfolgende Bytes, isoliert jeweils deren untere 4 Bits (ANI 00Fh), schiebt das zweite Nibble
 ; per Rotation nach oben (RLC) und fügt sie mit ORA B zu einem einzigen, kompakten Daten-Byte zusammen.
-; SRAM-Transfer: Diese gepackten Daten werden sequenziell direkt in den System-SRAM ab Adresse STACK_BASE
+; SRAM-Transfer: Diese gepackten Daten werden sequenziell direkt in den System-SRAM ab Adresse IO_LST_DATA
 ; übertragen (STAX D).
+;
+; C: number of characters to write to
 ; ------------------------------------------------------------------------------
 L_02C8:
         LXI     H, REG_BUFF_IDX ; 21 1F 04 -> set HL to RAM address 041Fh (counter value)
@@ -735,7 +753,7 @@ L_02C8:
         PUSH    B               ; C5       -> push B to stack
         CALL    0311h           ; CD 11 03 -> Depending on bit 3 in 0505h, C bytes in memory at HL are inverted or not (L_CHECK_INVERT)
         POP     B               ; C1       -> restore BC
-        LXI     D, STACK_BASE   ; 11 00 05 -> DE points to STACK_BASE
+        LXI     D, IO_LST_DATA   ; 11 00 05 -> DE points to IO_LST_DATA
 L_PACK_LOOP:
 L_02DB:
         INX     H               ; 23       -> inc HL
