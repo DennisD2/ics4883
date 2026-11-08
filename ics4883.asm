@@ -29,7 +29,7 @@ REG_BCD_DATA   EQU  0404h       ; Speicher für validierte BCD-Ziffern
 REG_GPIB_CTRL  EQU  0405h       ; GPIB Kontroll-Flag (z. B. 80h für Reset/Status)
 REG_SYS_STATUS EQU  0407h       ; Zentrales Statusregister (Remote/Local, Bit 3 LEDs)
 ; bit 0
-; 407 bit 1 used to mdecide warmstart or mainloop after gpib command SDC
+; 407 bit 1 used to decide warmstart or mainloop after gpib command SDC
 ; bit 2
 ; bit 3 1=only local , bit3 = 0 remote
 REG_INIT_FLAG  EQU  0408h       ; Initialisierungs- und Reset-Steuerflag
