@@ -88,11 +88,11 @@ IO_TALK_CTRL_2  EQU  0607h     ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung)
 ;   706 DIP switch
 ;   707 Front panel LEDs (only writes, no reads on that address; so assumed LED only)
 ; ==============================================================================
-GPIB_STATUS     EQU  0701h      ; Status des Talker-Interfaces (Eingang/Ausgang)
-GPIB_CTRLBUS    EQU  0702h      ; Synchronisationsregister 02h für Talker-Schnittstelle
-GPIB_DATABUS    EQU  0703h      ; Synchronisationsregister 03h für Talker-Schnittstelle
-GPIB_CTRL       EQU  0704h      ; Kontrollregister für IEEE-488 Buschip
-GPIB_DATA       EQU  0705h      ; Datenpuffer-Register des Talker-Interfaces
+GPIB_STATUS     EQU  0701h      ; Status des GPIB-Interfaces (Eingang/Ausgang)
+GPIB_CTRLBUS    EQU  0702h      ; Synchronisationsregister 02h für GPIB-Schnittstelle
+GPIB_DATABUS    EQU  0703h      ; Synchronisationsregister 03h für GPIB-Schnittstelle
+GPIB_CTRL       EQU  0704h      ; Kontrollregister
+GPIB_DATA       EQU  0705h      ; Datenpuffer-Register des GPIB-Interfaces
 DIP_SWITCH      EQU  0706h      ; VER DIP Switch byte
 ; 0706h DIP_SWITCH bits:
 ; bit 7 ONLY
