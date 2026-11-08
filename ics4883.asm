@@ -9,8 +9,8 @@
 ; 0000 - 03FF : ROM
 ; 0400 - 04FF : RAM and STACK
 ; 0500 - 05FF : Listener registers - 0500-0507h controlled by U34 74LS138
-; 0600 - 06FF : Talker registers (Input from Instrument) - 0600-0607 controlled by U63 74LS138
-; 0700 - 07FF : GPIB connector control, chips on mainboard - 0700-0707 controlled by U17 74LS138
+; 0600 - 06FF : Talker registers (Input from Instrument) - 0600-0607h controlled by U63 74LS138
+; 0700 - 07FF : GPIB connector control, chips on mainboard - 0700-0707h controlled by U17 74LS138
 ; 0800 and above - unused
 
 SRAM_START     EQU  0400h       ; start of RAM space
@@ -41,7 +41,7 @@ VAR_EOS_FLAG   EQU  040Fh       ; End-Of-Sequence / EOI Status-Register
 VAR_BUFF_PTR   EQU  041Dh       ; Letzter Tabellenzeiger / Puffer-Pointer
 VAR_BUFF_IDX   EQU  041Fh       ; Index-Zähler für den Zeichenpuffer (Max 10)
 VAR_ARRAY_PTR  EQU  042Eh       ; Zeiger auf das aktuelle Zeichen im indizierten Array
-RAM_ASCII_BUFF EQU  0430h       ; Startadresse für den übersetzten ASCII-Datenpuffer
+VAR_ASCII_BUFF EQU  0430h       ; Startadresse für den übersetzten ASCII-Datenpuffer
 
 ; ==============================================================================
 ; 0500 - 05FF : Memory mapped IO registers for Listener section (Output, Write to instrument)
@@ -55,9 +55,9 @@ RAM_ASCII_BUFF EQU  0430h       ; Startadresse für den übersetzten ASCII-Daten
 ;   506
 ;   507
 ; ==============================================================================
-IO_LST_DATA    EQU  0500h       ; VER start of data registers fort reading from instrument
-IO_LST_CONFIG1 EQU  0505h       ; VER control byte for Listener hardware
-IO_LST_CONFIG2 EQU  0506h       ; VER control byte for Listener hardware (created by L_0006 during boot; value is 1010)
+IO_LST_DATA     EQU  0500h       ; VER start of data registers for writing to instrument
+IO_LST_CTRL_1   EQU  0505h       ; VER control byte for Listener hardware
+IO_LST_CTRL_2   EQU  0506h       ; VER control byte for Listener hardware (created by L_0006 during boot; value is 1010)
 
 ; ==============================================================================
 ; 0600 - 06FF :  Memory mapped IO registers for Talker section (Input, Read from instrument)
@@ -70,9 +70,9 @@ IO_LST_CONFIG2 EQU  0506h       ; VER control byte for Listener hardware (create
 ;   606 controls output handshake pins 49 and 50 via U64
 ;   607 control
 ; ==============================================================================
-IO_TALK_REG_DATA EQU  0604h     ; VER Data byte address related to Talker section. 0604h down to 0600h contain 5 bytes = 10 nibbles correspond to 40 data pins J2
-GPIB_CTRL_1   EQU  0605h     ; VER Control byte related to Talker section, contains bit for handshake pins
-IO_SRAM_FLAG1    EQU  0607h     ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung)
+IO_TALK_DATA    EQU  0604h     ; VER end of data registers for reading from instrument. 0604h down to 0600h contain 5 bytes = 10 nibbles correspond to 40 data pins J2
+IO_TALK_CTRL_1  EQU  0605h     ; VER Control byte related to Talker section, contains bit for handshake pins
+IO_TALK_CTRL_2  EQU  0607h     ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung)
 
 ; ==============================================================================
 ; 0700 - 07FF :   Memory mapped IO registers for GPIB connector, DIP Switch and front panel LEDs+switches
@@ -86,13 +86,12 @@ IO_SRAM_FLAG1    EQU  0607h     ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung
 ;   706 DIP switch
 ;   707 Front panel LEDs (only writes, no reads on that address; so assumed LED only)
 ; ==============================================================================
-GPIB_STATUS EQU  0701h       ; Status des Talker-Interfaces (Eingang/Ausgang)
-GPIB_CTRLBUS  EQU  0702h     ; Synchronisationsregister 02h für Talker-Schnittstelle
-GPIB_DATABUS  EQU  0703h     ; Synchronisationsregister 03h für Talker-Schnittstelle
-GPIB_CTRL   EQU  0704h       ; Kontrollregister für IEEE-488 Buschip
-GPIB_DATA   EQU  0705h       ; Datenpuffer-Register des Talker-Interfaces
-DIP_SWITCH  EQU  0706h       ; VER DIP Switch byte
-
+GPIB_STATUS     EQU  0701h      ; Status des Talker-Interfaces (Eingang/Ausgang)
+GPIB_CTRLBUS    EQU  0702h      ; Synchronisationsregister 02h für Talker-Schnittstelle
+GPIB_DATABUS    EQU  0703h      ; Synchronisationsregister 03h für Talker-Schnittstelle
+GPIB_CTRL       EQU  0704h      ; Kontrollregister für IEEE-488 Buschip
+GPIB_DATA       EQU  0705h      ; Datenpuffer-Register des Talker-Interfaces
+DIP_SWITCH      EQU  0706h      ; VER DIP Switch byte
 ; 0706h DIP_SWITCH bits:
 ; bit 7 ONLY
 ; bit 6 TALKER
@@ -112,7 +111,7 @@ L_0000:
 L_0006:
         LDA     L_03C4          ; 3A C4 03 -> read config value from ROM 03C4 (value there is: 6=0110)
         XRI     0Ch             ; EE 0C    -> XOR with C=1100 (result: 1010)
-        STA     IO_LST_CONFIG2  ; 32 06 05 -> put result to RAM 0506, Listerner hardware control byte
+        STA     IO_LST_CTRL_2  ; 32 06 05 -> put result to RAM 0506, Listerner hardware control byte
         LXI     H, L_03B3       ; 21 B3 03 -> put pointer to ROM table to H
         CALL    L_007B          ; CD 7B 00 -> copy ROM tables to RAM/memory mapped regs
         JMP     L_02C8          ; C3 C8 02 -> jump into Listener handling code, if nothing is incoming, this continues to main loop
@@ -152,13 +151,13 @@ L_003C:
         RRC                     ; 0F       -> Akkumulator nach rechts rotieren
         JC      L_01AD          ; DA AD 01 -> Wenn Carry=1, springe zu Adresse 01ADh - talker handling
         LXI     B,01000h        ; 01 00 10 -> lade 01000h in BC
-        LDA     GPIB_CTRL_1  ; 3A 05 06 -> Holt das control byte
+        LDA     IO_TALK_CTRL_1  ; 3A 05 06 -> Holt das control byte
     	CMA                     ; 2F       -> Akkumulator invertieren (Low-Aktive Signale)
     	RRC                     ; 0F       -> put lowest bit into carry flag
     	JNC     L_0060          ; D2 60 00 -> if no carry (lowest bit was 0) then continue at 0060h, which will return from there to main loop
     	CALL    L_00C7          ; CD C7 00 -> if we had carry at lowest bit, puts bit 5 of GPIB_DATA into carry flag
         JC      L_SET_DATA_AVAILABLE ; DA 6D 00 -> if carry, jump to L_SET_DATA_AVAILABLE = 006Dh - Wenn Carry=1, springe zu Adresse 006Dh
-        STA     IO_SRAM_FLAG1   ; 32 07 06 -> no carry, no data available, put A to 0607h
+        STA     IO_TALK_CTRL_2   ; 32 07 06 -> no carry, no data available, put A to 0607h
 
 ; ------------------------------------------------------------------------------
 ; Some cleanup at end of talker handling
@@ -255,13 +254,13 @@ L_00A1:
 
 L_00AD:
         LXI     H, 0391h        ; 21 91 03 -> HL-Zeiger auf ROM-Tabelle/String 0391h ausrichten
-    	LDA     GPIB_CTRL_1  ; 3A 05 06 -> Holt das aktuelle I/O-Datenbyte vom Talker
+    	LDA     IO_TALK_CTRL_1  ; 3A 05 06 -> Holt das aktuelle I/O-Datenbyte vom Talker
         CMA                     ; 2F       -> Akkumulator invertieren (Low-Aktiv Pegel)
         ANI     02h             ; E6 02    -> Bit 1 maskieren (Prüfung eines bestimmten Bus-Signals)
         CMP     M               ; BE       -> Vergleiche das Ergebnis mit dem Wert im ROM [HL]
         JNZ     L_00C5          ; C2 C5 00 -> Wenn ungleich, springe vor zu Adresse 00C5h
         INX     H               ; 23       -> HL-Zeiger auf das nächste Tabellenbyte erhöhen
-        LDA     IO_LST_CONFIG1  ; 3A 05 05 -> Listener control byte einlesen
+        LDA     IO_LST_CTRL_1  ; 3A 05 05 -> Listener control byte einlesen
         CMA                     ; 2F       -> Invertieren
         ANI     07h             ; E6 07    -> Die untersten 3 Bits maskieren
         CMP     M               ; BE       -> Mit dem nächsten Tabellenwert im ROM vergleichen
@@ -471,7 +470,7 @@ L_01A9:
 ; Talker code
 ; Handle input from instrument and write to GPIB bus
 ; these bytes seem to have following meaning
-; 0605h also called GPIB_CTRL_1
+; 0605h also called IO_TALK_CTRL_1
 ;   bit0=1 no input data, bit0=0 we have input data at input pins. Seems to be set by IOBoard and is maybe controlled by an input pin.
 ;   bit2 checked by convert_out_char,
 ;
@@ -495,7 +494,7 @@ L_01AD:
     	LDA     VAR_CMD_SERIALPOLL   ; 3A 0D 04 -> loads 040Dh into A
     	ORA     A               ; B7       -> is 040Dh == 0 ? this means: are we in a serial poll process?
     	JNZ     L_0232          ; C2 32 02 -> if in serial poll, jump to 0232h
-        LXI     H, GPIB_CTRL_1 ; 21 05 06 -> HL points to 0605h
+        LXI     H, IO_TALK_CTRL_1 ; 21 05 06 -> HL points to 0605h
 WAIT_FOR_BIT0_SET:
 ; we do busy waiting until bit0 from 0605h is cleared (this might be: J2_Pin2)
 ; bit0 will be cleared externally by some interrupt-driven action (not code)
@@ -504,13 +503,13 @@ L_01B8:
     	RRC                     ; 0F       -> bit 0 to Carry flag
         JC      L_01B8          ; DA B8 01 -> if Carry set, loop back to 01B8h WAIT_FOR_BIT0_SET
         DI                      ; F3       -> Disable Interrupts
-        LXI     D, RAM_ASCII_BUFF ; 11 30 04 -> load 0430h to DE (target pointer)
-        LXI     H, IO_TALK_REG_DATA  ; 21 04 06 -> load 0604h to HL; DD: h := 0x0604 = start address of bytes read from input (5 bytes containing 10 nibbles)
+        LXI     D, VAR_ASCII_BUFF ; 11 30 04 -> load 0430h to DE (target pointer)
+        LXI     H, IO_TALK_DATA  ; 21 04 06 -> load 0604h to HL; DD: h := 0x0604 = start address of bytes read from input (5 bytes containing 10 nibbles)
     	CALL    L_0242          ; CD 42 02 -> read in and convert 5 input bytes
     	MVI     A, 0Fh          ; 3E 0F    -> load 0fh to A
         STA     SRAM_START      ; 32 00 04 -> Akkumulator-Inhalt direkt in RAM SRAM_START sichern
         EI                      ; FB       -> Interrupts wieder freigeben (Enable Interrupts)
-        LXI     H, RAM_ASCII_BUFF ; 21 30 04 -> HL-Zeiger auf SRAM-Adresse 0430h laden DD: h := address of created 10 bytes
+        LXI     H, VAR_ASCII_BUFF ; 21 30 04 -> HL-Zeiger auf SRAM-Adresse 0430h laden DD: h := address of created 10 bytes
         SHLD    VAR_ARRAY_PTR   ; 22 2E 04 -> Speicherinhalt von HL nach SRAM 042Eh sichern
         LXI     H, L_03E4       ; 21 E4 03 -> HL-Zeiger auf Übersetzungstabelle im ROM ausrichten
 L_01D6:
@@ -568,7 +567,7 @@ L_020A:
         JM      L_MAINLOOP      ; FA 17 00 -> if A<0 (bit 7=1), jump to L_MAINLOOP
         JZ      L_022B          ; CA 2B 02 -> if A==0, jump to L_022B
         XRA     A               ; AF       -> A:=0
-        STA     IO_SRAM_FLAG1   ; 32 07 06 -> clear IO_SRAM_FLAG1
+        STA     IO_TALK_CTRL_2   ; 32 07 06 -> clear IO_TALK_CTRL_2
         STA     VAR_BUS_STATUS  ; 32 0E 04 -> clear VAR_BUS_STATUS
 L_022B:
         EI                      ; FB       -> enable interrupts
@@ -630,7 +629,7 @@ L_0244:
 convert_out_char:
 L_0256:
         MOV     C, A            ; 4F       -> save A to C
-        LDA     GPIB_CTRL_1  ; 3A 05 06 -> read byte from 0605h
+        LDA     IO_TALK_CTRL_1  ; 3A 05 06 -> read byte from 0605h
         ANI     04h             ; E6 04    -> isolate bit 2 to check bit 2 (maybe "DO_INVERT_DATA_READ)"
         CPI     04h             ; FE 04    -> is bit 2 set?
         MOV     A, C            ; 79       -> restore A from C
@@ -672,7 +671,7 @@ L_0270_UNUSED:
 ; I suppose here J2 pins 49 and 50 are controlled. These are driven by 7474 D-Flip-Flops and thus can keep state.
 ; pin 50 gives LO pulse on device Trigger command
 ; pin 49 gives HI pulse on device Trigger command
-; maybe IO_SRAM_FLAG1 controls these pins.
+; maybe IO_TALK_CTRL_2 controls these pins.
 ;
 ;
 ; ------------------------------------------------------------------------------
@@ -680,7 +679,7 @@ L_028A:
         LDA     VAR_SYS_STATUS  ; 3A 07 04 -> Lädt den Gerätestatus aus dem RAM
         ANI     02h             ; E6 02    -> Bit 1 maskieren (z. B. Remote/Local oder ein Bus-Flag)
         JZ      L_MAINLOOP      ; CA 17 00 -> Wenn Bit1==0, Schleife abbrechen und zurück zu L_MAINLOOP
-        LXI     H, IO_SRAM_FLAG1 ; 21 07 06 -> HL auf register ausrichten
+        LXI     H, IO_TALK_CTRL_2 ; 21 07 06 -> HL auf register ausrichten
         MOV     M, A            ; 77       -> Den maskierten Statuswert direkt dorthin schreiben
         DCX     H               ; 2B       -> HL dekrementieren auf 0606h
         LDA     03C8h           ; 3A C8 03 -> Einen Konfigurations- oder Initialisierungswert aus dem ROM laden
@@ -749,7 +748,7 @@ L_02BE:
 ; IO_LST_DATA address where received characters to write to J2 connector are stored
 ;
 ; Bit 3 in 0505 decides if values read are inverted or not
-; Bit 0 and 1 of IO_LST_CONFIG2 0506h are flipped after loop is finished.
+; Bit 0 and 1 of IO_LST_CTRL_2 0506h are flipped after loop is finished.
 ; ------------------------------------------------------------------------------
 LISTENER_PROCESSING:
 L_02C8:
@@ -785,7 +784,7 @@ L_02DB:
         JNZ     L_02DB          ; C2 DB 02 -> if loop count is larger 0, repeat loop
 L_PACK_DONE:
 L_02F3:
-        LXI     H, IO_LST_CONFIG2 ; 21 06 05 -> HL points to 0506h
+        LXI     H, IO_LST_CTRL_2 ; 21 06 05 -> HL points to 0506h
         LDA     L_03C4          ; 3A C4 03 -> load [03C4h] into A
 L_02F9:
         MOV     B, A            ; 47       -> save A in B
@@ -819,7 +818,7 @@ L_0305:
 ; called from 02D4h
 L_CHECK_INVERT:
 L_0311:
-        LDA     IO_LST_CONFIG1  ; 3A 05 05 -> load 0505h to A
+        LDA     IO_LST_CTRL_1  ; 3A 05 05 -> load 0505h to A
         ANI     08h             ; E6 08    -> isolate bit 3
         CPI     08h             ; FE 08    -> is bit set?
         RNZ                     ; C0       -> if bit is not set, simply return
