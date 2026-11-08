@@ -8,24 +8,15 @@
 ; Memory map:
 ; 0000 - 03FF : ROM
 ; 0400 - 04FF : RAM and STACK
-; 0500 - 05FF : Input and Output registers (needs more detailing)
+; 0500 - 05FF : Listener registers - 0500-0507h controlled by U34 74LS138
 ; 0600 - 06FF : Talker registers (Input from Instrument) - 0600-0607 controlled by U63 74LS138
 ; 0700 - 07FF : GPIB connector control, chips on mainboard
-
 ; 0800 and above - unused
 
 SRAM_START     EQU  0400h       ; start of RAM space
 STACK_BASE     EQU  0500h       ; start value for stack pointer (last valid stack memory address + 1)
 
 ; "VER" at EQU comments means "verified", I am sure that the name of EQU fits to reality
-
-; ==============================================================================
-; 0000 - 03FF : ROM constants and table addresses
-; ==============================================================================
-ROM_TLK_CHAR_TABLE EQU 03D4h    ; VER Talker Character Table (tranlates HEX input values to ICS4883 chars) ('0123...')
-ROM_PROT_LIMITS  EQU  03E4h     ; Status- und Protokoll-Grenzwerte
-ROM_STR_TERMS    EQU  03EEh     ; String-Terminatoren und Kontroll-Codes (CR/LF)
-SEPARATOR_JUMP_TABLE  EQU  03F5h  ; VER jump table for separator bytes ( CR, LF, comma)
 
 ; ==============================================================================
 ; 0400 -04FF : RAM variables
@@ -490,7 +481,7 @@ L_01A9:
 ; 0600
 ; In 0605h we have non-data-pins, looking like handshake signals. Or internal signals between IOBoard and mainboard. Needs more analysis.
 ;
-; 10 nibbles are processed, converted by using the Talker Character Table (ROM_TLK_CHAR_TABLE) and written
+; 10 nibbles are processed, converted by using the Talker Character Table (L_TLK_CHAR_TABLE) and written
 ; to 10 bytes in RAM starting at location 0430h.
 ;
 ; All GPIB line handshake (NDAC, DAV, ...) is done in the code.
@@ -519,7 +510,7 @@ L_01B8:
         EI                      ; FB       -> Interrupts wieder freigeben (Enable Interrupts)
         LXI     H, RAM_ASCII_BUFF ; 21 30 04 -> HL-Zeiger auf SRAM-Adresse 0430h laden DD: h := address of created 10 bytes
         SHLD    REG_ARRAY_PTR   ; 22 2E 04 -> Speicherinhalt von HL nach SRAM 042Eh sichern
-        LXI     H, ROM_PROT_LIMITS ; 21 E4 03 -> HL-Zeiger auf Übersetzungstabelle im ROM ausrichten
+        LXI     H, L_03E4       ; 21 E4 03 -> HL-Zeiger auf Übersetzungstabelle im ROM ausrichten
 L_01D6:
         MOV     A, M            ; 7E       -> Byte via HL laden
         INX     H               ; 23       -> HL-Zeiger um 1 erhöhen
@@ -627,7 +618,7 @@ L_0244:
         RET                     ; C9       -> return to caller
 
 ; ------------------------------------------------------------------------------
-; convert hex value read from instrument via conversion table ROM_TLK_CHAR_TABLE
+; convert hex value read from instrument via conversion table L_TLK_CHAR_TABLE
 ; lookup, store it (0x26c)  to somewhere
 ; (in RAM or register?), increment index in d, and keep h in original state
 ;
@@ -646,7 +637,7 @@ L_0256:
 L_0263:
         ANI     0Fh             ; E6 0F    -> mask lower 4 bit in A
         PUSH    H               ; E5       -> save HL
-        LXI     H, ROM_TLK_CHAR_TABLE ; 21 D4 03 -> HL points to ROM table
+        LXI     H, L_TLK_CHAR_TABLE ; 21 D4 03 -> HL points to ROM table
         ADD     L               ; 85       -> Add L to A (now A contains byte offset in table)
         MOV     L, A            ; 6F       -> L := A
         MOV     A, M            ; 7E       -> read translated char from char table
@@ -814,7 +805,7 @@ L_0305:
         MOV     A, B            ; 78       -> copy B to A
         ANI     07Fh            ; E6 7F    -> mask lower 7 bits (pure 7 bit ASCII)
         MVI     C, 03h          ; 0E 03    -> number of items in table (3)
-        LXI     H, SEPARATOR_JUMP_TABLE ; 21 F5 03 -> HL points to table L_GPIB_CMD_JUMPTABLE
+        LXI     H, L_SEPARATOR_JUMP_TABLE ; 21 F5 03 -> HL points to table L_GPIB_CMD_JUMPTABLE
         CALL    L_FIND_HANDLER_ADDRESS ; CD 4E 01 -> find handler for separator
         PCHL                    ; E9       -> execute separator
 
@@ -970,8 +961,8 @@ L_03C4:
 ; 03CEh - 03D3h: Maskierungs- und Fehler-Grenzwerte
     	DB 000h, 080h, 000h, 000h, 000h, 000h
 
-; 03D4h - 03E3h: IEEE-488 Bus ASCII-Übersetzungstabelle
-TALK_CHAR_TABLE:
+; 03D4h - 03E3h: IEEE-488 Bus Talker Character Table (tranlates HEX input values to ICS4883 chars) ('0123...')
+L_TLK_CHAR_TABLE:
         DB '0123456789+-.,E '
                     ;DB 030h	; 030h, from address 3d4h
                     ;DB 031h	; 031h, from address 3d5h
@@ -990,6 +981,7 @@ TALK_CHAR_TABLE:
                     ;DB 045h	; 045h, from address 3e2h
                     ;DB 020h	; 020h, from address 3e3h
 
+L_03E4:
 ; 03E4h - 03EDh: Status- und Protokoll-Grenzwerte
     	DB 080h, 080h, 080h, 080h, 080h, 080h, 080h, 080h, 080h, 080h
 
