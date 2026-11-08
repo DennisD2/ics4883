@@ -22,10 +22,6 @@ STACK_BASE     EQU  0500h       ; start value for stack pointer (last valid stac
 ; ==============================================================================
 ; 0000 - 03FF : ROM constants and table addresses
 ; ==============================================================================
-ROM_DATA_START   EQU  038Ah     ; Startbereich der Datentabellen im ROM
-ROM_CONST_CMP    EQU  0390h     ; Kontroll-Konstanten für den Zeichenvergleich
-GPIB_CMD_JUMPTABLE EQU  0393h   ; VER jump table for GPIB commands
-ROM_TAB_SRAM_INI EQU  03B3h     ; Initialisierungs-Tabelle für den RAM-Puffer
 ROM_CFG_FLAGS    EQU  03C4h     ; System-Konfigurations-Flags im ROM
 ROM_CFG_LIMITS   EQU  03CEh     ; Maskierungs- und Fehler-Grenzwerte
 ROM_TLK_CHAR_TABLE EQU 03D4h    ; VER Talker Character Table (tranlates HEX input values to ICS4883 chars) ('0123...')
@@ -126,7 +122,7 @@ L_0006:
         LDA     ROM_CFG_FLAGS   ; 3A C4 03 -> read config value from ROM 03C4 (value there is: 6=0110)
         XRI     0Ch             ; EE 0C    -> XOR with C=1100 (result: 1010)
         STA     IO_LST_CONFIG2  ; 32 06 05 -> put result to RAM 0506, Listerner hardware control byte
-        LXI     H, ROM_TAB_SRAM_INI ; 21 B3 03 -> put pointer to ROM table to H
+        LXI     H, L_03B3       ; 21 B3 03 -> put pointer to ROM table to H
         CALL    L_007B          ; CD 7B 00 -> copy ROM tables to RAM/memory mapped regs
         JMP     L_02C8          ; C3 C8 02 -> jump into Listener handling code, if nothing is incoming, this continues to main loop
 
@@ -316,7 +312,7 @@ L_00CE:
         JNZ     L_00F7          ; C2 F7 00 -> if bit 5 or 6 are set, call again L_00F7 (there a handler address is determined and handler code executed)
         MOV     A, B            ; 78       -> load B to A
 L_00F7:
-        LXI     H, GPIB_CMD_JUMPTABLE ; 21 93 03 -> Load handler jump table at 0393h
+        LXI     H, L_GPIB_CMD_JUMPTABLE ; 21 93 03 -> Load handler jump table at 0393h
         MVI     C, 0Ah          ; 0E 0A    -> loop counter C := 10
         CALL    L_FIND_HANDLER_ADDRESS ; CD 4E 01 -> handle chars by determining correct handling routine address
         PCHL                    ; E9       -> jump to handler found
@@ -424,6 +420,7 @@ L_015C:
 
 ; ------------------------------------------------------------------------------
 ; Code assumed to read in one byte from GPIB. Byte result in B.
+;
 ; I guess its complexity comes from the fact, that all GPIB bit handling (DAV, NDAC, ...)
 ; is done by bit manupulation via IO registers 070xh .
 ;
@@ -663,7 +660,7 @@ L_0263:
 ; WHO CALLS THIS CODE???
 ; Steuerzeichen Filter
 L_0270_UNUSED:
-        LXI     H, ROM_CONST_CMP ; 21 90 03 -> HL auf alternative Tabelle/String im ROM ausrichten
+        LXI     H, L_0390       ; 21 90 03 -> HL auf alternative Tabelle/String im ROM ausrichten
         MOV     A, B            ; 78       -> Register B (04h) nach A holen
         ANI     01Fh            ; E6 1F    -> 5-Bit-Maskierung
         CMP     M               ; BE       -> Mit Speicherwert [HL] vergleichen
@@ -819,7 +816,7 @@ L_0305:
         MOV     A, B            ; 78       -> copy B to A
         ANI     07Fh            ; E6 7F    -> mask lower 7 bits (pure 7 bit ASCII)
         MVI     C, 03h          ; 0E 03    -> number of items in table (3)
-        LXI     H, SEPARATOR_JUMP_TABLE ; 21 F5 03 -> HL points to table GPIB_CMD_JUMPTABLE
+        LXI     H, SEPARATOR_JUMP_TABLE ; 21 F5 03 -> HL points to table L_GPIB_CMD_JUMPTABLE
         CALL    L_FIND_HANDLER_ADDRESS ; CD 4E 01 -> find handler for separator
         PCHL                    ; E9       -> execute separator
 
@@ -923,6 +920,10 @@ L_037B:
         STA     REG_CMD_LOCK    ; 32 0C 04 -> write A to 040Ch
         JMP     L_MAINLOOP      ; C3 17 00 -> start over in mainloop
 
+; ------------------------------------------------------------------------------
+; Table definitions and constants
+; ------------------------------------------------------------------------------
+
 ; 038Ah - 038Fh: Padding / Unused ROM-Space (Füllbytes)
     	DB 0FFh	; 0FFh, from address 38ah
     	DB 0FFh	; 0FFh, from address 38bh
@@ -931,7 +932,8 @@ L_037B:
     	DB 0FFh	; 0FFh, from address 38eh
     	DB 0FFh	; 0FFh, from address 38fh
 
-; 0390h: Einzelne Kontroll-Konstanten für Vergleiche
+L_0390:
+; 0390h: single byte constants used for comparison
     	DB 000h	; 000h, from address 390h
     	DB 002h	; 002h, from address 391h ROM_BUS_SIG_MASK
     	DB 005h	; 005h, from address 392h
@@ -955,6 +957,7 @@ L_GPIB_CMD_JUMPTABLE:
 ; 03B3h - 03C3h: initialization table for RAM buffer - Initialisierungs-Tabelle für den RAM-Puffer
 ; values are read by code at L_007B, to prepare buffer starting at location 041Fh
 ; [length 0Bh] [target address 041Fh] [max-limit 0Ah] [10x buffer zeroes]
+L_03B3:
         DB 00Bh, 01Fh, 004h, 00Ah
         DB 000h, 000h, 000h, 000h, 000h, 000h, 000h, 000h, 000h, 000h
 
