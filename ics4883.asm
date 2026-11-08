@@ -28,6 +28,10 @@ REG_SYS_STATE  EQU  0403h       ; Globaler Systemzustand (Handshake / I/O)
 REG_BCD_DATA   EQU  0404h       ; Speicher für validierte BCD-Ziffern
 REG_GPIB_CTRL  EQU  0405h       ; GPIB Kontroll-Flag (z. B. 80h für Reset/Status)
 REG_SYS_STATUS EQU  0407h       ; Zentrales Statusregister (Remote/Local, Bit 3 LEDs)
+; bit 0
+; 407 bit 1 used to mdecide warmstart or mainloop after gpib command SDC
+; bit 2
+; bit 3 1=only local , bit3 = 0 remote
 REG_INIT_FLAG  EQU  0408h       ; Initialisierungs- und Reset-Steuerflag
 REG_PENDING_CMD EQU  040Bh      ; Zwischenspeicher für anstehende Handshake-Befehle
 REG_CMD_LOCK   EQU  040Ch       ; Sperrregister für eingehende Bus-Befehle
@@ -82,7 +86,7 @@ IO_SRAM_FLAG1    EQU  0607h     ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung
 ;   704
 ;   705
 ;   706 DIP switch
-;   707
+;   707 Front panel LEDs (only writes, no reads on that address; so assumed LED only)
 ; ==============================================================================
 IO_TALK_STATUS EQU  0701h       ; Status des Talker-Interfaces (Eingang/Ausgang)
 IO_TALK_CTRLBUS  EQU  0702h     ; Synchronisationsregister 02h für Talker-Schnittstelle
@@ -133,7 +137,7 @@ L_001F:
 
         CALL    L_00AD          ; CD AD 00 -> calls 00ADh;
         MVI     C, 0FEh         ; 0E FE    -> loads 0FEh to C (looks like a mask 1111.1110) - bit 0 is in focus
-        CALL    L_00A1          ; CD A1 00 -> calls 00A1h; seem to write both RAM 0407h and GPIB hardware 0707h
+        CALL    L_00A1          ; CD A1 00 -> calls 00A1h; seem to write both RAM 0407h and GPIB hardware 0707h (=front panel LEDs)
         LDA     IO_DIP_SWITCH   ; 3A 06 07 -> Loads 0706h to A
         RLC                     ; 07       -> rotate left, move highest bit ("ONLY" switch) to carry flag
         JMP     L_003C          ; C3 3C 00 -> continue at L_003C, with bits 6..0 from 0706h in A; "TL43.210x"
@@ -235,7 +239,7 @@ L_009C:
 L_009F:
     	MVI     C, 0F9h         ; 0E F9    -> loads mask value 0F9h (mask 1111.1001b) into C
 ;
-; L_00A1 updates systen state register RAM 0407h and also writes changes out to hardware register 0707h.
+; L_00A1 updates systen state register RAM 0407h and also writes changes out to hardware register 0707h (front panel LEDs).
 ; It applies a mask value in C
 ; mask is either 0F9h (called via L_009F) or 0FDh (called by L_010E)
 ; A - new bits to set
@@ -247,7 +251,7 @@ L_00A1:
         ANA     C               ; A1       -> AND with C (apply mask) , means switch of bits to be new defined
         ORA     B               ; B0       -> OR with B, means all new bits are set correctly after that
         MOV     M, A            ; 77       -> write new value to [HL] (0407h)
-        MVI     H, 07h          ; 26 07    -> set H of HL to 07h (HL points now to 0707h)
+        MVI     H, 07h          ; 26 07    -> set H of HL to 07h (HL points now to 0707h, front panel LEDs)
         MOV     M, A            ; 77       -> write A to 0707h
         RET                     ; C9       -> back to caller
 
@@ -317,7 +321,7 @@ L_0100:
         JNZ     L_010E          ; C2 0E 01 -> if value of last cmp (address compare) !=0, jump to 010Eh; so: nout our address
 L_0108:
         ; address equals our address
-        CALL    L_009F          ; CD 9F 00 -> call 009Fh, which seems to write out a byte to 0707h (maybe GPIB talker write)
+        CALL    L_009F          ; CD 9F 00 -> call 009Fh, which seems to write out a byte to 0707h(front panel LEDs)
         JMP     L_MAINLOOP      ; C3 17 00 -> jump to main loop
 
 L_010E:
@@ -328,7 +332,7 @@ L_010E:
     	XRA     A               ; AF       -> XOR A mit A <=> A:=0
     	STA     REG_BUFF_IDX    ; 32 1F 04 -> write 0 to 041F; clear incoming character data buffer
     	MVI     C, 0FDh         ; 0E FD    -> loads 0FDh into C (output mask?)
-    	CALL    L_00A1          ; CD A1 00 -> L_00A1 writes value from RAM 0407h to 0707h (maybe GPIB talker write)
+    	CALL    L_00A1          ; CD A1 00 -> L_00A1 writes value from RAM 0407h to 0707h(front panel LEDs)
         JMP     L_MAINLOOP      ; C3 17 00 -> jump back to main loop
 
 ; ------------------------------------------------------------------------------
@@ -671,11 +675,13 @@ L_0270_UNUSED:
 ; pin 50 gives LO pulse on device Trigger command
 ; pin 49 gives HI pulse on device Trigger command
 ; maybe IO_SRAM_FLAG1 controls these pins.
+;
+;
 ; ------------------------------------------------------------------------------
 L_028A:
         LDA     REG_SYS_STATUS  ; 3A 07 04 -> Lädt den Gerätestatus aus dem RAM
         ANI     02h             ; E6 02    -> Bit 1 maskieren (z. B. Remote/Local oder ein Bus-Flag)
-        JZ      L_MAINLOOP      ; CA 17 00 -> Wenn Bit 0 ist, Schleife abbrechen und zurück zu L_MAINLOOP
+        JZ      L_MAINLOOP      ; CA 17 00 -> Wenn Bit1==0, Schleife abbrechen und zurück zu L_MAINLOOP
         LXI     H, IO_SRAM_FLAG1 ; 21 07 06 -> HL auf register ausrichten
         MOV     M, A            ; 77       -> Den maskierten Statuswert direkt dorthin schreiben
         DCX     H               ; 2B       -> HL dekrementieren auf 0606h
@@ -868,7 +874,7 @@ L_0346:
         MOV     M, A            ; 77       -> Aktualisierten Wert zurückschreiben
 ; 0704h, 0703h are set to 0.
 ; value of [040B] REG_PENDING_CMD is written to 0702h IO_TALK_CTRLBUS
-; value of [0407] REG_SYS_STATUS is written to 0707h
+; value of [0407] REG_SYS_STATUS is written to 0707h (LED control)
 L_0355:
         LXI     H, IO_TALK_CTRL ; 21 04 07 -> HL points to 0704h (GPIB connector related)
         MVI     M, 00h          ; 36 00    -> clear [0704h]
@@ -877,9 +883,9 @@ L_0355:
         MOV     M, A            ; 77       -> copy A to [0702h]
         INX     H               ; 23       -> inc HL (now 0703h)
         MVI     M, 00h          ; 36 00    -> clear [0703h]
-        MVI     L, 07h          ; 2E 07    -> set lower byte of HL to 07h (HL now is 0707h)
+        MVI     L, 07h          ; 2E 07    -> set lower byte of HL to 07h (HL now is 0707h), which is LED control
         LDA     REG_SYS_STATUS  ; 3A 07 04 -> load content of RAM 0407h to A
-        MOV     M, A            ; 77       -> copy A to [0707h]
+        MOV     M, A            ; 77       -> copy A to [0707h], switches on/off LEDs
         JMP     L_001F          ; C3 1F 00 -> continue at L_001F inside main polling loop
 
 ; ------------------------------------------------------------------------------
