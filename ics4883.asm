@@ -92,7 +92,7 @@ GPIB_STATUS     EQU  0701h      ; Status des GPIB-Interfaces (Eingang/Ausgang)
 GPIB_CTRLBUS    EQU  0702h      ; Synchronisationsregister 02h für GPIB-Schnittstelle
 GPIB_DATABUS    EQU  0703h      ; Synchronisationsregister 03h für GPIB-Schnittstelle
 GPIB_CTRL       EQU  0704h      ; Kontrollregister
-GPIB_DATA       EQU  0705h      ; Datenpuffer-Register des GPIB-Interfaces
+GPIB_DATA       EQU  0705h      ; only 1 read opcode in firmware; maybe this is "SRQ inhibit" frontpanel switch
 DIP_SWITCH      EQU  0706h      ; VER DIP Switch byte
 ; 0706h DIP_SWITCH bits:
 ; bit 7 ONLY
@@ -170,7 +170,7 @@ L_0060:
     	ANA     B               ; A0       -> AND A with B
     	ORA     C               ; B1       -> OR A with C
     	MOV     M,A             ; 77       -> move A to [0403h]
-    	STA     GPIB_DATABUS ; 32 03 07 -> write result to 0703h (GPIB connector)
+    	STA     GPIB_DATABUS    ; 32 03 07 -> write result to 0703h (GPIB connector)
     	JMP     L_MAINLOOP      ; C3 17 00 -> back to loop start
 
 ; ------------------------------------------------------------------------------
@@ -262,7 +262,7 @@ L_00AD:
         CMP     M               ; BE       -> Vergleiche das Ergebnis mit dem Wert im ROM [HL]
         JNZ     L_00C5          ; C2 C5 00 -> Wenn ungleich, springe vor zu Adresse 00C5h
         INX     H               ; 23       -> HL-Zeiger auf das nächste Tabellenbyte erhöhen
-        LDA     IO_LST_CTRL_1  ; 3A 05 05 -> Listener control byte einlesen
+        LDA     IO_LST_CTRL_1   ; 3A 05 05 -> Listener control byte einlesen
         CMA                     ; 2F       -> Invertieren
         ANI     07h             ; E6 07    -> Die untersten 3 Bits maskieren
         CMP     M               ; BE       -> Mit dem nächsten Tabellenwert im ROM vergleichen
@@ -273,7 +273,7 @@ L_00C5:
     	RET                     ; C9
 
 L_00C7:
-    	LDA     GPIB_DATA    ; 3A 07 05 -> load 0507h to A
+    	LDA     GPIB_DATA       ; 3A 07 05 -> load 0507h to A
         RLC                     ; 07       -> put bit 5 to carry flag by rotating 3x
         RLC                     ; 07       ->
         RLC                     ; 07       ->
@@ -286,9 +286,9 @@ L_00CE:
         MVI     A, 80h          ; 3E 80    -> load 80h to A
         STA     VAR_GPIB_CTRL   ; 32 05 04 -> write A to RAM location 0405
         XRA     A               ; AF       -> A:=0
-        STA     GPIB_CTRLBUS ; 32 02 07 -> write A which is 0 to 0702h
+        STA     GPIB_CTRLBUS    ; 32 02 07 -> write A which is 0 to 0702h
         CALL    L_0163          ; CD 63 01 -> call L_0163 DD seems to read a byte from GPIB, result in B
-        LDA     DIP_SWITCH   ; 3A 06 07 -> load 0706h to A
+        LDA     DIP_SWITCH      ; 3A 06 07 -> load 0706h to A
         RLC                     ; 07       -> check ONLY bit of dip switch
         JC      L_MAINLOOP      ; DA 17 00 -> if ONLY=1, then carry=1, we are finished and jump to L_MAINLOOP
         MOV     A, B            ; 78       -> load B to A
