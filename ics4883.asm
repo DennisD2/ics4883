@@ -80,10 +80,11 @@ IO_TALK_CTRL_2  EQU  0607h     ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung)
 ; ==============================================================================
 ; 0700 - 07FF :   Memory mapped IO registers for GPIB connector, DIP Switch and front panel LEDs+switches
 ; GPIB connector control uses no special chip, just 74xx chips)
-;   700 seems to be data byte (D0-D7 from GPIB bus)
+;   700 seems to be data byte (D0-D7 from GPIB bus) for listener
 ;   701
 ;       bit0 DAV Data AVailable
-;       bit1 - used when writing to GPIB, see L_01F1
+;       bit1 - NRFD Listener used when writing to GPIB, see L_01F1
+;   702 data byte (data lines d0-d7) for talker
 ;   703
 ;       bit1 NDAC line Not Data Accepted
 ;       bit2 NRFD line Not Ready For Data
@@ -556,11 +557,12 @@ L_01A9:
 ;
 ; used regs and bits
 ; 701
-;   bit1 R
-;   bit2 R
-; 702
+;   bit1 R NRFD Listener
+;   bit2 R NDAC Listener
+; 702 data byte (data lines d0-d7) for talker
 ; 703
-;   bit1 W
+;   bit1 W DAV Listener
+;   bit4 W
 ;
 ; Note: code starting at L_01F1 is also used for sending status byte during serial poll.
 ; ------------------------------------------------------------------------------
@@ -603,39 +605,41 @@ L_01D6:
         MOV     A, M            ; 7E       -> Byte erneut via HL laden
         INX     H               ; 23       -> HL-Zeiger um 1 erhöhen
         SHLD    VAR_ARRAY_PTR   ; 22 2E 04 -> HL-Registerinhalt im SRAM 042Eh sichern
+WRITE_BYTE_TO_GPIB_BUS:
 L_01F0:
-        MOV     B, A            ; 47       -> Byte in Register B sichern
+        MOV     B, A            ; 47       -> Byte in Register B sichern; B contains byte to send to GPIB bus.
 L_01F1:
         LDA     VAR_SYS_STATE   ; 3A 03 04 -> load [0403h] to A
         ANI     10h             ; E6 10    -> isolate bit 4 0001.0000
         MOV     C, A            ; 4F       -> save to C
         LXI     D,GPIB_CTRL_2 ; 11 03 07 -> [DE] points to 0703h
-        STAX    D               ; 12       -> write A to [DE]
+        STAX    D               ; 12       -> write A to [DE] = 0703h.
         LXI     H, GPIB_CTRL_1 ; 21 02 07 -> HL points to 0702h
-        MOV     M,B             ; 70       -> write B to [HL], to 0702h
-        DCX     H               ; 2B       -> HL-- (now 0701h)
-; loop waits for 0701h, bit 1 becomes 0 (NDAC / NRFD)
+        MOV     M,B             ; 70       -> write B to [HL], to 0702h; writes data byte to GPIB bus
+        DCX     H               ; 2B       -> HL-- (now 0701h), GPIB_STATUS byte
+; loop waits for 0701h, bit 1 becomes 0 ; NRFD releas
 L_0200:
         MOV     A, M            ; 7E       -> load from 0701h to A
         RRC                     ; 0F       -> rotate right
         RRC                     ; 0F       -> rotate right
         JC      L_0200          ; DA 00 02 -> if carry=1, loop back at L_0200
-; now bit1=0
+; now bit1=0, NRFD is released, all partners are ready for reading data
+; set DAV
         MVI     A, 01h          ; 3E 01    -> load 01h to A (DAV signal)
         ORA     C               ; B1       -> OR A with C
         STAX    D               ; 12       -> write A to [DE] = 0703h
-; byte is written out, DAV was set. Now wait for ack from controller.
-; loop waits for 0701h, bit 2 becomes 0 ()
+; byte is written out, DAV was set. Now wait for ack from controller, wait for NDAC release
+; loop waits for 0701h, bit 2 becomes 0 ;
 L_020A:
         MOV     A, M            ; 7E       -> load from 0701h to A
         RRC                     ; 0F       --> shift right 3x, bit2 is in C flag
         RRC                     ; 0F
         RRC                     ; 0F
         JC      L_020A          ; DA 0A 02 -> if carry==1, i.e. bit2=1, loop back to L_020A
-; now bit2=0
+; now bit2=0, NDAC is released. All partners have copied byte written.
         DI                      ; F3       -> disable interrupts
         XRA     A               ; AF       -> A:=0
-        STAX    D               ; 12       -> [DE] := A i.e. 0, [0703h]:=0 (DAV becomes inactive)
+        STAX    D               ; 12       -> [DE] := A i.e. 0, [0703h]:=0 (DAV is released)
         STA     VAR_SYS_STATE   ; 32 03 04 -> clear VAR_SYS_STATE (becomes 0)
         LXI     H, SRAM_START   ; 21 00 04 -> HL points to SRAM_START
         MOV     A, M            ; 7E       -> load [HL] to A (HL points to SRAM_START)
