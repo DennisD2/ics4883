@@ -83,11 +83,11 @@ IO_TALK_CTRL_2  EQU  0607h     ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung)
 ;   700 seems to be data byte (D0-D7 from GPIB bus)
 ;   701
 ;       bit0 DAV Data AVailable
-;       bit1 ?
+;       bit1 - used when writing to GPIB, see L_01F1
 ;   703
 ;       bit1 NDAC line Not Data Accepted
 ;       bit2 NRFD line Not Ready For Data
-;       bit4 - used, see L_01F1
+;       bit4 - used when writing to GPIB, see L_01F1
 ;   704
 ;       bit7 NDAC related?!
 ;   705
@@ -554,6 +554,14 @@ L_01A9:
 ;
 ; All GPIB line handshake (NDAC, DAV, ...) is done in the code.
 ;
+; used regs and bits
+; 701
+;   bit1 R
+;   bit2 R
+; 702
+; 703
+;   bit1 W
+;
 ; Note: code starting at L_01F1 is also used for sending status byte during serial poll.
 ; ------------------------------------------------------------------------------
 L_01AD:
@@ -574,7 +582,7 @@ L_01B8:
         LXI     H, IO_TALK_DATA  ; 21 04 06 -> load 0604h to HL; DD: h := 0x0604 = start address of bytes read from input (5 bytes containing 10 nibbles)
     	CALL    L_0242          ; CD 42 02 -> read in and convert 5 input bytes
     	MVI     A, 0Fh          ; 3E 0F    -> load 0fh to A
-        STA     SRAM_START      ; 32 00 04 -> Akkumulator-Inhalt direkt in RAM SRAM_START sichern
+        STA     SRAM_START      ; 32 00 04 -> Akkumulator-Inhalt direkt in RAM SRAM_START sichern [0400h] := 0FFh
         EI                      ; FB       -> Interrupts wieder freigeben (Enable Interrupts)
         LXI     H, VAR_ASCII_BUFF ; 21 30 04 -> HL-Zeiger auf SRAM-Adresse 0430h laden DD: h := address of created 10 bytes
         SHLD    VAR_ARRAY_PTR   ; 22 2E 04 -> Speicherinhalt von HL nach SRAM 042Eh sichern
@@ -583,7 +591,7 @@ L_01D6:
         MOV     A, M            ; 7E       -> Byte via HL laden
         INX     H               ; 23       -> HL-Zeiger um 1 erhöhen
         SHLD    VAR_BUFF_PTR    ; 22 1D 04 -> Aktuellen HL-Zeiger im RAM 041Dh sichern
-        CPI     19h             ; FE 19    -> Akkumulator mit Konstante 19h vergleichen
+        CPI     19h             ; FE 19    -> Akkumulator mit Konstante 19h vergleichen (19=SPD, but makes no sense here)
 
         JZ      L_MAINLOOP      ; CA 17 00 -> if A==19, jump to mainloop
         ORA     A               ; B7       -> Flags aktualisieren (Prüfen auf Null/Vorzeichen)
@@ -612,24 +620,26 @@ L_0200:
         RRC                     ; 0F       -> rotate right
         RRC                     ; 0F       -> rotate right
         JC      L_0200          ; DA 00 02 -> if carry=1, loop back at L_0200
+; now bit1=0
         MVI     A, 01h          ; 3E 01    -> load 01h to A (DAV signal)
         ORA     C               ; B1       -> OR A with C
-        STAX    D               ; 12       -> write A to [DE]
+        STAX    D               ; 12       -> write A to [DE] = 0703h
 ; byte is written out, DAV was set. Now wait for ack from controller.
 ; loop waits for 0701h, bit 2 becomes 0 ()
 L_020A:
         MOV     A, M            ; 7E       -> load from 0701h to A
-        RRC                     ; 0F       --> shift right 3x
+        RRC                     ; 0F       --> shift right 3x, bit2 is in C flag
         RRC                     ; 0F
         RRC                     ; 0F
-        JC      L_020A          ; DA 0A 02 -> if carry==1 loop back to L_020A
+        JC      L_020A          ; DA 0A 02 -> if carry==1, i.e. bit2=1, loop back to L_020A
+; now bit2=0
         DI                      ; F3       -> disable interrupts
         XRA     A               ; AF       -> A:=0
-        STAX    D               ; 12       -> [DE] := A i.e. 0 (DAV becomes inactive)
+        STAX    D               ; 12       -> [DE] := A i.e. 0, [0703h]:=0 (DAV becomes inactive)
         STA     VAR_SYS_STATE   ; 32 03 04 -> clear VAR_SYS_STATE (becomes 0)
         LXI     H, SRAM_START   ; 21 00 04 -> HL points to SRAM_START
         MOV     A, M            ; 7E       -> load [HL] to A (HL points to SRAM_START)
-        MVI     M, 00h          ; 36 00    -> [HL] := 0
+        MVI     M, 00h          ; 36 00    -> [HL] := 0, i.e. [SRAM_START]:=0
         ORA     A               ; B7       -> (update CPU flags)
         JM      L_MAINLOOP      ; FA 17 00 -> if A<0 (bit 7=1), jump to L_MAINLOOP
         JZ      L_022B          ; CA 2B 02 -> if A==0, jump to L_022B
