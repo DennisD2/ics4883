@@ -89,9 +89,9 @@ IO_TALK_CTRL_2  EQU  0607h     ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung)
 ;       705 bit 5 maybe "SRQ INHIBIT" front panel switch
 ;   706 DIP switch
 ;   707 Front panel LEDs (only writes, no reads on that address; so assumed LED only)
-;       bit0 ?
-;       bit1 Listener LED
-;       bit2 Talker LED
+;       bit0 ? maybe Ready LED? This is supported by L_00AD and its use, which sets bit0 if L_00AD returns 1
+;       bit1 Listening LED
+;       bit2 Talking LED
 ; ==============================================================================
 GPIB_STATUS     EQU  0701h      ; Status des GPIB-Interfaces (Eingang/Ausgang)
 GPIB_CTRLBUS    EQU  0702h      ; Synchronisationsregister 02h für GPIB-Schnittstelle
@@ -129,17 +129,17 @@ L_0006:
 ; ------------------------------------------------------------------------------
 L_MAINLOOP:                     ; was: L_0017
         DI                      ; F3
-        LDA     VAR_IO_STATE    ; 3A 01 04 -> load 0401h from RAM to A - Status von GPIB / I/O Interface-Chip laden
+        LDA     VAR_IO_STATE    ; 3A 01 04 -> load 0401h from RAM to A - coupler state
         ORA     A               ; B7       -> is it = 0 ?
         JNZ     L_0355          ; C2 55 03 -> if no, then handle state change in L_0355; DD: maybe a pending command is handled there
 
 L_001F:
-        LDA     GPIB_STATUS  ; 3A 01 07 -> load 0701h to A
-        ANI     0C0h            ; E6 C0    -> mask 2 upper bits of 0701h
+        LDA     GPIB_STATUS  ; 3A 01 07    -> load 0701h to A
+        ANI     0C0h            ; E6 C0    -> mask 2 upper bits of 0701h 1100.0000
         CPI     80h             ; FE 80    -> is masked value equal to 80h (so bit7 was 1 and bit6 was 0)
         JZ      L_00CE          ; CA CE 00 -> on equality, continue at L_00CE (supposed Listener handling)
 
-        CALL    L_00AD          ; CD AD 00 -> calls 00ADh; checks talker and listener status bytes
+        CALL    L_00AD          ; CD AD 00 -> calls 00ADh; checks talker and listener status bytes; returns 0 or 1 in A
         MVI     C, 0FEh         ; 0E FE    -> loads 0FEh to C (looks like a mask 1111.1110) - bit 0 is in focus
         CALL    L_00A1          ; CD A1 00 -> calls 00A1h; seem to write both RAM 0407h and GPIB hardware 0707h (=front panel LEDs)
         LDA     DIP_SWITCH   ; 3A 06 07 -> Loads 0706h to A
@@ -266,12 +266,15 @@ L_00A1:
         MOV     M, A            ; 77       -> write A to 0707h
         RET                     ; C9       -> back to caller
 
+; ------------------------------------------------------------------------------
+; Supposed: Check for "Coupler Ready" state, coupler is healthy, and can receive GPIB commands
+; ------------------------------------------------------------------------------
 ; compares talker handshake byte with value in ROM (location 0391h = 02h)
 ; if not equal, return 0 in A
 ; after that, compare listener control byte in ROM (location 0392h = 02h)
 ; if equal, return 1 in A
 ;  return 0 in A
-; it seems that the result is ignored by all callers.
+; maybe result is "Ready State Ok" if 1, 0 if not ready.
 L_00AD:
         LXI     H, L_0391       ; 21 91 03 -> HL points to 0391h
     	LDA     IO_TALK_CTRL_1  ; 3A 05 06 -> load talker handshake byte 0605h to A
