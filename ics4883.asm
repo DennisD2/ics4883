@@ -93,11 +93,11 @@ IO_TALK_CTRL_2  EQU  0607h     ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung)
 ;       bit1 Listening LED
 ;       bit2 Talking LED
 ; ==============================================================================
-GPIB_STATUS     EQU  0701h      ; Status des GPIB-Interfaces (Eingang/Ausgang)
-GPIB_CTRLBUS    EQU  0702h      ; Synchronisationsregister 02h für GPIB-Schnittstelle
-GPIB_DATABUS    EQU  0703h      ; Synchronisationsregister 03h für GPIB-Schnittstelle
-GPIB_CTRL       EQU  0704h      ; Kontrollregister
-GPIB_DATA       EQU  0705h      ; only 1 read opcode in firmware; maybe this is "SRQ inhibit" frontpanel switch
+GPIB_STATUS    EQU  0701h      ; GPIB status register
+GPIB_CTRL_1    EQU  0702h      ; GPIB handshake control register 1
+GPIB_CTRL_2    EQU  0703h      ; GPIB handshake control register 2
+GPIB_CTRL_3    EQU  0704h      ; GPIB handshake control register 3
+FRONT_SWITCHES EQU  0705h      ; only 1 read opcode in firmware; maybe this is "SRQ inhibit" frontpanel switch
 DIP_SWITCH      EQU  0706h      ; VER DIP Switch byte
 ; 0706h DIP_SWITCH bits:
 ; bit 7 ONLY
@@ -162,11 +162,11 @@ L_003C:
     	CMA                     ; 2F       -> invert (low active signals)
     	RRC                     ; 0F       -> put lowest bit from control byte into carry flag
     	JNC     L_0060          ; D2 60 00 -> if no carry (lowest bit was 0) then continue at 0060h, which will return from there to main loop
-    	CALL    L_00C7          ; CD C7 00 -> if we had carry at lowest bit, puts bit 5 of GPIB_DATA in Carry. This is maybe "SRQ INHIBIT" switch.
+    	CALL    L_00C7          ; CD C7 00 -> if we had carry at lowest bit, puts bit 5 of FRONT_SWITCHES in Carry. This is maybe "SRQ INHIBIT" switch.
         JC      L_SET_DATA_AVAILABLE ; DA 6D 00 -> if carry, jump to L_SET_DATA_AVAILABLE = 006Dh ; we update status register
         STA     IO_TALK_CTRL_2   ; 32 07 06 -> no carry, no data available, put A to 0607h
         ; ------------------------------------------------------------------------------
-        ; Reads byte from 0403 VAR_SYS_STATE, uses B anc C values to do bitwise update and writes resulting byte to 0703 GPIB_DATABUS
+        ; Reads byte from 0403 VAR_SYS_STATE, uses B anc C values to do bitwise update and writes resulting byte to 0703 GPIB_CTRL_2
         ; B - bit mask
         ; C - bit value to OR with
         ; ------------------------------------------------------------------------------
@@ -176,7 +176,7 @@ L_0060:
     	ANA     B               ; A0       -> AND A with B
     	ORA     C               ; B1       -> OR A with C
     	MOV     M,A             ; 77       -> move A to [0403h]
-    	STA     GPIB_DATABUS    ; 32 03 07 -> write result to 0703h (GPIB connector)
+    	STA     GPIB_CTRL_2    ; 32 03 07 -> write result to 0703h (GPIB connector)
     	JMP     L_MAINLOOP      ; C3 17 00 -> back to loop start
 
 ; ------------------------------------------------------------------------------
@@ -294,7 +294,7 @@ L_00C5:
     	RET                     ; C9       -> return to caller
 
 L_00C7:
-    	LDA     GPIB_DATA       ; 3A 05 07 -> load 0705h to A; maybe "SRQ INHIBIT" front panel switch
+    	LDA     FRONT_SWITCHES       ; 3A 05 07 -> load 0705h to A; maybe "SRQ INHIBIT" front panel switch
         RLC                     ; 07       -> put bit 5 to carry flag by rotating 3x
         RLC                     ; 07       ->
         RLC                     ; 07       ->
@@ -320,7 +320,7 @@ L_00CE:
         MVI     A, 80h          ; 3E 80    -> load 80h to A
         STA     VAR_GPIB_CTRL   ; 32 05 04 -> write A, which is 080h, to RAM location 0405
         XRA     A               ; AF       -> A:=0
-        STA     GPIB_CTRLBUS    ; 32 02 07 -> write A which is 0 to 0702h
+        STA     GPIB_CTRL_1    ; 32 02 07 -> write A which is 0 to 0702h
         CALL    L_0163          ; CD 63 01 -> call L_0163, seems to read a byte from GPIB, result in B
         LDA     DIP_SWITCH      ; 3A 06 07 -> load 0706h to A
         RLC                     ; 07       -> check "ONLY" bit of dip switch
@@ -448,22 +448,19 @@ L_015C:
         RET                     ; C9       -> return to caller
 
 ; ------------------------------------------------------------------------------
-; Code assumed to read in one byte from GPIB. Byte result in B.
+; Code reads in one byte from GPIB. Byte result in B.
+; All GPIB line handshaking during reading a byte is done here.
 ;
-; I guess its complexity comes from the fact, that all GPIB bit handling (DAV, NDAC, ...)
-; is done by bit manipulation via IO registers 070xh .
-;
-; L_0163 waits for bit0 = 1 in VAR_GPIB_CTRL
+; L_0163 waits for bit0 = 1 in VAR_GPIB_CTRL = DAV line.
 ; HL points to 0701 GPIB_STATUS
-; DE points to 0703 GPIB_DATABUS
-; several bytes are written to [DE], i.e. GPIB_DATABUS. I count 4 bytes, "STAX D"
+; DE points to 0703 GPIB_CTRL_2
 ;
 ; NDAC Not DAta aCcepted
 ; NRFD Not Ready For Data
 ;
 ; bit indices count from 0
-; if 1 released
-; if 0 assigned
+; depending on output hardware, a 0 means assign or release.
+; depending on output hardware, a 1 means assign or release.
 ;
 ; 700 seems to be data byte (D0-D7 from GPIB bus)
 ; 701
@@ -472,6 +469,7 @@ L_015C:
 ; 703
 ;   bit1 NDAC line
 ;   bit2 NRFD line
+;   bit4 - used, see L_01F1
 ; 704
 ;   bit7 NDAC related?!
 ; ------------------------------------------------------------------------------
@@ -480,14 +478,14 @@ L_0163:
         LDA     VAR_SYS_STATE   ; 3A 03 04 -> load 0403h to A
         ANI     10h             ; E6 10    -> and with bit 4, isolate bit 4
         MOV     C, A            ; 4F       -> copy A to C
-        LXI     D, GPIB_DATABUS ; 11 03 07 -> DE points to 0703h
+        LXI     D, GPIB_CTRL_2 ; 11 03 07 -> DE points to 0703h
         MVI     A, 04h          ; 3E 04    -> load 04h to A bit2
         ORA     C               ; B1       -> OR with C: now bit 2 from 0403h is set in A
         STAX    D               ; 12       -> write A to [DE] ausgeben ; NRFD release (I am ready to receive data)
         MVI     A, 80h          ; 3E 80    -> load 80h  to A 1000.0000, set bit 7
-        STA     GPIB_CTRL       ; 32 04 07 -> write A to 0704h; NDAC assign (part of) (really?)
+        STA     GPIB_CTRL_3       ; 32 04 07 -> write A to 0704h; NDAC assign (part of) (really?)
         LXI     H, GPIB_STATUS  ; 21 01 07 -> HL points to 0701h
-WAIT_FOR_BIT0_GPIB_CTRL_IS_HI:
+WAIT_FOR_BIT0_GPIB_CTRL_3_IS_HI:
 WAIT_FOR_DAV_ASSIGNED:
 L_0178:
         LDA     VAR_GPIB_CTRL   ; 3A 05 04 -> load RAM 0405h to A
@@ -512,7 +510,7 @@ L_0178:
         ORA     C               ; B1       -> OR with C: now bit 4 from 0403h is set in A NDAC release?
         STAX    D               ; 12       -> write A to [DE] NDAC release?
 L_019B:
-WAIT_FOR_BIT0_GPIB_CTRL_IS_LO:
+WAIT_FOR_BIT0_GPIB_CTRL_3_IS_LO:
 WAIT_FOR_DAV_RELEASE:
         MOV     A, M            ; 7E       -> read from [HL], which is 0701h
         ANI     01h             ; E6 01    -> and with bit 0, isolate bit 0 DAV
@@ -593,12 +591,12 @@ L_01F0:
         MOV     B, A            ; 47       -> Byte in Register B sichern
 L_01F1:
         LDA     VAR_SYS_STATE   ; 3A 03 04 -> load [0403h] to A
-        ANI     10h             ; E6 10    -> isolate bit 4
+        ANI     10h             ; E6 10    -> isolate bit 4 0001.0000
         MOV     C, A            ; 4F       -> save to C
-        LXI     D,GPIB_DATABUS ; 11 03 07 -> loads byte from [DE] - Lädt Byte von der Hardware-Adresse [DE] (0703h)
+        LXI     D,GPIB_CTRL_2 ; 11 03 07 -> [DE] points to 0703h
         STAX    D               ; 12       -> write A to [DE]
-        LXI     H, GPIB_CTRLBUS ; 21 02 07 -> HL points to 0702h
-        MOV     M,B             ; 70       -> write B to [HL]
+        LXI     H, GPIB_CTRL_1 ; 21 02 07 -> HL points to 0702h
+        MOV     M,B             ; 70       -> write B to [HL], to 0702h
         DCX     H               ; 2B       -> HL-- (now 0701h)
 ; loop waits for 0701h, bit 1 becomes 0 (NDAC / NRFD)
 L_0200:
@@ -752,7 +750,7 @@ L_028A:
 L_029D:
         XRA     A               ; AF       -> Akkumulator nullen
         STA     VAR_GPIB_CTRL   ; 32 05 04 -> Systemregister 0405h im RAM zurücksetzen
-        STA     GPIB_CTRLBUS ; 32 02 07 -> Interface-Register 0702h löschen
+        STA     GPIB_CTRL_1 ; 32 02 07 -> Interface-Register 0702h löschen
         DI                      ; F3       -> Interrupts global sperren
 
 ; ------------------------------------------------------------------------------
@@ -931,12 +929,12 @@ L_0346:
         ORI     008h            ; F6 08    -> Bit 3 gezielt setzen
         MOV     M, A            ; 77       -> Aktualisierten Wert zurückschreiben
 ; 0704h, 0703h are set to 0.
-; value of [040B] VAR_PENDING_CMD is written to 0702h GPIB_CTRLBUS
+; value of [040B] VAR_PENDING_CMD is written to 0702h GPIB_CTRL_1
 ; value of [0407] VAR_SYS_STATUS is written to 0707h (LED control)
 L_0355:
-        LXI     H, GPIB_CTRL ; 21 04 07 -> HL points to 0704h (GPIB connector related)
+        LXI     H, GPIB_CTRL_3 ; 21 04 07 -> HL points to 0704h (GPIB connector related)
         MVI     M, 00h          ; 36 00    -> clear [0704h]
-        LXI     H, GPIB_CTRLBUS ; 21 02 07 -> HL points to 0702h
+        LXI     H, GPIB_CTRL_1 ; 21 02 07 -> HL points to 0702h
         LDA     VAR_PENDING_CMD ; 3A 0B 04 -> load content of RAM 040Bh to A
         MOV     M, A            ; 77       -> copy A to [0702h]
         INX     H               ; 23       -> inc HL (now 0703h)
