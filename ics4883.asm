@@ -301,8 +301,9 @@ L_00C7:
     	RET                     ; C9       -> return to caller
 
 ; ------------------------------------------------------------------------------
-; Handle incoming GPIB data and call handler function to handle byte.
+; Handle incoming GPIB bytes and call handler function to handle byte.
 ; byte may be a command byte or an address or a data byte.
+; The low level byte_ready function is L_0163, which is doing bit handling/GPIB lines control
 ;
 ; Byte read from GPIB is stripped to 7 bits.
 ; Then it is checked if both bits 5 and 6 are set. if yes, the byte seems to be a GPIB command and its handler is executed (via  L_00F7)
@@ -314,6 +315,7 @@ L_00C7:
 ; finally we enter L_00F7 without any condition. From there a handler is executed and we return to mainloop.
 ; note that L_00F7 is doing a PCHL, which means we will never return here but end in mainloop after handlers were executed.
 ; ------------------------------------------------------------------------------
+HANDLE_GPIB_BYTE_RECEIVED:
 L_00CE:
         MVI     A, 80h          ; 3E 80    -> load 80h to A
         STA     VAR_GPIB_CTRL   ; 32 05 04 -> write A, which is 080h, to RAM location 0405
@@ -455,6 +457,20 @@ L_015C:
 ; HL points to 0701 GPIB_STATUS
 ; DE points to 0703 GPIB_DATABUS
 ; several bytes are written to [DE], i.e. GPIB_DATABUS. I count 4 bytes, "STAX D"
+;
+; NDAC Not DAta aCcepted
+; NRFD Not Ready For Data
+;
+; 700 seems to be data byte (D0-D7 from GPIB bus)
+;
+; 703
+;   bit2 NRFD?NDAC?
+;   bit3 NDAC line ?
+; 704
+;   bit7 NRFD? could also be NDAC?
+; 701
+;   bit0 DAV Data AVailable ?
+;   bit1 set after read data byte was done NDAC freigabe?
 ; ------------------------------------------------------------------------------
 READ_BYTE_FROM_GPIB:
 L_0163:
@@ -463,12 +479,12 @@ L_0163:
         MOV     C, A            ; 4F       -> copy A to C
         LXI     D, GPIB_DATABUS ; 11 03 07 -> DE points to 0703h
         MVI     A, 04h          ; 3E 04    -> load 04h to A
-        ORA     C               ; B1       -> OR with C: now bit 4 from 0403h is set in A
-        STAX    D               ; 12       -> write A to [DE] ausgeben
+        ORA     C               ; B1       -> OR with C: now bit 3 from 0403h is set in A
+        STAX    D               ; 12       -> write A to [DE] ausgeben ; is this NDAC ?
         MVI     A, 80h          ; 3E 80    -> load 80h  to A 1000.0000
-        STA     GPIB_CTRL       ; 32 04 07 -> write A to 0704h; is this NDAC?
-        LXI     H, GPIB_STATUS ; 21 01 07  -> HL points to 0701h
-WAIT_FOR_BIT0_VAR_GPIB_CTRL:
+        STA     GPIB_CTRL       ; 32 04 07 -> write A to 0704h; is this NRFD?
+        LXI     H, GPIB_STATUS  ; 21 01 07 -> HL points to 0701h
+WAIT_FOR_BIT0_GPIB_CTRL_IS_HI:
 L_0178:
         LDA     VAR_GPIB_CTRL   ; 3A 05 04 -> load RAM 0405h to A
     	XRA     M               ; AE       -> XOR A with [HL], i.e. [0405h]
@@ -476,28 +492,31 @@ L_0178:
         MOV     A, M            ; 7E       -> read from [HL], which is 0701h
         ANI     01h             ; E6 01    -> and with bit 0, isolate bit 0
         JZ      L_0178          ; CA 78 01 -> if bit0==0, jump back to 0178h (we are waiting for bit0 becoming 1)
+; now bit0=1
         LDA     VAR_GPIB_CTRL   ; 3A 05 04 -> load RAM 0405h to A
     	XRA     M               ; AE       -> XOR A with [HL], i.e. [0405h]
     	JM      L_01A9          ; FA A9 01 -> if sign flag==1, continue at 01A9h (do nothing)
-        MVI     A, 06h          ; 3E 06    -> sign flag is 0, load 06h to A
-        ORA     C               ; B1       -> OR with C: now bit 4 from 0403h is set in A
-        STAX    D               ; 12       -> write A to [DE] ausgeben
+        MVI     A, 06h          ; 3E 06    -> sign flag is 0, load 06h to A, 0000.0110
+        ORA     C               ; B1       -> OR with C: now bit 3 AND bit 2 from 0403h is set in A
+        STAX    D               ; 12       -> write A to [DE] ausgeben (to 0703h)
         MOV     A, M            ; 7E       -> read from [HL], which is 0701h
         STA     VAR_EOS_FLAG    ; 32 0F 04 -> save A to RAM 040Fh
         DCX     H               ; 2B       -> HL-- (now 0700h)
-        MOV     B, M            ; 46       -> read from [HL], which is 0700h, to B
+        MOV     B, M            ; 46       -> read from [HL], which is 0700h, to B ; read data byte?
         INX     H               ; 23       -> HL++ (now again 0701h)
-        MVI     A, 02h          ; 3E 02    -> load 02h to A
-        ORA     C               ; B1       -> OR with C: now bit 4 from 0403h is set in A
-        STAX    D               ; 12       -> write A to [DE]
+        MVI     A, 02h          ; 3E 02    -> load 02h to A NDAC Freigabe?
+        ORA     C               ; B1       -> OR with C: now bit 4 from 0403h is set in A NDAC Freigabe?
+        STAX    D               ; 12       -> write A to [DE] NDAC Freigabe?
 L_019B:
+WAIT_FOR_BIT0_GPIB_CTRL_IS_LO:
         MOV     A, M            ; 7E       -> read from [HL], which is 0701h
         ANI     01h             ; E6 01    -> and with bit 0, isolate bit 0
         JNZ     L_019B          ; C2 9B 01 -> if bit0 is set, jump to 019Bh
+; now bit0=0
         MVI     A, 06h          ; 3E 06    -> load 06h to A
         ORA     C               ; B1       -> OR with C: now bit 4 from 0403h is set in A
-        STAX    D               ; 12       -> write A to [DE]
-        STA     VAR_SYS_STATE   ; 32 03 04 -> write A back to RAM 0403h
+        STAX    D               ; 12       -> write A to [DE]  (to 0703h) Release NDAC and NRFD???
+        STA     VAR_SYS_STATE   ; 32 03 04 -> write A back to RAM 0403h ; VAR_... mirrors some of the GPIB handshake lines
         RET                     ; C9       -> return to caller
 L_01A9:
         POP     H               ; E1       -> restore HL
