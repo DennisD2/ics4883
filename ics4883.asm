@@ -461,16 +461,19 @@ L_015C:
 ; NDAC Not DAta aCcepted
 ; NRFD Not Ready For Data
 ;
-; 700 seems to be data byte (D0-D7 from GPIB bus)
+; bit indices count from 0
+; if 1 released
+; if 0 assigned
 ;
-; 703
-;   bit2 NRFD?NDAC?
-;   bit3 NDAC line ?
-; 704
-;   bit7 NRFD? could also be NDAC?
+; 700 seems to be data byte (D0-D7 from GPIB bus)
 ; 701
-;   bit0 DAV Data AVailable ?
-;   bit1 set after read data byte was done NDAC freigabe?
+;   bit0 DAV Data AVailable
+;   bit1 ?
+; 703
+;   bit1 NDAC line
+;   bit2 NRFD line
+; 704
+;   bit7 NDAC related?!
 ; ------------------------------------------------------------------------------
 READ_BYTE_FROM_GPIB:
 L_0163:
@@ -478,13 +481,14 @@ L_0163:
         ANI     10h             ; E6 10    -> and with bit 4, isolate bit 4
         MOV     C, A            ; 4F       -> copy A to C
         LXI     D, GPIB_DATABUS ; 11 03 07 -> DE points to 0703h
-        MVI     A, 04h          ; 3E 04    -> load 04h to A
-        ORA     C               ; B1       -> OR with C: now bit 3 from 0403h is set in A
-        STAX    D               ; 12       -> write A to [DE] ausgeben ; is this NDAC ?
-        MVI     A, 80h          ; 3E 80    -> load 80h  to A 1000.0000
-        STA     GPIB_CTRL       ; 32 04 07 -> write A to 0704h; is this NRFD?
+        MVI     A, 04h          ; 3E 04    -> load 04h to A bit2
+        ORA     C               ; B1       -> OR with C: now bit 2 from 0403h is set in A
+        STAX    D               ; 12       -> write A to [DE] ausgeben ; NRFD release (I am ready to receive data)
+        MVI     A, 80h          ; 3E 80    -> load 80h  to A 1000.0000, set bit 7
+        STA     GPIB_CTRL       ; 32 04 07 -> write A to 0704h; NDAC assign (part of) (really?)
         LXI     H, GPIB_STATUS  ; 21 01 07 -> HL points to 0701h
 WAIT_FOR_BIT0_GPIB_CTRL_IS_HI:
+WAIT_FOR_DAV_ASSIGNED:
 L_0178:
         LDA     VAR_GPIB_CTRL   ; 3A 05 04 -> load RAM 0405h to A
     	XRA     M               ; AE       -> XOR A with [HL], i.e. [0405h]
@@ -492,30 +496,31 @@ L_0178:
         MOV     A, M            ; 7E       -> read from [HL], which is 0701h
         ANI     01h             ; E6 01    -> and with bit 0, isolate bit 0
         JZ      L_0178          ; CA 78 01 -> if bit0==0, jump back to 0178h (we are waiting for bit0 becoming 1)
-; now bit0=1
+; now bit0=1, DAV is assigned
         LDA     VAR_GPIB_CTRL   ; 3A 05 04 -> load RAM 0405h to A
     	XRA     M               ; AE       -> XOR A with [HL], i.e. [0405h]
     	JM      L_01A9          ; FA A9 01 -> if sign flag==1, continue at 01A9h (do nothing)
         MVI     A, 06h          ; 3E 06    -> sign flag is 0, load 06h to A, 0000.0110
-        ORA     C               ; B1       -> OR with C: now bit 3 AND bit 2 from 0403h is set in A
-        STAX    D               ; 12       -> write A to [DE] ausgeben (to 0703h)
+        ORA     C               ; B1       -> OR with C: now bit 1 AND bit 2 from 0403h is set in A
+        STAX    D               ; 12       -> write A to [DE] ausgeben (to 0703h) ; we do assign NDAC and NRFD
         MOV     A, M            ; 7E       -> read from [HL], which is 0701h
         STA     VAR_EOS_FLAG    ; 32 0F 04 -> save A to RAM 040Fh
         DCX     H               ; 2B       -> HL-- (now 0700h)
         MOV     B, M            ; 46       -> read from [HL], which is 0700h, to B ; read data byte?
         INX     H               ; 23       -> HL++ (now again 0701h)
-        MVI     A, 02h          ; 3E 02    -> load 02h to A NDAC Freigabe?
-        ORA     C               ; B1       -> OR with C: now bit 4 from 0403h is set in A NDAC Freigabe?
-        STAX    D               ; 12       -> write A to [DE] NDAC Freigabe?
+        MVI     A, 02h          ; 3E 02    -> load 02h to A NDAC release bit1
+        ORA     C               ; B1       -> OR with C: now bit 4 from 0403h is set in A NDAC release?
+        STAX    D               ; 12       -> write A to [DE] NDAC release?
 L_019B:
 WAIT_FOR_BIT0_GPIB_CTRL_IS_LO:
+WAIT_FOR_DAV_RELEASE:
         MOV     A, M            ; 7E       -> read from [HL], which is 0701h
-        ANI     01h             ; E6 01    -> and with bit 0, isolate bit 0
+        ANI     01h             ; E6 01    -> and with bit 0, isolate bit 0 DAV
         JNZ     L_019B          ; C2 9B 01 -> if bit0 is set, jump to 019Bh
 ; now bit0=0
         MVI     A, 06h          ; 3E 06    -> load 06h to A
         ORA     C               ; B1       -> OR with C: now bit 4 from 0403h is set in A
-        STAX    D               ; 12       -> write A to [DE]  (to 0703h) Release NDAC and NRFD???
+        STAX    D               ; 12       -> write A to [DE]  (to 0703h) Release NDAC and NRFD
         STA     VAR_SYS_STATE   ; 32 03 04 -> write A back to RAM 0403h ; VAR_... mirrors some of the GPIB handshake lines
         RET                     ; C9       -> return to caller
 L_01A9:
