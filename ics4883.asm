@@ -80,13 +80,18 @@ IO_TALK_CTRL_2  EQU  0607h     ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung)
 ; ==============================================================================
 ; 0700 - 07FF :   Memory mapped IO registers for GPIB connector, DIP Switch and front panel LEDs+switches
 ; GPIB connector control uses no special chip, just 74xx chips)
-;   700
+;   700 seems to be data byte (D0-D7 from GPIB bus)
 ;   701
-;   702
+;       bit0 DAV Data AVailable
+;       bit1 ?
 ;   703
+;       bit1 NDAC line Not Data Accepted
+;       bit2 NRFD line Not Ready For Data
+;       bit4 - used, see L_01F1
 ;   704
+;       bit7 NDAC related?!
 ;   705
-;       705 bit 5 maybe "SRQ INHIBIT" front panel switch
+;       bit5 maybe "SRQ INHIBIT" front panel switch
 ;   706 DIP switch
 ;   707 Front panel LEDs (only writes, no reads on that address; so assumed LED only)
 ;       bit0 ? maybe Ready LED? This is supported by L_00AD and its use, which sets bit0 if L_00AD returns 1
