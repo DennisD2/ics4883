@@ -80,17 +80,9 @@ IO_TALK_CTRL_2  EQU  0607h     ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung)
 ; ==============================================================================
 ; 0700 - 07FF :   Memory mapped IO registers for GPIB connector, DIP Switch and front panel LEDs+switches
 ; GPIB connector control uses no special chip, just 74xx chips)
-;   700 seems to be data byte (D0-D7 from GPIB bus) for listener
-;   701
-;       bit0 DAV Data AVailable
-;       bit1 - NRFD Listener used when writing to GPIB, see L_01F1
-;   702 data byte (data lines d0-d7) for talker
-;   703
-;       bit1 NDAC line Not Data Accepted
-;       bit2 NRFD line Not Ready For Data
-;       bit4 - used when writing to GPIB, see L_01F1
-;   704
-;       bit7 NDAC related?!
+; depending on Listener or Talker state, the registers and bits are used in different ways:
+;
+; Used the same for both cases:
 ;   705
 ;       bit5 maybe "SRQ INHIBIT" front panel switch
 ;   706 DIP switch
@@ -98,6 +90,30 @@ IO_TALK_CTRL_2  EQU  0607h     ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung)
 ;       bit0 ? maybe Ready LED? This is supported by L_00AD and its use, which sets bit0 if L_00AD returns 1
 ;       bit1 Listening LED
 ;       bit2 Talking LED
+;
+; 1. Listener
+;   700 data byte (D0-D7 from GPIB bus) for listener
+;   701
+;       bit0 DAV Data AVailable
+;       bit1 R NDAC
+;       bit2 NRFD line Not Ready For Data
+;   702 not used
+;   703
+;       bit1 NDAC line Not Data Accepted
+;       bit2 NRFD line Not Ready For Data
+;   704
+;       bit7 ? NDAC related?!
+;
+; 2. Talker
+;   700 not used
+;   701
+;       bit1 NRFD line Not Ready For Data
+;       bit2  NDAC line Not Data Accepted
+;   702 data byte (data lines d0-d7)
+;   703
+;       bit0 DAV Data AVailable
+;       bit4 - used when writing to GPIB, see L_01F1
+;   704 not used
 ; ==============================================================================
 GPIB_STATUS    EQU  0701h      ; GPIB status register
 GPIB_CTRL_1    EQU  0702h      ; GPIB handshake control register 1
@@ -112,9 +128,16 @@ DIP_SWITCH      EQU  0706h      ; VER DIP Switch byte
 ; bit 4-0 is GPIB ADDRESS
 
 ; bit positions for 70x GPIB control registers
-BIT_NRFD        EQU     04h     ; 0000.0100
-BIT_DAV         EQU     01h     ; 0000.0001
-BIT_NDAC        EQU     02h     ; 0000.0010
+; Listener bits
+BIT_LIS_NRFD        EQU     04h     ; W 0000.0100 in 703
+BIT_LIS_DAV         EQU     01h     ; R 0000.0001 in 701
+BIT_LIS_NDAC        EQU     02h     ; W 0000.0010 in 703
+; uses also 80h, bit 7 in 0704h
+; talker bits
+BIT_TLK_DAV     EQU     01h         ; W 0000.0001 in 703
+;BIT_TLK_NDAC    EQU     04h        ; R in 701 in equ not used, is done by rotate opcodes in code
+;BIT_TLK_NRFD    EQU     02h        ; R in 701 equ not used, is done by rotate opcodes in code
+; uses also 10h, bit 4 in 0703h
 
 ; ---------------------------------------------------------------------
 ; 0000h - 0016h: boot vector and initialization
@@ -473,43 +496,42 @@ L_015C:
 ; depending on output hardware, a 0 means assign or release.
 ; depending on output hardware, a 1 means assign or release.
 ;
-; 700 seems to be data byte (D0-D7 from GPIB bus)
-; 701
-;   bit0 DAV Data AVailable
-;   bit1 ?
-; 703
-;   bit1 NDAC line
-;   bit2 NRFD line
-;   bit4 - used, see L_01F1
-; 704
-;   bit7 NDAC related?!
+;   700 data byte (D0-D7 from GPIB bus) for listener
+;   701
+;       bit0 DAV Data AVailable
+;       bit1 R NDAC
+;       bit2 NRFD line Not Ready For Data
+;   702 not used
+;   703
+;       bit1 NDAC line Not Data Accepted
+;       bit2 NRFD line Not Ready For Data
+;   704
+;       bit7 ? NDAC related?!
 ; ------------------------------------------------------------------------------
-
-
 READ_BYTE_FROM_GPIB:
 L_0163:
         LDA     VAR_SYS_STATE   ; 3A 03 04 -> load 0403h to A
         ANI     10h             ; E6 10    -> and with bit 4, isolate bit 4
         MOV     C, A            ; 4F       -> copy A to C
         LXI     D, GPIB_CTRL_2  ; 11 03 07 -> DE points to 0703h
-        MVI     A, BIT_NRFD     ; 3E 04    -> load 04h to A bit2
+        MVI     A, BIT_LIS_NRFD ; 3E 04    -> load 04h to A bit2
         ORA     C               ; B1       -> OR with C: now bit 2 from 0403h is set in A
         STAX    D               ; 12       -> write A to [DE] ausgeben ; NRFD release (I am ready to receive data)
         MVI     A, 80h          ; 3E 80    -> load 80h  to A 1000.0000, set bit 7
-        STA     GPIB_CTRL_3       ; 32 04 07 -> write A to 0704h; NDAC assign (part of) (really?)
+        STA     GPIB_CTRL_3     ; 32 04 07 -> write A to 0704h; NDAC assign (part of) (really?)
         LXI     H, GPIB_STATUS  ; 21 01 07 -> HL points to 0701h
 WAIT_FOR_DAV_ASSIGNED:          ; was L_0178
         LDA     VAR_GPIB_CTRL   ; 3A 05 04 -> load RAM 0405h to A
     	XRA     M               ; AE       -> XOR A with [HL], i.e. [0405h]
     	JM      L_01A9          ; FA A9 01 -> if sign flag==1, continue at 01A9h (do nothing)
         MOV     A, M            ; 7E       -> read from [HL], which is 0701h
-        ANI     BIT_DAV         ; E6 01    -> and with bit 0, isolate bit 0
+        ANI     BIT_LIS_DAV     ; E6 01    -> and with bit 0, isolate bit 0
         JZ      WAIT_FOR_DAV_ASSIGNED ; CA 78 01 -> if bit0==0, jump back to 0178h (we are waiting for bit0 becoming 1)
 ; now bit0=1, DAV is assigned
         LDA     VAR_GPIB_CTRL   ; 3A 05 04 -> load RAM 0405h to A
     	XRA     M               ; AE       -> XOR A with [HL], i.e. [0405h]
     	JM      L_01A9          ; FA A9 01 -> if sign flag==1, continue at 01A9h (do nothing)
-        MVI     A, BIT_NRFD|BIT_NDAC ; 3E 06    -> sign flag is 0, load 06h to A, 0000.0110
+        MVI     A, BIT_LIS_NRFD|BIT_LIS_NDAC ; 3E 06    -> sign flag is 0, load 06h to A, 0000.0110
         ORA     C               ; B1       -> OR with C: now bit 1 AND bit 2 from 0403h is set in A
         STAX    D               ; 12       -> write A to [DE] ausgeben (to 0703h) ; we do assign NDAC and NRFD
         MOV     A, M            ; 7E       -> read from [HL], which is 0701h
@@ -517,15 +539,15 @@ WAIT_FOR_DAV_ASSIGNED:          ; was L_0178
         DCX     H               ; 2B       -> HL-- (now 0700h)
         MOV     B, M            ; 46       -> read from [HL], which is 0700h, to B ; read data byte?
         INX     H               ; 23       -> HL++ (now again 0701h)
-        MVI     A, BIT_NDAC     ; 3E 02    -> load 02h to A NDAC release bit1
+        MVI     A, BIT_LIS_NDAC ; 3E 02    -> load 02h to A NDAC release bit1
         ORA     C               ; B1       -> OR with C: now bit 4 from 0403h is set in A NDAC release?
-        STAX    D               ; 12       -> write A to [DE] NDAC release?
+        STAX    D               ; 12       -> write A to [DE] = 703 NDAC release
 WAIT_FOR_DAV_RELEASE:           ; was L_019B
         MOV     A, M            ; 7E       -> read from [HL], which is 0701h
-        ANI     BIT_DAV         ; E6 01    -> and with bit 0, isolate bit 0 DAV
-        JNZ     WAIT_FOR_DAV_RELEASE          ; C2 9B 01 -> if bit0 is set, jump to 019Bh
+        ANI     BIT_LIS_DAV     ; E6 01    -> and with bit 0, isolate bit 0 DAV
+        JNZ     WAIT_FOR_DAV_RELEASE ; C2 9B 01 -> if bit0 is set, jump to 019Bh
 ; now bit0=0, DAV is released
-        MVI     A,  BIT_NRFD|BIT_NDAC ; 3E 06    -> load 06h to A
+        MVI     A,  BIT_LIS_NRFD|BIT_LIS_NDAC ; 3E 06    -> load 06h to A
         ORA     C               ; B1       -> OR with C: now bit 4 from 0403h is set in A
         STAX    D               ; 12       -> write A to [DE]  (to 0703h) Release NDAC and NRFD
         STA     VAR_SYS_STATE   ; 32 03 04 -> write A back to RAM 0403h ; VAR_... mirrors some of the GPIB handshake lines
@@ -556,13 +578,15 @@ L_01A9:
 ; All GPIB line handshake (NDAC, DAV, ...) is done in the code.
 ;
 ; used regs and bits
-; 701
-;   bit1 R NRFD Listener
-;   bit2 R NDAC Listener
-; 702 data byte (data lines d0-d7) for talker
-; 703
-;   bit1 W DAV Listener
-;   bit4 W
+;   700 not used
+;   701
+;       bit1 NDAC line Not Data Accepted
+;       bit2  NDAC line Not Data Accepted
+;   702 data byte (data lines d0-d7)
+;   703
+;       bit0 DAV Data AVailable
+;       bit4 - used when writing to GPIB, see L_01F1
+;   704 not used
 ;
 ; Note: code starting at L_01F1 is also used for sending status byte during serial poll.
 ; ------------------------------------------------------------------------------
@@ -605,6 +629,8 @@ L_01D6:
         MOV     A, M            ; 7E       -> Byte erneut via HL laden
         INX     H               ; 23       -> HL-Zeiger um 1 erhöhen
         SHLD    VAR_ARRAY_PTR   ; 22 2E 04 -> HL-Registerinhalt im SRAM 042Eh sichern
+
+
 WRITE_BYTE_TO_GPIB_BUS:
 L_01F0:
         MOV     B, A            ; 47       -> Byte in Register B sichern; B contains byte to send to GPIB bus.
@@ -617,7 +643,7 @@ L_01F1:
         LXI     H, GPIB_CTRL_1 ; 21 02 07 -> HL points to 0702h
         MOV     M,B             ; 70       -> write B to [HL], to 0702h; writes data byte to GPIB bus
         DCX     H               ; 2B       -> HL-- (now 0701h), GPIB_STATUS byte
-; loop waits for 0701h, bit 1 becomes 0 ; NRFD releas
+; loop waits for 0701h, bit 1 becomes 0 ; NRFD release
 L_0200:
         MOV     A, M            ; 7E       -> load from 0701h to A
         RRC                     ; 0F       -> rotate right
@@ -625,7 +651,7 @@ L_0200:
         JC      L_0200          ; DA 00 02 -> if carry=1, loop back at L_0200
 ; now bit1=0, NRFD is released, all partners are ready for reading data
 ; set DAV
-        MVI     A, 01h          ; 3E 01    -> load 01h to A (DAV signal)
+        MVI     A, BIT_TLK_DAV  ; 3E 01    -> load 01h to A (DAV signal)
         ORA     C               ; B1       -> OR A with C
         STAX    D               ; 12       -> write A to [DE] = 0703h
 ; byte is written out, DAV was set. Now wait for ack from controller, wait for NDAC release
