@@ -89,6 +89,9 @@ IO_TALK_CTRL_2  EQU  0607h     ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung)
 ;       705 bit 5 maybe "SRQ INHIBIT" front panel switch
 ;   706 DIP switch
 ;   707 Front panel LEDs (only writes, no reads on that address; so assumed LED only)
+;       bit0 ?
+;       bit1 Listener LED
+;       bit2 Talker LED
 ; ==============================================================================
 GPIB_STATUS     EQU  0701h      ; Status des GPIB-Interfaces (Eingang/Ausgang)
 GPIB_CTRLBUS    EQU  0702h      ; Synchronisationsregister 02h für GPIB-Schnittstelle
@@ -238,8 +241,14 @@ L_009C:
         RLC                     ; 07       -> shift 3 bits left result is L43.210xx
         RLC                     ; 07       -> "                           4321.0xxx
         RLC                     ; 07       -> "                           3210.xxxx
+; ------------------------------------------------------------------------------
+; Frontpanel LED control and update of VAR_SYS_STATUS
+; 0707
+;   bit1 Listener LED
+;   bit2 Talker LED
+; ------------------------------------------------------------------------------
 L_009F:
-    	MVI     C, 0F9h         ; 0E F9    -> loads mask value 0F9h (mask 1111.1001b) into C
+    	MVI     C, 0F9h         ; 0E F9    -> loads mask value 0F9h (mask 1111.1001b) into C; switch of LEDs bit pos 1 and 2
 ;
 ; L_00A1 updates systen state register RAM 0407h and also writes changes out to hardware register 0707h (front panel LEDs).
 ; It applies a mask value in C
@@ -289,9 +298,14 @@ L_00C7:
     	RET                     ; C9       -> return to caller
 
 ; ------------------------------------------------------------------------------
-; Handle incoming GPIB data
+; Handle incoming GPIB data and call handler function to handle byte.
+; byte may be a command byte or an address or a data byte.
+;
 ; Byte read from GPIB is stripped to 7 bits.
 ; Then it is checked if both bits 5 and 6 are set. if yes, the byte seems to be a GPIB command and its handler is executed (via  L_00F7)
+;  bit 5 means byte is like 0x1x.xxxx. This is like 0x0x.xxxx + 0x20, so it is a MLA (Listener address). We are addressed to listen!
+;  bit 6 means byte is like 01xx.xxxx. This is like 00xx.xxxx + 0x40, so it is a MTA (Talker address). We are addressed to talk!
+;  both bits 5&6 means (maybe) PPE command, parallel poll.
 ; if bits are not set, VAR_CMD_LOCK is set to 0. This means maybe "we are not processing a GPIB command byte".
 ; again bit 5 and 6 are checked and L_00F7 is called if bits are set (this is strange).
 ; finally we enter L_00F7 without any condition. From there a handler is executed and we return to mainloop.
@@ -310,12 +324,13 @@ L_00CE:
         ANI     07Fh            ; E6 7F    -> mask to 7 bits (only 7 bits are used)
         MOV     B,A             ; 47       -> save to B (B contains now byte from GPIB bus, 7 bits)
         ANI     060h            ; E6 60    -> isolate bits 6 and 5
-        CPI     060h            ; FE 60    -> Check against 0110.0000
+        CPI     060h            ; FE 60    -> Check against 0110.0000 (this could mean we check if byte received is PPE=060h command)
         JZ      L_00F7          ; CA F7 00 -> if equality (bits 5 and 6 are set) continue at 00F7h (there a handler address is determined and handler code executed and returned to mainloop)
         XRA     A               ; AF       -> bits are not equal, A := 0
         STA     VAR_CMD_LOCK    ; 32 0C 04 -> writes A, which is 0, to 040Ch, i.e. clear VAR_CMD_LOCK
         MOV     A, B            ; 78       -> load B to A, B = the byte read from GPIB
         ANI     060h            ; E6 60    -> isolate bits 6 and 5
+        ; in next line, jump is done if neither bit6 nor bit 5 is 1. This means maybe we jump iff byte is not a MLA/MTA.
         JNZ     L_00F7          ; C2 F7 00 -> if bit 5 or 6 are set, continue again L_00F7 (there a handler address is determined and handler code executed and returned to mainloop)
         MOV     A, B            ; 78       -> bits are not equal, load B to A, B = the byte read from GPIB
 L_00F7:
@@ -330,11 +345,12 @@ L_00F7:
 ; checks if address in B equals address defined at DIP switches.
 ; ------------------------------------------------------------------------------
 L_0100:
-        CALL    L_0131          ; CD 31 01 -> Compare GPIB address received with own address
+        CALL    L_0131          ; CD 31 01 -> Compare GPIB address received with own address; result is in flag Z
         MVI     A, 02h          ; 3E 02    -> load 02h into A
-        JNZ     L_010E          ; C2 0E 01 -> if value of last cmp (address compare) !=0, jump to 010Eh; so: nout our address
+        JNZ     L_010E          ; C2 0E 01 -> if value of last cmp (address compare) !=0, jump to 010Eh; so: not our address
 L_0108:
         ; address equals our address
+        ; next call seems to switch on byte 1 (02h) in LED control byte; this should be Listener LED
         CALL    L_009F          ; CD 9F 00 -> call 009Fh, which seems to write out a byte to 0707h(front panel LEDs)
         JMP     L_MAINLOOP      ; C3 17 00 -> jump to main loop
 
@@ -355,10 +371,11 @@ L_010E:
 L_0120:
         CALL    L_0131          ; CD 31 01 -> Compare GPIB address received with own address
         MVI     A, 04h          ; 3E 04    -> load 04h into A
-        JZ      L_0108          ; CA 08 01 -> if value of last cmp (address compare) ==0, jump to L_0108
-        MVI     C, 0FBh         ; 0E FB    -> loads mask 0FBh 1111.1100 to C
+        JZ      L_0108          ; CA 08 01 -> if value of last cmp (address compare) ==0, jump to L_0108; switch on bit pos 2 (Talker LED?)
+        MVI     C, 0FBh         ; 0E FB    -> loads mask 0FBh 1111.1100 to C; switch off bit pos 0 and 1
         XRA     A               ; AF       -> clear A
-        CALL    L_00A1          ; CD A1 00 -> Ruft die I/O-Ausgabestufe auf
+        ; next call seems to switch off LED control byte; but maybe I am wrong...
+        CALL    L_00A1          ; CD A1 00 -> call L_00A1, which seems to write out a byte to 0707h(front panel LEDs)
     	JMP     L_MAINLOOP      ; C3 17 00 -> jump back to main loop
 
 ; Comparison if GPIB address just received with address set at dip switch
