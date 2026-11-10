@@ -796,10 +796,10 @@ L_028A:
 ; Dynamische Puffer-Adressierung: Durch ADI 020h und MOV L, A berechnet der Code zur Laufzeit eine Zieladresse im RAM (ein sogenanntes indiziertes Array), um die eingehenden Zeichen nacheinander geordnet abzuspeichern.
 ; Protokoll-Validierung: Am Ende wird über das RAM-Register 040Fh ausgewertet, ob der Bus ein Übertragungsende signalisiert (CPI 040h).
 L_029D:
-        XRA     A               ; AF       -> Akkumulator nullen
-        STA     VAR_GPIB_CTRL   ; 32 05 04 -> Systemregister 0405h im RAM zurücksetzen
-        STA     GPIB_CTRL_1 ; 32 02 07 -> Interface-Register 0702h löschen
-        DI                      ; F3       -> Interrupts global sperren
+        XRA     A               ; AF       -> A := 0
+        STA     VAR_GPIB_CTRL   ; 32 05 04 -> [0405h] := A i.e. 0
+        STA     GPIB_CTRL_1     ; 32 02 07 -> [0702h] := 0
+        DI                      ; F3       -> disable interrupts
 
 ; ------------------------------------------------------------------------------
 ; L_02A5 is also Default Handler in separator table
