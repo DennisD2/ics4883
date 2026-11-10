@@ -97,8 +97,8 @@ IO_TALK_CTRL_2  EQU  0607h     ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung)
 ;       bit0 DAV Data AVailable
 ;       bit1 R NDAC
 ;       bit2 NRFD line Not Ready For Data
-        bit6 EOI ?
-        bit7 (another hs line, like ATN?)
+;       bit6 EOI ?
+;       bit7 (another hs line, like ATN?)
 ;   702 not used
 ;   703
 ;       bit1 NDAC line Not Data Accepted
@@ -113,7 +113,7 @@ IO_TALK_CTRL_2  EQU  0607h     ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung)
 ;       bit2  NDAC line Not Data Accepted
 ;   702 data byte (data lines d0-d7)
 ;   703
-;       bit0 DAV Data AVailable
+        bit0 DAV Data AVailable
 ;       bit4 SRQ line
 ;   704 not used
 ; ==============================================================================
@@ -503,6 +503,8 @@ L_015C:
 ;       bit0 DAV Data AVailable
 ;       bit1 R NDAC
 ;       bit2 NRFD line Not Ready For Data
+;       bit6 EOI ?
+;       bit7 (another hs line, like ATN?)
 ;   702 not used
 ;   703
 ;       bit1 NDAC line Not Data Accepted
@@ -582,12 +584,12 @@ L_01A9:
 ; used regs and bits
 ;   700 not used
 ;   701
-;       bit1 NDAC line Not Data Accepted
+;       bit1 NRFD line Not Ready For Data
 ;       bit2  NDAC line Not Data Accepted
 ;   702 data byte (data lines d0-d7)
 ;   703
-;       bit0 DAV Data AVailable
-;       bit4 - used when writing to GPIB, see L_01F1
+        bit0 DAV Data AVailable
+;       bit4 SRQ line
 ;   704 not used
 ;
 ; Note: code starting at L_01F1 is also used for sending status byte during serial poll.
@@ -655,7 +657,7 @@ L_0200:
 ; set DAV
         MVI     A, BIT_TLK_DAV  ; 3E 01    -> load 01h to A (DAV signal)
         ORA     C               ; B1       -> OR A with C
-        STAX    D               ; 12       -> write A to [DE] = 0703h
+        STAX    D               ; 12       -> write A to [DE] = 0703h so DAV=703-bit0
 ; byte is written out, DAV was set. Now wait for ack from controller, wait for NDAC release
 ; loop waits for 0701h, bit 2 becomes 0 ;
 L_020A:
