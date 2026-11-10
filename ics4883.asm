@@ -97,6 +97,8 @@ IO_TALK_CTRL_2  EQU  0607h     ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung)
 ;       bit0 DAV Data AVailable
 ;       bit1 R NDAC
 ;       bit2 NRFD line Not Ready For Data
+        bit6 EOI ?
+        bit7 (another hs line, like ATN?)
 ;   702 not used
 ;   703
 ;       bit1 NDAC line Not Data Accepted
@@ -112,7 +114,7 @@ IO_TALK_CTRL_2  EQU  0607h     ; Status-Flag im I/O-SRAM (Eingangs-Bestätigung)
 ;   702 data byte (data lines d0-d7)
 ;   703
 ;       bit0 DAV Data AVailable
-;       bit4 - used when writing to GPIB, see L_01F1
+;       bit4 SRQ line
 ;   704 not used
 ; ==============================================================================
 GPIB_STATUS    EQU  0701h      ; GPIB status register
@@ -191,11 +193,11 @@ L_003C:
         JC      L_029D          ; DA 9D 02 -> Wenn Carry=1, springe zu Adresse 029Dh
         RRC                     ; 0F       -> Akkumulator nach rechts rotieren
         JC      L_01AD          ; DA AD 01 -> Wenn Carry=1, springe zu Adresse 01ADh - talker handling
-        LXI     B,01000h        ; 01 00 10 -> lade 01000h in BC
+        LXI     B,01000h        ; 01 00 10 -> B:= 10h, C:=0h
         LDA     IO_TALK_CTRL_1  ; 3A 05 06 -> load talker control byte
     	CMA                     ; 2F       -> invert (low active signals)
-    	RRC                     ; 0F       -> put lowest bit from control byte into carry flag
-    	JNC     L_0060          ; D2 60 00 -> if no carry (lowest bit was 0) then continue at 0060h, which will return from there to main loop
+    	RRC                     ; 0F       -> put lowest bit from control byte into carry flag; seems "data ready from instrument" bit
+    	JNC     L_0060          ; D2 60 00 -> if no carry (lowest bit was 0) then continue at 0060h, which will return from there to main loop -> no data from instrument
     	CALL    L_00C7          ; CD C7 00 -> if we had carry at lowest bit, puts bit 5 of FRONT_SWITCHES in Carry. This is maybe "SRQ INHIBIT" switch.
         JC      L_SET_DATA_AVAILABLE ; DA 6D 00 -> if carry, jump to L_SET_DATA_AVAILABLE = 006Dh ; we update status register
         STA     IO_TALK_CTRL_2   ; 32 07 06 -> no carry, no data available, put A to 0607h
@@ -617,26 +619,26 @@ L_01D6:
         MOV     A, M            ; 7E       -> Byte via HL laden
         INX     H               ; 23       -> HL-Zeiger um 1 erhöhen
         SHLD    VAR_BUFF_PTR    ; 22 1D 04 -> Aktuellen HL-Zeiger im RAM 041Dh sichern
-        CPI     19h             ; FE 19    -> Akkumulator mit Konstante 19h vergleichen (19=SPD, but makes no sense here)
+        CPI     19h             ; FE 19    -> Akkumulator mit Konstante 19h vergleichen (19=SPD, but makes no sense here?)
 
         JZ      L_MAINLOOP      ; CA 17 00 -> if A==19, jump to mainloop
-        ORA     A               ; B7       -> Flags aktualisieren (Prüfen auf Null/Vorzeichen)
-        JP      L_01F0          ; F2 F0 01 -> Wenn positiv (Bit 7 = 0), springe vor zu Adresse 01F0h
-        ANI     040h            ; E6 40    -> Bit 6 maskieren
-        ORA     C               ; B1       -> Logisches ODER mit Register C verknüpfen
-        MOV     C, A            ; 4F       -> In Register C sichern (AS-Syntax für MOV C,A)
-        LHLD    VAR_ARRAY_PTR   ; 2A 2E 04 -> HL-Registerinhalt im SRAM 042Ah sichern
-        MOV     A, M            ; 7E       -> Byte erneut via HL laden
-        INX     H               ; 23       -> HL-Zeiger um 1 erhöhen
-        SHLD    VAR_ARRAY_PTR   ; 22 2E 04 -> HL-Registerinhalt im SRAM 042Eh sichern
+        ORA     A               ; B7       -> set flags
+        JP      L_01F0          ; F2 F0 01 -> if >0, jump to 01F0h (byte is simple data byte)
+        ANI     040h            ; E6 40    -> mask bit 6 0100.0000
+        ORA     C               ; B1       -> or with C
+        MOV     C, A            ; 4F       -> save A in C
+        LHLD    VAR_ARRAY_PTR   ; 2A 2E 04 -> load HL from 042Ah
+        MOV     A, M            ; 7E       -> load again byte to send
+        INX     H               ; 23       -> inc HL
+        SHLD    VAR_ARRAY_PTR   ; 22 2E 04 -> save HL to 042Eh
 
 
 WRITE_BYTE_TO_GPIB_BUS:
 L_01F0:
-        MOV     B, A            ; 47       -> Byte in Register B sichern; B contains byte to send to GPIB bus.
+        MOV     B, A            ; 47       -> save A in B; B contains byte to send to GPIB bus.
 L_01F1:
         LDA     VAR_SYS_STATE   ; 3A 03 04 -> load [0403h] to A
-        ANI     10h             ; E6 10    -> isolate bit 4 0001.0000
+        ANI     10h             ; E6 10    -> isolate bit 4 0001.0000 (SRQ line)
         MOV     C, A            ; 4F       -> save to C
         LXI     D,GPIB_CTRL_2 ; 11 03 07 -> [DE] points to 0703h
         STAX    D               ; 12       -> write A to [DE] = 0703h.
@@ -691,7 +693,7 @@ L_0232:
         LXI     H, VAR_DATA_AVAILABLE ; 21 0E 04 -> HL points to GPIB status byte of coupler
         MOV     B, M            ; 46       -> load status byte to B
         MOV     A, M            ; 7E       -> and load it to A
-        ANI     0BFh            ; E6 BF    -> clear bit 6 in A (mask 1011.1111)
+        ANI     0BFh            ; E6 BF    -> clear bit 6 in A (mask 1011.1111); clear my SRQ request bit (after it was handled by controller)
         MOV     M, A            ; 77       -> write A back to VAR_DATA_AVAILABLE
         JMP     L_01F1          ; C3 F1 01 -> continue at 01F1h
 
